@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.1.0 (unreleased)
+## v0.1.0 (2026-10-28)
 
 - 100: repairs SCS 35.21 caster AI on IWD:EE (Shadowed Elven Clerics without AI;
   a melee AI that runs before a caster AI).

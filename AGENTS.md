@@ -15,3 +15,6 @@ Easy IWD collection (`chriz-bg-collection`, recipe `recipes/iwd-current`).
 - Reuse SCS ideas, not SCS files; credit them in `THIRD_PARTY_NOTICES.md`.
 - No in-game technical notices; diagnostics go to the WeiDU log.
 - Public release, tags and a GitHub repository only with Christopher's OK.
+- Build release zips with `python -I tools/make_release.py <tag> <zip>`. The collection
+  recipe pins each zip's length and SHA-256: never replace a published asset, release a
+  new version instead.

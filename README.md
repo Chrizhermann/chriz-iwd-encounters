@@ -15,8 +15,9 @@ Details per change, written so they can move to the Chriz script engine later:
 ## Install
 
 Needs IWD:EE (built and tested on 2.7.3.0) and SCS's smarter priests (component 200)
-or smarter mages/priests (component 100). Copy `chriz-iwd-encounters/` into the game
-folder and run `setup-chriz-iwd-encounters` with WeiDU after SCS.
+or smarter mages/priests (component 100). Extract the release zip from the GitHub
+releases into the game folder (it holds `chriz-iwd-encounters/`) and run
+`setup-chriz-iwd-encounters` with WeiDU after SCS.
 
 ## Tests
 
