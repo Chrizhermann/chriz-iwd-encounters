@@ -1,0 +1,352 @@
+// Component 100: enemy casters that SCS means to give its caster AI but that end
+// up without a working spell AI on IWD:EE. Each repair finds its cases from the
+// installed files and changes nothing when SCS did the job itself.
+
+DEFINE_ACTION_FUNCTION cie_scs_caster_repairs BEGIN
+  LAM cie_scan_scripts
+  LAF cie_repair_shadowed_cleric_typo END
+  LAF cie_repair_melee_over_caster END
+END
+
+// SCS 35.21 (priest/priest_iwd.tpa:109) gives sdelfch2 the default script
+// "sdelfcs1", a typo for shelfcs1: its priest list and every sibling use shelfcs1.
+// No such script exists, and the edit runs before SCS's creature pass, so these
+// Shadowed Elven Clerics (spawned in AR5202) keep their unconverted spells and
+// have no combat AI at all; they only walk towards the party. sdelfch1 is the
+// same creature and went through SCS normally. Give every creature that points at
+// the missing script the SCS script and SCS spell selection of that twin, which
+// is what SCS meant to produce.
+DEFINE_ACTION_FUNCTION cie_repair_shadowed_cleric_typo BEGIN
+  ACTION_IF (!FILE_EXISTS_IN_GAME ~sdelfcs1.bcs~) AND (FILE_EXISTS_IN_GAME ~sdelfch1.cre~) BEGIN
+    OUTER_SPRINT cie_donor_script ~~
+    ACTION_CLEAR_ARRAY cie_donor_spell
+    ACTION_CLEAR_ARRAY cie_donor_level
+    ACTION_CLEAR_ARRAY cie_donor_slots
+    ACTION_CLEAR_ARRAY cie_donor_slots_after
+    COPY_EXISTING ~sdelfch1.cre~ ~override~
+      READ_BYTE 0x273 cie_twin_class
+      READ_BYTE 0x272 cie_twin_race
+      READ_BYTE 0x234 cie_twin_level1
+      READ_BYTE 0x235 cie_twin_level2
+      READ_BYTE 0x236 cie_twin_level3
+      READ_LONG 0x244 cie_twin_kit
+      FOR (slot = 0x248; slot < 0x270; slot += 8) BEGIN
+        LPF cie_read_script_slot INT_VAR offset = slot RET script END
+        PATCH_IF VARIABLE_IS_SET $cie_scs_caster(~%script%~) BEGIN
+          SPRINT cie_donor_script ~%script%~
+        END
+      END
+      // Memorised priest spells, level by level (memorisation info at 0x2a8/0x2ac,
+      // 16 bytes each: level-1, slots, slots after effects, type, first, count;
+      // memorised spells at 0x2b0, 12 bytes each).
+      READ_LONG 0x2a8 info_offset
+      READ_LONG 0x2ac info_count
+      READ_LONG 0x2b0 memorised_offset
+      SET cie_donor_count = 0
+      FOR (i = 0; i < info_count; ++i) BEGIN
+        READ_SHORT (info_offset + i * 0x10)       level
+        READ_SHORT (info_offset + i * 0x10 + 0x2) slots
+        READ_SHORT (info_offset + i * 0x10 + 0x4) slots_after
+        READ_SHORT (info_offset + i * 0x10 + 0x6) type
+        READ_LONG  (info_offset + i * 0x10 + 0x8) first
+        READ_LONG  (info_offset + i * 0x10 + 0xc) count
+        PATCH_IF (type = 0) BEGIN
+          SET $cie_donor_slots(~%level%~) = slots
+          SET $cie_donor_slots_after(~%level%~) = slots_after
+          FOR (j = 0; j < count; ++j) BEGIN
+            READ_ASCII (memorised_offset + (first + j) * 0xc) spell (8) NULL
+            SPRINT $cie_donor_spell(~%cie_donor_count%~) ~%spell%~
+            SET $cie_donor_level(~%cie_donor_count%~) = level
+            SET cie_donor_count += 1
+          END
+        END
+      END
+    BUT_ONLY
+
+    ACTION_IF (~%cie_donor_script%~ STRING_EQUAL ~~) BEGIN
+      WARN ~chriz-iwd-encounters: sdelfch1 has no SCS caster script, so the Shadowed Elven Clerics that point at the missing sdelfcs1 stay as SCS left them.~
+    END ELSE BEGIN
+      COPY_EXISTING_REGEXP GLOB ~^.+\.cre$~ ~override~
+        PATCH_IF (BUFFER_LENGTH >= 0x2d4) BEGIN
+          SET broken_slot = 0
+          FOR (slot = 0x248; slot < 0x270; slot += 8) BEGIN
+            LPF cie_read_script_slot INT_VAR offset = slot RET script END
+            PATCH_IF (~%script%~ STRING_EQUAL ~SDELFCS1~) BEGIN
+              SET broken_slot = slot
+            END
+          END
+          PATCH_IF broken_slot BEGIN
+            READ_BYTE 0x273 class
+            READ_BYTE 0x272 race
+            READ_BYTE 0x234 level_1
+            READ_BYTE 0x235 level_2
+            READ_BYTE 0x236 level_3
+            READ_LONG 0x244 kit
+            // SCS picks a priest's spells from its class, kit, race and levels; only a
+            // creature that matches the twin in those would have got the same kind of
+            // selection.
+            PATCH_IF (class = cie_twin_class) AND (race = cie_twin_race) AND (kit = cie_twin_kit)
+                AND (level_1 = cie_twin_level1) AND (level_2 = cie_twin_level2) AND (level_3 = cie_twin_level3) BEGIN
+              WRITE_ASCIIE broken_slot ~%cie_donor_script%~ (8)
+              LPF cie_replace_priest_spells END
+              PATCH_PRINT ~chriz-iwd-encounters: %SOURCE_RES% now runs %cie_donor_script% with sdelfch1's SCS spell selection.~
+            END ELSE BEGIN
+              PATCH_WARN ~chriz-iwd-encounters: %SOURCE_RES% points at the missing sdelfcs1 but is not a twin of sdelfch1 (class %class%/%cie_twin_class%, race %race%/%cie_twin_race%, kit %kit%/%cie_twin_kit%, levels %level_1%.%level_2%.%level_3%/%cie_twin_level1%.%cie_twin_level2%.%cie_twin_level3%); left unchanged.~
+            END
+          END
+        END
+      BUT_ONLY
+    END
+  END
+END
+
+// Replaces the current creature's priest spells with the donor's (arrays filled
+// by cie_repair_shadowed_cleric_typo), including the slots per level.
+DEFINE_PATCH_FUNCTION cie_replace_priest_spells BEGIN
+  // The creature's own priest spells: known (0x2a0/0x2a4, 12 bytes: resref,
+  // level-1, type) and memorised (through the memorisation info).
+  CLEAR_ARRAY own_spell
+  READ_LONG 0x2a0 known_offset
+  READ_LONG 0x2a4 known_count
+  FOR (i = 0; i < known_count; ++i) BEGIN
+    READ_SHORT (known_offset + i * 0xc + 0xa) type
+    PATCH_IF (type = 0) BEGIN
+      READ_ASCII (known_offset + i * 0xc) spell (8) NULL
+      TO_UPPER spell
+      SPRINT $own_spell(~%spell%~) ~1~
+    END
+  END
+  READ_LONG 0x2a8 info_offset
+  READ_LONG 0x2ac info_count
+  READ_LONG 0x2b0 memorised_offset
+  FOR (i = 0; i < info_count; ++i) BEGIN
+    READ_SHORT (info_offset + i * 0x10 + 0x6) type
+    READ_LONG  (info_offset + i * 0x10 + 0x8) first
+    READ_LONG  (info_offset + i * 0x10 + 0xc) count
+    PATCH_IF (type = 0) BEGIN
+      FOR (j = 0; j < count; ++j) BEGIN
+        READ_ASCII (memorised_offset + (first + j) * 0xc) spell (8) NULL
+        TO_UPPER spell
+        SPRINT $own_spell(~%spell%~) ~1~
+      END
+    END
+  END
+  PHP_EACH own_spell AS spell => unused BEGIN
+    REMOVE_MEMORIZED_SPELL ~%spell%~
+    REMOVE_KNOWN_SPELL ~%spell%~
+  END
+
+  FOR (k = 0; k < cie_donor_count; ++k) BEGIN
+    SPRINT spell $cie_donor_spell(~%k%~)
+    SET level = $cie_donor_level(~%k%~)
+    PATCH_MATCH level WITH
+      0 BEGIN ADD_MEMORIZED_SPELL ~%spell%~ #0 ~priest~ END
+      1 BEGIN ADD_MEMORIZED_SPELL ~%spell%~ #1 ~priest~ END
+      2 BEGIN ADD_MEMORIZED_SPELL ~%spell%~ #2 ~priest~ END
+      3 BEGIN ADD_MEMORIZED_SPELL ~%spell%~ #3 ~priest~ END
+      4 BEGIN ADD_MEMORIZED_SPELL ~%spell%~ #4 ~priest~ END
+      5 BEGIN ADD_MEMORIZED_SPELL ~%spell%~ #5 ~priest~ END
+      6 BEGIN ADD_MEMORIZED_SPELL ~%spell%~ #6 ~priest~ END
+      DEFAULT
+        PATCH_FAIL ~chriz-iwd-encounters: priest spell %spell% has level index %level%, outside 0-6.~
+    END
+  END
+
+  // Same slots per level as the donor.
+  READ_LONG 0x2a8 info_offset
+  READ_LONG 0x2ac info_count
+  FOR (i = 0; i < info_count; ++i) BEGIN
+    READ_SHORT (info_offset + i * 0x10)       level
+    READ_SHORT (info_offset + i * 0x10 + 0x6) type
+    PATCH_IF (type = 0) AND (VARIABLE_IS_SET $cie_donor_slots(~%level%~)) BEGIN
+      WRITE_SHORT (info_offset + i * 0x10 + 0x2) $cie_donor_slots(~%level%~)
+      WRITE_SHORT (info_offset + i * 0x10 + 0x4) $cie_donor_slots_after(~%level%~)
+    END
+  END
+END
+
+// A few casters carry a melee AI in a slot the engine runs before their caster
+// AI (SCRLEV.IDS order: override, specifics, class, race, general, default). The
+// engine stops at the first block that fires, and melee blocks do not continue:
+// the base game's GNMMGSGH attacks whatever it sees, so the caster never casts;
+// SCS's melee AI walks to the nearest enemy when idle and attacks every round in
+// melee range, so the caster casts only at a distance and just swings its weapon
+// once the party is next to it. SCS removes such scripts from the
+// casters it knows (4001lmtr) or swaps them for their wake-up part
+// (gntrpb1 -> dw#gntrp); these it misses. Where a melee AI runs before an SCS
+// caster AI:
+//   a plain melee AI (the base game's GNMMGSGH, or one of SCS's generic melee
+//   scripts that replace it) is removed: the caster AI fights on its own;
+//   one built from the base game's GNTRPM1 is replaced by CIETMWK, GNTRPM1's
+//   group wake-up;
+//   any other is left as it is and named in the WeiDU log.
+// Creature files are repaired first; an area actor falls back to its creature's
+// script wherever its own slot is empty.
+DEFINE_ACTION_FUNCTION cie_repair_melee_over_caster BEGIN
+  LAM cie_read_scs_melee_record
+  COMPILE ~chriz-iwd-encounters/baf/cietmwk.baf~
+  OUTER_SET cie_melee_repaired = 0
+  ACTION_CLEAR_ARRAY cie_cre_slot
+  // Script slot offsets by run order (override, specifics, class, race, general,
+  // default) in an area actor and in a creature file, which has no specifics.
+  ACTION_DEFINE_ASSOCIATIVE_ARRAY cie_are_slot_offset BEGIN
+    1 => 0x50  2 => 0x78  3 => 0x60  4 => 0x68  5 => 0x58  6 => 0x70
+  END
+  ACTION_DEFINE_ASSOCIATIVE_ARRAY cie_cre_slot_offset BEGIN
+    1 => 0x248  2 => 0  3 => 0x250  4 => 0x258  5 => 0x260  6 => 0x268
+  END
+
+  COPY_EXISTING_REGEXP GLOB ~^.+\.cre$~ ~override~
+    PATCH_IF (BUFFER_LENGTH >= 0x2d4) BEGIN
+      READ_ASCII 0x0 signature (8)
+      PATCH_IF (~%signature%~ STRING_EQUAL ~CRE V1.0~) BEGIN
+        FOR (rank = 1; rank <= 6; ++rank) BEGIN
+          SET offset = $cie_cre_slot_offset(~%rank%~)
+          SPRINT script ~~
+          PATCH_IF offset BEGIN
+            LPF cie_read_script_slot INT_VAR offset RET script END
+          END
+          SET $cie_slot_offset(~%rank%~) = offset
+          SPRINT $cie_slot_script(~%rank%~) ~%script%~
+          SPRINT $cie_slot_fallback(~%rank%~) ~~
+        END
+        LPF cie_repair_melee_slots STR_VAR where = EVAL ~%SOURCE_RES%~ RET repaired END
+        SET cie_melee_repaired += repaired
+        // what the area pass falls back to
+        SPRINT resref ~%SOURCE_RES%~
+        TO_UPPER resref
+        FOR (offset = 0x248; offset < 0x270; offset += 8) BEGIN
+          LPF cie_read_script_slot INT_VAR offset RET script END
+          PATCH_IF (~%script%~ STRING_COMPARE ~~) BEGIN
+            SPRINT $cie_cre_slot(~%resref%~ ~%offset%~) ~%script%~
+          END
+        END
+      END
+    END
+  BUT_ONLY
+
+  COPY_EXISTING_REGEXP GLOB ~^.+\.are$~ ~override~
+    GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+    PHP_EACH actors AS index => actor BEGIN
+      READ_ASCII actor actor_name (32) NULL
+      READ_ASCII (actor + 0x80) cre (8) NULL
+      TO_UPPER cre
+      LPF cie_embedded_cre INT_VAR actor RET embedded = offset END
+      FOR (rank = 1; rank <= 6; ++rank) BEGIN
+        SET offset = actor + $cie_are_slot_offset(~%rank%~)
+        SET cre_offset = $cie_cre_slot_offset(~%rank%~)
+        LPF cie_read_script_slot INT_VAR offset RET script END
+        SPRINT fallback ~~
+        PATCH_IF (cre_offset > 0) AND (embedded > 0) BEGIN
+          LPF cie_read_script_slot INT_VAR offset = (embedded + cre_offset) RET fallback = script END
+        END ELSE PATCH_IF (cre_offset > 0) AND (VARIABLE_IS_SET $cie_cre_slot(~%cre%~ ~%cre_offset%~)) BEGIN
+          SPRINT fallback $cie_cre_slot(~%cre%~ ~%cre_offset%~)
+        END
+        SET $cie_slot_offset(~%rank%~) = offset
+        SPRINT $cie_slot_script(~%rank%~) ~%script%~
+        SPRINT $cie_slot_fallback(~%rank%~) ~%fallback%~
+      END
+      LPF cie_repair_melee_slots STR_VAR where = EVAL ~%SOURCE_RES% %actor_name% (%cre%)~ RET repaired END
+      SET cie_melee_repaired += repaired
+    END
+  BUT_ONLY
+
+  PRINT ~chriz-iwd-encounters: %cie_melee_repaired% melee scripts above a caster AI repaired.~
+END
+
+// SCS's own record of the melee AI it built, one "original-base---built" line
+// per script: "base" is one of its generic melee scripts, "built" the script
+// it made from the base-game script "original" plus that script's own blocks.
+// Sets cie_scs_melee_base and cie_scs_melee_built_from in the caller's scope;
+// both stay empty without SCS's general AI.
+DEFINE_ACTION_MACRO cie_read_scs_melee_record BEGIN
+  LOCAL_SPRINT cie_original ~~
+  LOCAL_SPRINT cie_base ~~
+  LOCAL_SPRINT cie_built ~~
+  ACTION_CLEAR_ARRAY cie_scs_melee_base
+  ACTION_CLEAR_ARRAY cie_scs_melee_built_from
+  ACTION_IF FILE_EXISTS ~weidu_external/data/stratagems/genai_scripts_built.txt~ BEGIN
+    COPY - ~weidu_external/data/stratagems/genai_scripts_built.txt~ nowhere
+      REPLACE_EVALUATE ~^\([^-%WNL%%MNL%%LNL%]+\)-\([^-%WNL%%MNL%%LNL%]+\)---\([^%WNL%%MNL%%LNL%]+\)~ BEGIN
+        SPRINT cie_original ~%MATCH1%~
+        SPRINT cie_base ~%MATCH2%~
+        SPRINT cie_built ~%MATCH3%~
+        TO_UPPER cie_original
+        TO_UPPER cie_base
+        TO_UPPER cie_built
+        SPRINT $cie_scs_melee_base(~%cie_base%~) ~1~
+        SPRINT $cie_scs_melee_built_from(~%cie_built%~) ~%cie_original%~
+      END ~%MATCH0%~
+  END
+END
+
+// "trap" (built from GNTRPM1), "plain" (no blocks of its own), "other" (another
+// melee AI) or "" (no melee AI).
+DEFINE_PATCH_FUNCTION cie_melee_kind
+  STR_VAR script = ~~
+  RET kind
+BEGIN
+  SPRINT kind ~~
+  SPRINT original ~~
+  PATCH_IF VARIABLE_IS_SET $cie_scs_melee_built_from(~%script%~) BEGIN
+    SPRINT original $cie_scs_melee_built_from(~%script%~)
+  END
+  PATCH_IF (~%script%~ STRING_EQUAL ~GNTRPM1~) OR (~%original%~ STRING_EQUAL ~GNTRPM1~) BEGIN
+    SPRINT kind ~trap~
+  END ELSE PATCH_IF (~%script%~ STRING_EQUAL ~GNMMGSGH~) BEGIN
+    SPRINT kind ~plain~
+  END ELSE PATCH_IF VARIABLE_IS_SET $cie_scs_melee(~%script%~) BEGIN
+    PATCH_IF (~%original%~ STRING_EQUAL ~~) AND (VARIABLE_IS_SET $cie_scs_melee_base(~%script%~)) BEGIN
+      SPRINT kind ~plain~
+    END ELSE BEGIN
+      SPRINT kind ~other~
+    END
+  END
+END
+
+// One placement, its six script slots by run order in cie_slot_offset (0 = this
+// file has no such slot), cie_slot_script (this file's script) and
+// cie_slot_fallback (what the engine uses where this file's slot is empty).
+// Repairs melee AI that runs before the first SCS caster AI, in this file's slots.
+DEFINE_PATCH_FUNCTION cie_repair_melee_slots
+  STR_VAR where = ~~
+  RET repaired
+BEGIN
+  SET repaired = 0
+  SET caster_rank = 0
+  FOR (rank = 1; rank <= 6 AND caster_rank = 0; ++rank) BEGIN
+    SPRINT script $cie_slot_script(~%rank%~)
+    PATCH_IF (~%script%~ STRING_EQUAL ~~) BEGIN
+      SPRINT script $cie_slot_fallback(~%rank%~)
+    END
+    PATCH_IF VARIABLE_IS_SET $cie_scs_caster(~%script%~) BEGIN
+      SET caster_rank = rank
+      SPRINT caster ~%script%~
+    END
+  END
+  FOR (rank = 1; rank < caster_rank; ++rank) BEGIN
+    SET offset = $cie_slot_offset(~%rank%~)
+    SPRINT own $cie_slot_script(~%rank%~)
+    SPRINT fallback $cie_slot_fallback(~%rank%~)
+    PATCH_IF (~%own%~ STRING_COMPARE ~~) BEGIN
+      SPRINT script ~%own%~
+    END ELSE BEGIN
+      SPRINT script ~%fallback%~
+    END
+    LPF cie_melee_kind STR_VAR script RET kind END
+    PATCH_IF (~%kind%~ STRING_EQUAL ~trap~) AND offset BEGIN
+      WRITE_ASCII offset ~CIETMWK~ (8)
+      SET repaired += 1
+      PATCH_PRINT ~chriz-iwd-encounters: %where%: %script% ran before the caster AI %caster%; replaced by its group wake-up CIETMWK.~
+    END ELSE PATCH_IF (~%kind%~ STRING_EQUAL ~plain~) AND (~%own%~ STRING_COMPARE ~~) AND (~%fallback%~ STRING_EQUAL ~~) BEGIN
+      WRITE_ASCII offset ~~ (8)
+      SET repaired += 1
+      PATCH_PRINT ~chriz-iwd-encounters: %where%: removed %script%, which ran before the caster AI %caster%.~
+    END ELSE PATCH_IF (~%kind%~ STRING_COMPARE ~~) BEGIN
+      // Another melee AI (its own blocks are unknown here), or a plain one this
+      // file cannot remove: an area actor's empty slot falls back to its
+      // creature's script, so clearing it would bring that script back.
+      PATCH_WARN ~chriz-iwd-encounters: %where%: %script% (%kind% melee AI) runs before the caster AI %caster%; left unchanged.~
+    END
+  END
+END

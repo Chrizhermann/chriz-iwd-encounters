@@ -1,0 +1,34 @@
+BACKUP ~weidu_external/backup/chriz-iwd-encounters~
+AUTHOR ~Christopher Hermann (github.com/Chrizhermann/chriz-iwd-encounters)~
+VERSION ~v0.1.0~
+
+ALWAYS
+  INCLUDE ~chriz-iwd-encounters/lib/cie_shared.tpa~
+END
+
+LANGUAGE ~English~ ~english~ ~chriz-iwd-encounters/languages/english/setup.tra~
+
+// ============================================================
+// chriz-iwd-encounters: small fight upgrades on top of Sword Coast
+// Stratagems for Icewind Dale: Enhanced Edition. Install right after SCS.
+//
+// 100 SCS caster-AI repairs: enemy casters SCS meant to convert but leaves
+//     without a working spell AI on IWD:EE
+// 200 enemy priests prepare when they first see the party (Core Rules and up)
+//
+// docs/components.md describes each change in engine-neutral terms.
+// ============================================================
+
+BEGIN @100 DESIGNATED 100
+LABEL ~chriz-iwd-encounters-scs-caster-repairs~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE (MOD_IS_INSTALLED ~stratagems/setup-stratagems.tp2~ ~6030~ OR MOD_IS_INSTALLED ~stratagems/setup-stratagems.tp2~ ~6040~) @9001
+INCLUDE ~chriz-iwd-encounters/lib/cie_scs_repairs.tpa~
+LAF cie_scs_caster_repairs END
+
+BEGIN @200 DESIGNATED 200
+LABEL ~chriz-iwd-encounters-priest-prep~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE MOD_IS_INSTALLED ~stratagems/setup-stratagems.tp2~ ~6040~ @9002
+INCLUDE ~chriz-iwd-encounters/lib/cie_priest_prep.tpa~
+LAF cie_priest_prep END

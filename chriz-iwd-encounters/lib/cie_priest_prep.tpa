@@ -1,0 +1,103 @@
+// Component 200: enemy priests prepare when they first see the party.
+//
+// The blocks of baf/cie_prep.baf go on top of the script that holds a priest's
+// spell AI, which is where SCS's own precasts live, so they run exactly when the
+// priest's AI runs. Priests are found through every place a creature gets its
+// scripts: the creature file and each area placement.
+//
+// SCS priests precast their self-protection themselves on Hard and Insane (SCS's
+// "InsanePrep" with its default priest-prep setting); their copy of the blocks
+// adds it on Core Rules only, so nothing is cast twice.
+
+DEFINE_ACTION_FUNCTION cie_priest_prep BEGIN
+  LAM cie_scan_scripts
+  ACTION_CLEAR_ARRAY cie_priest_cre
+  ACTION_CLEAR_ARRAY cie_prep_candidate
+
+  // Priest-class creature files and their own script slots
+  // (CRE V1.0: override, class, race, general, default at 0x248..0x268).
+  COPY_EXISTING_REGEXP GLOB ~^.+\.cre$~ ~override~
+    PATCH_IF (BUFFER_LENGTH >= 0x2d4) BEGIN
+      READ_ASCII 0x0 signature (8)
+      PATCH_IF (~%signature%~ STRING_EQUAL ~CRE V1.0~) BEGIN
+        READ_BYTE 0x273 class
+        LPF cie_class_is_priest INT_VAR class RET is_priest END
+        PATCH_IF is_priest BEGIN
+          SPRINT resref ~%SOURCE_RES%~
+          TO_UPPER resref
+          SPRINT $cie_priest_cre(~%resref%~) ~1~
+          FOR (slot = 0x248; slot < 0x270; slot += 8) BEGIN
+            LPF cie_read_script_slot INT_VAR offset = slot RET script END
+            PATCH_IF (~%script%~ STRING_COMPARE ~~) BEGIN
+              SPRINT $cie_prep_candidate(~%script%~) ~1~
+            END
+          END
+        END
+      END
+    END
+  BUT_ONLY
+
+  // Area placements of those creatures: an actor's script fields replace the
+  // creature's (ARE actor: override, general, class, race, default, specifics at
+  // +0x50..+0x78). Actors with an embedded creature are read from that copy.
+  COPY_EXISTING_REGEXP GLOB ~^.+\.are$~ ~override~
+    GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+    PHP_EACH actors AS index => actor BEGIN
+      READ_ASCII (actor + 0x80) cre (8) NULL
+      TO_UPPER cre
+      LPF cie_embedded_cre INT_VAR actor RET embedded = offset END
+      SET is_priest = 0
+      PATCH_IF embedded BEGIN
+        READ_BYTE (embedded + 0x273) class
+        LPF cie_class_is_priest INT_VAR class RET is_priest END
+        PATCH_IF is_priest BEGIN
+          FOR (slot = 0x248; slot < 0x270; slot += 8) BEGIN
+            LPF cie_read_script_slot INT_VAR offset = (embedded + slot) RET script END
+            PATCH_IF (~%script%~ STRING_COMPARE ~~) BEGIN
+              SPRINT $cie_prep_candidate(~%script%~) ~1~
+            END
+          END
+        END
+      END ELSE PATCH_IF VARIABLE_IS_SET $cie_priest_cre(~%cre%~) BEGIN
+        SET is_priest = 1
+      END
+      PATCH_IF is_priest BEGIN
+        FOR (slot = 0x50; slot < 0x80; slot += 8) BEGIN
+          LPF cie_read_script_slot INT_VAR offset = (actor + slot) RET script END
+          PATCH_IF (~%script%~ STRING_COMPARE ~~) BEGIN
+            SPRINT $cie_prep_candidate(~%script%~) ~1~
+          END
+        END
+      END
+    END
+  BUT_ONLY
+
+  // SCS priests: self-protection on Core Rules only. With its default priest-prep
+  // setting (DMWW_priest_prep_difficulty 0) SCS precasts its own on Hard and
+  // Insane; a player who changed that setting chose SCS's prep at every level,
+  // so this part steps aside then.
+  OUTER_SPRINT cie_self_gate ~Difficulty(NORMAL)
+  INI("DMWW_priest_prep_difficulty",0)~
+  OUTER_SPRINT cie_self_note ~SCS caster script, self-protection on Core Rules with SCS's default priest-prep setting (SCS precasts its own on Hard and Insane).~
+  OUTER_SET cie_prep_count = 0
+  ACTION_PHP_EACH cie_prep_candidate AS script => unused BEGIN
+    ACTION_IF VARIABLE_IS_SET $cie_scs_caster(~%script%~) BEGIN
+      EXTEND_TOP ~%script%.bcs~ ~chriz-iwd-encounters/baf/cie_prep.baf~ EVALUATE_BUFFER
+      OUTER_SET cie_prep_count += 1
+    END
+  END
+  PRINT ~chriz-iwd-encounters: priest preparation added to %cie_prep_count% SCS caster scripts.~
+
+  // Two IWD priest AIs SCS 35.21 means to convert but misses: it ships top-files
+  // for both, but its priest list misspells SHELFPS1 (as SDELFPS1) and lacks
+  // CAJSHA1M. Their priests keep the original AI, so SCS precasts nothing for them
+  // on Insane either. If a later SCS converts them, the loop above covers them.
+  OUTER_SPRINT cie_self_gate ~DifficultyGT(EASY)~
+  OUTER_SPRINT cie_self_note ~original AI that SCS missed, self-protection on Core Rules and up.~
+  ACTION_FOR_EACH script IN SHELFPS1 CAJSHA1M BEGIN
+    ACTION_IF (FILE_EXISTS_IN_GAME ~%script%.bcs~) AND (NOT VARIABLE_IS_SET $cie_scs_caster(~%script%~)) BEGIN
+      EXTEND_TOP ~%script%.bcs~ ~chriz-iwd-encounters/baf/cie_prep.baf~ EVALUATE_BUFFER
+      PRINT ~chriz-iwd-encounters: priest preparation added to %script% (original AI).~
+    END
+  END
+END

@@ -1,0 +1,67 @@
+// Shared helpers for chriz-iwd-encounters.
+
+// Sorts every script in the game once; the components look up thousands of
+// script slots. Sets, in the caller's scope:
+//   cie_scs_caster: caster AI built by Sword Coast Stratagems. Every SCS mage,
+//     priest and cleric/mage script carries the LOCALS variable "instantprep"
+//     from SCS's precast blocks; neither the base game nor the other mods of the
+//     collection use that name.
+//   cie_scs_melee: SCS's melee AI ("smarter general AI"): it carries the global
+//     DMWW_genai_difficulty and is no caster AI.
+DEFINE_ACTION_MACRO cie_scan_scripts BEGIN
+  LOCAL_SPRINT cie_script ~~
+  ACTION_CLEAR_ARRAY cie_scs_caster
+  ACTION_CLEAR_ARRAY cie_scs_melee
+  COPY_EXISTING_REGEXP GLOB ~^.+\.bcs$~ ~override~
+    SPRINT cie_script ~%SOURCE_RES%~
+    TO_UPPER cie_script
+    PATCH_IF (INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~instantprep~) >= 0) BEGIN
+      SPRINT $cie_scs_caster(~%cie_script%~) ~1~
+    END ELSE PATCH_IF (INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~DMWW_genai_difficulty~) >= 0) BEGIN
+      SPRINT $cie_scs_melee(~%cie_script%~) ~1~
+    END
+  BUT_ONLY
+END
+
+// True for the classes that cast priest spells as their main trade (single and
+// multi-class clerics, druids, shamans). Paladins and rangers get a few priest
+// spells late; they are not the casters these components are about.
+DEFINE_PATCH_FUNCTION cie_class_is_priest
+  INT_VAR class = 0
+  RET is_priest
+BEGIN
+  SET is_priest = 0
+  PATCH_FOR_EACH symbol IN CLERIC FIGHTER_CLERIC DRUID CLERIC_MAGE CLERIC_THIEF FIGHTER_DRUID FIGHTER_MAGE_CLERIC CLERIC_RANGER SHAMAN BEGIN
+    PATCH_IF (IDS_OF_SYMBOL (~class~ ~%symbol%~) = class) BEGIN
+      SET is_priest = 1
+    END
+  END
+END
+
+// Reads one 8-character script slot and returns it upper-case, or "" for an
+// empty slot or the engine's "NONE".
+DEFINE_PATCH_FUNCTION cie_read_script_slot
+  INT_VAR offset = 0
+  RET script
+BEGIN
+  READ_ASCII offset script (8) NULL
+  TO_UPPER script
+  PATCH_IF (~%script%~ STRING_EQUAL ~NONE~) BEGIN
+    SPRINT script ~~
+  END
+END
+
+// An area actor carries its creature inside the area file unless flag bit 0
+// ("not attached") is set (ARE actor: flags +0x28, creature offset +0x88, size
+// +0x8c). Returns the offset of that creature in the area file, or 0.
+DEFINE_PATCH_FUNCTION cie_embedded_cre
+  INT_VAR actor = 0
+  RET offset
+BEGIN
+  READ_LONG (actor + 0x28) flags
+  READ_LONG (actor + 0x88) offset
+  READ_LONG (actor + 0x8c) size
+  PATCH_IF ((flags BAND 1) OR (size < 0x2d4) OR (offset = 0)) BEGIN
+    SET offset = 0
+  END
+END

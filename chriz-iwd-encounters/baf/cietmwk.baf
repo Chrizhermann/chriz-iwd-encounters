@@ -1,0 +1,61 @@
+// chriz-iwd-encounters 100: the base game's GNTRPM1 without its melee blocks,
+// for casters whose spell AI runs after it. GNTRPM1 (and SCS's melee versions of
+// it) attacks whatever it sees and never continues, so the caster AI under it
+// never ran. What is left is GNTRPM1's own group wake-up, in its order: the
+// creature waits inactive until its area group is alerted, turns hostile, and
+// walks towards the party while it sees no one.
+
+IF
+  !Allegiance(Myself,ENEMY)
+  Global("AREA_GROUP_VARBit1","MYAREA",1)
+THEN
+  RESPONSE #100
+    Enemy()
+    Continue()
+END
+
+IF
+  !IsActive(Myself)
+  Global("AREA_GROUP_VARBit1","MYAREA",1)
+THEN
+  RESPONSE #100
+    Activate(Myself)
+    Continue()
+END
+
+IF
+  Global("CREATURE_STATE_VARBit1","LOCALS",0)
+THEN
+  RESPONSE #100
+    SetGlobal("CREATURE_STATE_VARBit1","LOCALS",1)
+    Deactivate(Myself)
+    Continue()
+END
+
+IF
+  !IsActive(Myself)
+THEN
+  RESPONSE #100
+    NoAction()
+END
+
+IF
+  !Global("CREATURE_STATE_VARBit2","LOCALS",1)
+  See(NearestEnemyOf(Myself))
+THEN
+  RESPONSE #50
+    SetGlobal("CREATURE_STATE_VARBit2","LOCALS",1)
+    SetSequence(HEAD_TURN)
+    Continue()
+  RESPONSE #50
+    SetGlobal("CREATURE_STATE_VARBit2","LOCALS",1)
+    Continue()
+END
+
+IF
+  ActionListEmpty()
+  !See([PC])
+THEN
+  RESPONSE #100
+    MoveToObject(Player1)
+END

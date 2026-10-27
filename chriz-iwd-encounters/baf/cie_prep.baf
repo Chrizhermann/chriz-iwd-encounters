@@ -1,0 +1,162 @@
+// chriz-iwd-encounters 200: an enemy priest prepares the moment it first sees
+// the party. Like SCS's precasts, it casts instantly a spell it has memorised
+// and spends that copy, so it is ready earlier, not stronger.
+//   Self-protection, on the difficulties the install-time setting below names:
+//     one from its own spells (Barkskin, else Armor of Faith, else Draw Upon Holy
+//     Might); with none of them, a free Armor of Faith, which every priest class
+//     can cast.
+//   Hard (priest level 7 and up) and Insane (every priest): one group blessing
+//     from its own spells (Recitation, else Prayer, else Bless). Chant is left
+//     out: in IWD:EE it stops the caster's spellcasting for a turn.
+// Each part fires once per creature. Every block ends in Continue(), so the AI
+// below this point runs as before.
+// Install-time setting for the self-protection blocks: %cie_self_note%
+
+IF
+  Global("CIE_SELF","LOCALS",0)
+  %cie_self_gate%
+  Allegiance(Myself,ENEMY)
+  OR(3)
+    Class(Myself,CLERIC_ALL)
+    Class(Myself,DRUID_ALL)
+    Class(Myself,SHAMAN)
+  See(NearestEnemyOf(Myself))
+  !StateCheck(Myself,STATE_REALLY_DEAD)
+  HaveSpell(CLERIC_BARKSKIN)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_SELF","LOCALS",1)
+    ReallyForceSpell(Myself,CLERIC_BARKSKIN)
+    RemoveSpell(CLERIC_BARKSKIN)
+    Continue()
+END
+
+IF
+  Global("CIE_SELF","LOCALS",0)
+  %cie_self_gate%
+  Allegiance(Myself,ENEMY)
+  OR(3)
+    Class(Myself,CLERIC_ALL)
+    Class(Myself,DRUID_ALL)
+    Class(Myself,SHAMAN)
+  See(NearestEnemyOf(Myself))
+  !StateCheck(Myself,STATE_REALLY_DEAD)
+  !HaveSpell(CLERIC_BARKSKIN)
+  HaveSpell(CLERIC_ARMOR_OF_FAITH)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_SELF","LOCALS",1)
+    ReallyForceSpell(Myself,CLERIC_ARMOR_OF_FAITH)
+    RemoveSpell(CLERIC_ARMOR_OF_FAITH)
+    Continue()
+END
+
+IF
+  Global("CIE_SELF","LOCALS",0)
+  %cie_self_gate%
+  Allegiance(Myself,ENEMY)
+  OR(3)
+    Class(Myself,CLERIC_ALL)
+    Class(Myself,DRUID_ALL)
+    Class(Myself,SHAMAN)
+  See(NearestEnemyOf(Myself))
+  !StateCheck(Myself,STATE_REALLY_DEAD)
+  !HaveSpell(CLERIC_BARKSKIN)
+  !HaveSpell(CLERIC_ARMOR_OF_FAITH)
+  HaveSpell(CLERIC_DRAW_UPON_HOLY_MIGHT)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_SELF","LOCALS",1)
+    ReallyForceSpell(Myself,CLERIC_DRAW_UPON_HOLY_MIGHT)
+    RemoveSpell(CLERIC_DRAW_UPON_HOLY_MIGHT)
+    Continue()
+END
+
+IF
+  Global("CIE_SELF","LOCALS",0)
+  %cie_self_gate%
+  Allegiance(Myself,ENEMY)
+  OR(3)
+    Class(Myself,CLERIC_ALL)
+    Class(Myself,DRUID_ALL)
+    Class(Myself,SHAMAN)
+  See(NearestEnemyOf(Myself))
+  !StateCheck(Myself,STATE_REALLY_DEAD)
+  !HaveSpell(CLERIC_BARKSKIN)
+  !HaveSpell(CLERIC_ARMOR_OF_FAITH)
+  !HaveSpell(CLERIC_DRAW_UPON_HOLY_MIGHT)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_SELF","LOCALS",1)
+    ReallyForceSpell(Myself,CLERIC_ARMOR_OF_FAITH)
+    Continue()
+END
+
+IF
+  Global("CIE_GROUP","LOCALS",0)
+  DifficultyGT(NORMAL)
+  OR(2)
+    Difficulty(HARDEST)
+    LevelGT(Myself,6)
+  Allegiance(Myself,ENEMY)
+  OR(3)
+    Class(Myself,CLERIC_ALL)
+    Class(Myself,DRUID_ALL)
+    Class(Myself,SHAMAN)
+  See(NearestEnemyOf(Myself))
+  !StateCheck(Myself,STATE_REALLY_DEAD)
+  HaveSpell(CLERIC_RECITATION)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_GROUP","LOCALS",1)
+    ReallyForceSpell(Myself,CLERIC_RECITATION)
+    RemoveSpell(CLERIC_RECITATION)
+    Continue()
+END
+
+IF
+  Global("CIE_GROUP","LOCALS",0)
+  DifficultyGT(NORMAL)
+  OR(2)
+    Difficulty(HARDEST)
+    LevelGT(Myself,6)
+  Allegiance(Myself,ENEMY)
+  OR(3)
+    Class(Myself,CLERIC_ALL)
+    Class(Myself,DRUID_ALL)
+    Class(Myself,SHAMAN)
+  See(NearestEnemyOf(Myself))
+  !StateCheck(Myself,STATE_REALLY_DEAD)
+  !HaveSpell(CLERIC_RECITATION)
+  HaveSpell(CLERIC_PRAYER)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_GROUP","LOCALS",1)
+    ReallyForceSpell(Myself,CLERIC_PRAYER)
+    RemoveSpell(CLERIC_PRAYER)
+    Continue()
+END
+
+IF
+  Global("CIE_GROUP","LOCALS",0)
+  DifficultyGT(NORMAL)
+  OR(2)
+    Difficulty(HARDEST)
+    LevelGT(Myself,6)
+  Allegiance(Myself,ENEMY)
+  OR(3)
+    Class(Myself,CLERIC_ALL)
+    Class(Myself,DRUID_ALL)
+    Class(Myself,SHAMAN)
+  See(NearestEnemyOf(Myself))
+  !StateCheck(Myself,STATE_REALLY_DEAD)
+  !HaveSpell(CLERIC_RECITATION)
+  !HaveSpell(CLERIC_PRAYER)
+  HaveSpell(CLERIC_BLESS)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_GROUP","LOCALS",1)
+    ReallyForceSpell(Myself,CLERIC_BLESS)
+    RemoveSpell(CLERIC_BLESS)
+    Continue()
+END
