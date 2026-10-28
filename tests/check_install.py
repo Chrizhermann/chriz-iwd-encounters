@@ -13,8 +13,9 @@ import sys
 PRIEST_TYPE = 0
 CRE_TYPE, ARE_TYPE, BCS_TYPE, ITM_TYPE, SPL_TYPE, IDS_TYPE = 0x3F1, 0x3F2, 0x3EF, 0x3ED, 0x3EE, 0x3F0
 EXT = {CRE_TYPE: "CRE", ARE_TYPE: "ARE", BCS_TYPE: "BCS", ITM_TYPE: "ITM", SPL_TYPE: "SPL", IDS_TYPE: "IDS"}
-# 300: what Belhifet must be protected from (opcode 101 targets)
-BELHIFET_BLOCKED = (13, 55, 134, 135, 209, 211, 213, 238)
+# 300: what Belhifet must be protected from (opcode 101 targets): instant death,
+# removal from the fight, paralysis and hold
+BELHIFET_BLOCKED = (13, 55, 134, 135, 209, 211, 213, 238, 109, 175, 185)
 # script slots by run order (SCRLEV.IDS): override, specifics, class, race, general, default
 ARE_SLOTS = (0x50, 0x78, 0x60, 0x68, 0x58, 0x70)
 CRE_SLOTS = (0x248, None, 0x250, 0x258, 0x260, 0x268)
@@ -53,7 +54,11 @@ class Resources:
         if (name, ext) in self.override:
             with open(self.override[(name, ext)], "rb") as f:
                 return f.read()
-        loc = self.biffed.get((name, ext))
+        return self.original(name, ext)
+
+    def original(self, name, ext):
+        """The BIFF copy, as the game ships it (override/ ignored)."""
+        loc = self.biffed.get((name.upper(), ext))
         if loc is None:
             return None
         data, table = self.biff(loc >> 20)
@@ -317,6 +322,21 @@ def main():
         c.check(pr is not None and not missing,
                 "CIEBELPR protects from opcodes %s (missing: %s)" % (BELHIFET_BLOCKED, missing or "none"))
         protected = {e[3] for e in pr_fx if e[0] == 206}
+        # immune to spell levels 1-3 only (Christopher, 2026-10-29), with the
+        # protections from single spells of those levels that his items had
+        levels = sorted(e[1] for e in pr_fx if e[0] == 102)
+        c.check(levels == [1, 2, 3], "CIEBELPR grants immunity to spell levels 1-3 only (%s)" % levels)
+        low = set()
+        for item in cre_items(res.original("BELHIF", "CRE") or bel):
+            data = res.original(item, "ITM")
+            for e in itm_equipped(data) if data else []:
+                spell = res.get(e[3], "SPL") if e[0] == 206 and re.match(r"SP(PR|WI)[1-3]\d\d$", e[3]) else None
+                if spell and len(spell) >= 0x38 and struct.unpack_from("<H", spell, 0x1C)[0] in (1, 2) \
+                        and 1 <= struct.unpack_from("<I", spell, 0x34)[0] <= 3:
+                    low.add(e[3])
+        lost = sorted(low - protected)
+        c.check(not lost, "CIEBELPR keeps his items' %d protections from spells of levels 1-3 (lost: %s)"
+                % (len(low), ", ".join(lost) or "none"))
         limit = max(10, struct.unpack_from("<H", bel, 0x26)[0] // 10)
         setters = []
         for name in res.names("SPL"):

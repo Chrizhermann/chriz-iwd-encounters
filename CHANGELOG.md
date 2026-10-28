@@ -2,8 +2,9 @@
 
 ## Unreleased
 
-- 300: Belhifet's final fight. No blanket spell immunity (protected only from what
-  would end the fight without taking his hit points), +2 weapons hit him, more hit
+- 300: Belhifet's final fight. Immune to spell levels 1–3 instead of all levels,
+  protected from hold and paralysis and from what would end the fight without
+  taking his hit points, +2 weapons hit him, more hit
   points from Core Rules up (base game 350: 500, 625, 750), Improved Invisibility
   when he appears from Core Rules up, his cornugons as a second wave below two
   thirds of his hit points (a third on Insane below one third), no dispel at

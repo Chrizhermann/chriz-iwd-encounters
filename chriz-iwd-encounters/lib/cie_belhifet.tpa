@@ -1,10 +1,11 @@
 // Component 300: Belhifet's final fight in Easthaven (AR1105), designed with
-// Christopher on 2026-10-26 and 2026-10-28. Works with and without SCS.
-//   - No blanket spell immunity: the item that makes him immune to every spell
-//     level loses that and its list of protections from single spells. He keeps
-//     his magic resistance, his other items' protections, and gains protections
-//     that keep the fight going until the scripted ending: instant death, removal
-//     from the fight, and spells that set his hit points.
+// Christopher on 2026-10-26, 2026-10-28 and 2026-10-29. Works with and without SCS.
+//   - Immune to spell levels 1-3 only: the item that makes him immune to every
+//     spell level loses that and its list of protections from single spells; he
+//     keeps the protections that belong to spells of levels 1-3. He keeps his magic
+//     resistance and his other items' protections, and gains protections that keep
+//     the fight going until the scripted ending (instant death, removal from the
+//     fight, spells that set his hit points) and from hold and paralysis.
 //   - +2 weapons hit him.
 //   - More hit points from Core Rules up.
 //   - From Core Rules up he appears under Improved Invisibility.
@@ -41,18 +42,20 @@ DEFINE_ACTION_FUNCTION cie_belhifet BEGIN
   LAF cie_belhifet_second_wave END
 END
 
-// No blanket spell immunity, +2 weapons hit him, protections that keep the fight
-// going until the scripted ending. The protections come from a spell (CIEBELPR)
-// his script applies when he appears, so the ending can take them away again
-// (cie_belhifet_ending).
+// Immunity to spell levels 1-3 instead of every level, +2 weapons hit him,
+// protections that keep the fight going until the scripted ending. The protections
+// come from a spell (CIEBELPR) his script applies when he appears, so the ending can
+// take them away again (cie_belhifet_ending).
 DEFINE_ACTION_FUNCTION cie_belhifet_protections BEGIN
   // Items that carry a spell-level immunity (opcode 102) lose it together with
   // their protections from single spells (opcode 206): together they make him
   // immune to every spell (base game: his ring BRING, levels 1-9 plus 44 spells
-  // that would otherwise slip through). Weapon immunities that stop +2 weapons go
-  // from every item (base game: his amulet BEHAMU). Changed items become copies
-  // only he carries.
+  // that would otherwise slip through). The protections that belong to spells of
+  // levels 1-3 move to CIEBELPR with a level 1-3 immunity (Christopher,
+  // 2026-10-29). Weapon immunities that stop +2 weapons go from every item (base
+  // game: his amulet BEHAMU). Changed items become copies only he carries.
   ACTION_CLEAR_ARRAY cie_bel_item
+  ACTION_CLEAR_ARRAY cie_low_spell
   COPY_EXISTING ~belhif.cre~ ~override~
     READ_LONG 0x2bc items_offset
     READ_LONG 0x2c0 items_count
@@ -71,6 +74,14 @@ DEFINE_ACTION_FUNCTION cie_belhifet_protections BEGIN
       COPY_EXISTING ~%item%.itm~ ~override~
         LPF cie_item_immunities RET level_immunity weapon_immunity END
       BUT_ONLY
+      ACTION_IF (level_immunity > 0) BEGIN
+        COPY_EXISTING ~%item%.itm~ ~override~
+          LPF cie_item_low_level_protections RET_ARRAY low END
+          PHP_EACH low AS spell => unused BEGIN
+            SPRINT $cie_low_spell(~%spell%~) ~1~
+          END
+        BUT_ONLY
+      END
       ACTION_IF (level_immunity > 0) OR (weapon_immunity > 0) BEGIN
         OUTER_SET cie_copies += 1
         OUTER_SPRINT copy ~CIEBELI%cie_copies%~
@@ -139,24 +150,71 @@ DEFINE_ACTION_FUNCTION cie_belhifet_protections BEGIN
     END
   BUT_ONLY
 
-  // CIEBELPR: instant death (13), slaying (55), petrification (134), polymorph
-  // (135), Power Word: Kill (209), imprisonment (211), maze (213), disintegration
-  // (238), and the spells above. Not dispellable, and nothing breaches it (no
-  // secondary type). CIEBELEN takes it away for the ending.
+  // CIEBELPR: immunity to spell levels 1-3 (102) and the single-spell protections
+  // kept for them; instant death (13), slaying (55), petrification (134),
+  // polymorph (135), Power Word: Kill (209), imprisonment (211), maze (213),
+  // disintegration (238), the spells above; paralysis (109) and hold (175, 185),
+  // Christopher, 2026-10-29. Not dispellable, and nothing breaches it (no secondary
+  // type). CIEBELEN takes it away for the ending. Spells his own scripts apply to
+  // him pass a spell-level immunity (base game: SCS's level 2 invisibility worked
+  // through his ring's levels 1-9).
   OUTER_SET hp_setters = 0
+  OUTER_SET low_spells = 0
   CREATE ~spl~ ~CIEBELPR~
     LPF cie_spl_one_ability END
-    PATCH_FOR_EACH blocked IN 13 55 134 135 209 211 213 238 BEGIN
+    FOR (level = 1; level <= 3; ++level) BEGIN
+      LPF ADD_SPELL_EFFECT INT_VAR opcode = 102 target = 1 timing = 1 parameter1 = level resist_dispel = 2 END
+    END
+    PATCH_FOR_EACH blocked IN 13 55 134 135 209 211 213 238 109 175 185 BEGIN
       LPF ADD_SPELL_EFFECT INT_VAR opcode = 101 target = 1 timing = 1 parameter2 = blocked resist_dispel = 2 END
     END
     PATCH_PHP_EACH cie_hp_setter AS spell => unused BEGIN
       LPF ADD_SPELL_EFFECT INT_VAR opcode = 206 target = 1 timing = 1 parameter1 = (0 - 1) resist_dispel = 2 STR_VAR resource = EVAL ~%spell%~ END
       SET hp_setters += 1
     END
+    PATCH_PHP_EACH cie_low_spell AS spell => unused BEGIN
+      PATCH_IF !(VARIABLE_IS_SET $cie_hp_setter(~%spell%~)) BEGIN
+        LPF ADD_SPELL_EFFECT INT_VAR opcode = 206 target = 1 timing = 1 parameter1 = (0 - 1) resist_dispel = 2 STR_VAR resource = EVAL ~%spell%~ END
+      END
+      SET low_spells += 1
+    END
   CREATE ~spl~ ~CIEBELEN~
     LPF cie_spl_one_ability END
     LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 timing = 1 resist_dispel = 2 STR_VAR resource = ~CIEBELPR~ END
-  PRINT ~chriz-iwd-encounters: Belhifet is protected from instant death, removal from the fight and %hp_setters% spells that set hit points (CIEBELPR).~
+  PRINT ~chriz-iwd-encounters: Belhifet is immune to spell levels 1-3 (%low_spells% single-spell protections kept for them), protected from instant death, removal from the fight, hold and paralysis, and from %hp_setters% spells that set hit points (CIEBELPR).~
+END
+
+// The current item's equipped protections from single spells (opcode 206) that
+// belong to spells of levels 1-3 (keys of low): a priest or wizard spell named by
+// its SPELL.IDS number (SPPRlnn, SPWIlnn) with level 1-3 in its header. Sub-spells
+// and other names (a Wish option, a level 6 spell's part) stay out.
+DEFINE_PATCH_FUNCTION cie_item_low_level_protections
+  RET_ARRAY low
+BEGIN
+  CLEAR_ARRAY low
+  READ_LONG  0x6a fx_offset
+  READ_SHORT 0x6e fx_first
+  READ_SHORT 0x70 fx_count
+  FOR (i = 0; i < fx_count; ++i) BEGIN
+    SET fx = fx_offset + (fx_first + i) * 0x30
+    READ_SHORT fx opcode
+    READ_ASCII (fx + 0x14) spell (8) NULL
+    TO_UPPER spell
+    PATCH_IF (opcode = 206) AND (~%spell%~ STRING_MATCHES_REGEXP ~^SP\(PR\|WI\)[1-3][0-9][0-9]$~ = 0)
+        AND (FILE_EXISTS_IN_GAME ~%spell%.spl~) BEGIN
+      SET type = 0
+      SET level = 0
+      INNER_PATCH_FILE ~%spell%.spl~ BEGIN
+        PATCH_IF (BUFFER_LENGTH >= 0x38) BEGIN
+          READ_SHORT 0x1c type
+          READ_LONG  0x34 level
+        END
+      END
+      PATCH_IF ((type = 1) OR (type = 2)) AND (level >= 1) AND (level <= 3) BEGIN
+        SPRINT $low(~%spell%~) ~1~
+      END
+    END
+  END
 END
 
 // Counts the current item's equipped effects (ITM V1: offset 0x6a, first index
