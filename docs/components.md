@@ -96,6 +96,15 @@ Belhifet (`BELHIF`, script name `EEBELHI1`) only exists from Poquelin's
 transformation on. Installed on a running game, every change applies as long as the
 party has not entered that area yet.
 
+Lab-tested on 2026-10-28 in IWD:EE 2.7.3.0 with SCS 35.21 and EEex 1.3.1, from a
+save in Easthaven with one level-1 character (kept alive for the measurement), on
+Normal, Hard and Insane, and on Hard without this component for comparison: his
+protection spell (there when he appears, gone before the death animation), hit
+points, preparation, the second wave (and the third cornugon on Insane), the
+transformation without dispel, the teleport pause and the ending. Not tested in the
+game: spells and +2 weapons against him (the install checks cover his items and
+effects), without SCS, and with a real party.
+
 ### Protections
 
 - **Base game:** his ring `BRING` makes him immune to spell levels 1–9 and protects
@@ -211,11 +220,17 @@ party has not entered that area yet.
 
 ### SCS's teleport pause
 
-- SCS 35.21 (`fiend/ssl/bel_conveyance.ssl`) checks the timer
-  `belhifet_bel_conveyance` before a teleport but sets
-  `belhifet_bel_conveyance_timer` after it. Its 24-second pause never applies: he
-  teleports whenever his 6-second spell timer has run out, and since the teleport
-  blocks come before his spell blocks, those rarely get their turn.
+- SCS 35.21 (`fiend/ssl/bel_conveyance.ssl`; installed as the timers
+  `belhifet_bel_conveyance` and `belhifet_bel_conveyance_timer`) checks one timer
+  before a teleport but sets the other after it. Its 24-second pause never applies:
+  he teleports whenever his 6-second spell timer has run out, and since the teleport
+  blocks come before his spell blocks, those rarely get their turn. Lab, Hard, SCS
+  as shipped: 34 teleports in 198 seconds (every 6 seconds on average), each with
+  Demon Fear, no Fiend Fireball.
 - **Change:** every timer his script sets as `<name>_timer` while it only checks
-  `<name>` is set as `<name>`. Without SCS, or once SCS fixes it, nothing changes
-  (the base game teleports him on its own timers, every 9–26 seconds).
+  `<name>` is set as `<name>`. Lab, Hard and Normal: his Infernal Conveyance every
+  24–31 seconds (SCS's Teleport Without Error now and then on top, 18–21 seconds
+  between teleports of either kind on average), Demon Fear every 6–14 seconds,
+  Fiend Fireball every 6–52 seconds, melee in between. Without SCS, or once SCS
+  fixes it, nothing changes (the base game teleports him on its own timers, every
+  9–26 seconds).

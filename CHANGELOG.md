@@ -7,8 +7,9 @@
   points from Core Rules up (base game 350: 500, 625, 750), Improved Invisibility
   when he appears from Core Rules up, his cornugons as a second wave below two
   thirds of his hit points (a third on Insane below one third), no dispel at
-  Poquelin's transformation, SCS 35.21's teleport pause repaired. Works with and
-  without SCS.
+  Poquelin's transformation, SCS 35.21's teleport pause repaired (as shipped he
+  teleports every 6 seconds on average). The ending plays as in the base game.
+  Works with and without SCS.
 
 ## v0.1.0 (2026-10-28)
 
