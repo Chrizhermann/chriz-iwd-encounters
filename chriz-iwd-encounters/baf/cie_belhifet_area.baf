@@ -1,0 +1,47 @@
+// chriz-iwd-encounters 300: Belhifet's cornugons come as a second wave, on top of
+// the finale area's script.
+// The base game keeps them on Hard and Insane, and on every difficulty once
+// SPRITE_IS_DEADGEM is set; Poquelin brings them through his portal while he talks
+// (cutscene EECRNENT), so they attack together with Belhifet and his golems. Here
+// they leave when the party enters (as the base game has them do below Hard) and
+// come back through the portal when Belhifet falls below two thirds of his hit
+// points: copies of their creatures with the same script names (CIEBELC1,
+// CIEBELC2), visible, with the Gate visual where they stood.
+// CIE_BEL_STAGE (area): 1 waiting, 2 arrived, 3 the Insane third arrived, 9 none
+// in this fight. With Continue(), later blocks still see the stage as it was when
+// the pass began, so the first two blocks have conditions that exclude each other.
+
+IF
+  Global("CIE_BEL_STAGE","MYAREA",0)
+  Global("END_PORTAL","GLOBAL",0)
+  OR(2)
+    DifficultyGT(NORMAL)
+    !Global("SPRITE_IS_DEADGEM","GLOBAL",0)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_BEL_STAGE","MYAREA",1)%cie_leave_lines%
+    Continue()
+END
+
+IF
+  Global("CIE_BEL_STAGE","MYAREA",0)
+  Global("END_PORTAL","GLOBAL",0)
+  !DifficultyGT(NORMAL)
+  Global("SPRITE_IS_DEADGEM","GLOBAL",0)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_BEL_STAGE","MYAREA",9)
+    Continue()
+END
+
+IF
+  Global("CIE_BEL_STAGE","MYAREA",1)
+  Global("END_PORTAL","GLOBAL",10)
+  Global("IWD_COMPLETE","MYAREA",0)
+  Exists("EEBELHI1")
+  HPPercentLT("EEBELHI1",67)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_BEL_STAGE","MYAREA",2)%cie_arrive_lines%
+    Continue()
+END

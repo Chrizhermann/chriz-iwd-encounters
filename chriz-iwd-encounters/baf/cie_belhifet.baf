@@ -1,0 +1,66 @@
+// chriz-iwd-encounters 300: Belhifet's protections, hit points by difficulty and
+// preparation, on top of the script that runs first for him. Each block fires once
+// and ends in Continue(), so his AI below runs as before.
+//   Protections (CIEBELPR): instant death, removal from the fight, spells that set
+//   hit points; the ending takes them away again before his death animation.
+//   Hit points: Core Rules, Hard and Insane raise them for good (CIEBHP3-5, built
+//   at install time from his own hit points); Easy and Normal keep them.
+//   From Core Rules up he casts Improved Invisibility on himself the moment he
+//   appears, instantly, like SCS's precasts.
+
+IF
+  Global("CIE_BEL_PR","LOCALS",0)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_BEL_PR","LOCALS",1)
+    ApplySpellRES("CIEBELPR",Myself)
+    Continue()
+END
+
+IF
+  Global("CIE_BEL_HP","LOCALS",0)
+  Difficulty(NORMAL)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_BEL_HP","LOCALS",1)
+    ApplySpellRES("CIEBHP3",Myself)
+    Continue()
+END
+
+IF
+  Global("CIE_BEL_HP","LOCALS",0)
+  Difficulty(HARD)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_BEL_HP","LOCALS",1)
+    ApplySpellRES("CIEBHP4",Myself)
+    Continue()
+END
+
+IF
+  Global("CIE_BEL_HP","LOCALS",0)
+  Difficulty(HARDEST)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_BEL_HP","LOCALS",1)
+    ApplySpellRES("CIEBHP5",Myself)
+    Continue()
+END
+
+IF
+  Global("CIE_BEL_HP","LOCALS",0)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_BEL_HP","LOCALS",1)
+    Continue()
+END
+
+IF
+  Global("CIE_BEL_PREP","LOCALS",0)
+  DifficultyGT(EASY)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_BEL_PREP","LOCALS",1)
+    ReallyForceSpell(Myself,WIZARD_IMPROVED_INVISIBILITY)
+    Continue()
+END

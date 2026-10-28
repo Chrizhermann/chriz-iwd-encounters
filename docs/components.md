@@ -85,3 +85,137 @@ nicht nackt sind". Graded by difficulty on 2026-10-28: "ab Core ein paar prebuff
 - **Not changed:** mages (SCS prepares them from Normal up), allies, Easy and Normal,
   and priests whose AI is neither an SCS script nor one of the two named above (for
   example priests that other mods add with their own scripts).
+
+## 300: Belhifet's final fight
+
+Works with and without SCS. Designed with Christopher on 2026-10-26 ("Denke der
+letzte Fight sollte etwas dauern und nicht gimicky sein") and 2026-10-28 ("Es ist
+kein geiles Endkampf-Design …, wenn alles gleichzeitig passiert"). The fight takes
+place in `AR1105` (Easthaven, chapter 6), which the party enters once, at the end;
+Belhifet (`BELHIF`, script name `EEBELHI1`) only exists from Poquelin's
+transformation on. Installed on a running game, every change applies as long as the
+party has not entered that area yet.
+
+### Protections
+
+- **Base game:** his ring `BRING` makes him immune to spell levels 1–9 and protects
+  him from 44 single spells, mostly area spells that would slip past the level
+  immunity. His amulet `BEHAMU` makes him immune to non-magical, +1 and +2 weapons
+  and to charm, sleep, stun, poison, horror and morale effects. `MIN1HP` keeps him at
+  1 hit point at least (and protects him from vorpal hits), so the area script plays
+  the ending once he is below 10 hit points. SCS adds 50 % magic resistance.
+- **Change:**
+  - an item that carries a spell-level immunity loses it and its protections from
+    single spells (the ring);
+  - every item loses its immunities to "enchanted" weapons of enchantment 2 or more
+    (the amulet's +2 entry): +2 weapons hit him;
+  - changed items become copies only Belhifet carries (`CIEBELI1`, `CIEBELI2`, …);
+    the same rules apply to effects on the creature itself;
+  - new protections against what would end the fight without taking his hit
+    points: instant death, slaying, petrification, polymorph, Power Word: Kill,
+    imprisonment, maze, disintegration (opcodes 13, 55, 134, 135, 209, 211, 213,
+    238), and every spell that takes his hit points to the bottom in one go
+    instead of dealing damage. Found at install time over all spell types (such
+    effects often sit in a sub-spell): damage that sets hit points to at most a
+    tenth of his own (at least 10) or to at most 10 %, or takes 90 % or more;
+    current or maximum hit points set the same way (opcodes 12, 17, 18). Spells
+    that only take a small share, or set hit points high, stay. In the reference
+    install: the old Harm that sets hit points to 1–4, a "reduce by 100 %"
+    sub-spell, and a few helper spells of other mods; Polymorph Other's polymorph
+    falls under the polymorph protection;
+  - the protections are one spell (`CIEBELPR`: not dispellable, no secondary type
+    to breach) that the script running first for him applies when he appears, so
+    the ending can take them away again (below).
+- **Kept:** his magic resistance and resistances, the amulet's protections from
+  charm, sleep, stun, poison, horror and morale effects, the minimum hit point and
+  the scripted ending.
+
+### Ending
+
+- **Base game:** below 10 hit points the area script starts the cutscene `EEBELDTH`;
+  with SCS his own script does the same. Both cast his death animation (`SPIN171`,
+  `INNATE_BELHIFETS_DEATH_ANIMATION`: a visual and an instant death at power 10,
+  which the ring's spell-level immunity never blocked), play his death sequence and
+  start `EEBELKIL`, which kills the golems and cornugons and plays the end movies.
+  The instant death itself does not take: `MIN1HP`'s minimum hit point makes him
+  immune to directly applied instant death (IESDP, opcode 208). In the lab he stayed
+  at 1 hit point while the ending played.
+- **Change:** every script that casts the death animation on him first applies
+  `CIEBELEN` (removes `CIEBELPR`) and waits two AI ticks, so he meets the death
+  animation as in the base game, also where another mod kills him for real (for
+  example after taking `MIN1HP`). Lab, Hard: the protections were gone when the
+  animation started, and the ending ran.
+
+### Hit points
+
+- Easy and Normal: unchanged (base game 350).
+- Core Rules ×10/7, Hard ×25/14, Insane ×15/7 of his installed hit points (base
+  game: 500, 625, 750), rounded. Christopher, 2026-10-28: Core Rules "wesentlich
+  mehr", 875 on Insane perhaps too much.
+- Applied once, when he appears: a permanent raise of maximum and current hit points
+  (opcode 18, mode 0), which his magic resistance does not stop. Built at install
+  time as `CIEBHP3`, `CIEBHP4`, `CIEBHP5`; the rule sits on top of the script that
+  runs first for him.
+- With SCS: its fiend "staying power" (on Hard and Insane, or on any difficulty its
+  fiend setting asks for) adds half of his hit points on top (`DW#FIEHP`: maximum
+  and current hit points to 150 %, opcode 18 mode 2, renewed before it runs out).
+  It multiplies the raised value: in the lab on Hard 625 became 937; Insane works
+  out at 1,125.
+
+### Preparation
+
+- Core Rules and up: he casts Improved Invisibility on himself the moment he
+  appears, instantly, like SCS's precasts. With SCS he recasts it in the fight as SCS
+  intends. Christopher, 2026-10-28: he buffs before and during the fight, as SCS
+  does.
+
+### Second wave
+
+- **Base game:** two invisible cornugons (`Cornugon_1`, `Cornugon_2`) are destroyed
+  on entry below Hard, unless Icasaracht's soul gem has been destroyed
+  (`SPRITE_IS_DEADGEM`, the end of Heart of Winter). During Poquelin's talk they come
+  through his portal (cutscene `EECRNENT`) and fight from the first moment, together
+  with Belhifet and the two iron golems.
+- **Change:** where the base game keeps them, they leave when the party enters (as
+  the base game has them do below Hard) and come back through the portal when
+  Belhifet falls below two thirds of his hit points: copies of their creatures with
+  the placements' scripts and the same script names (`CIEBELC1`, `CIEBELC2`),
+  visible, at their old places by the portal, with the Gate visual (`SPSUMGTE`).
+  The ending cutscene and every script that names them find them as before.
+  Deactivating them while they wait is not enough: a deactivated creature keeps
+  running its scripts, and in the lab the waiting cornugons teleported after the
+  party.
+- A cornugon whose creature cannot be copied (stored inside the area file) stays as
+  in the base game and fights from the start; the installer says so.
+- **Insane:** below one third, a third cornugon comes through, between the two
+  cornugons' places (`CIEBELC3`: a copy of `Cornugon_1`'s creature with that
+  placement's scripts, script name `CIE_CORNUGON_3`, visible). The ending cutscene
+  `EEBELKIL` kills the golems and cornugons by name; it gets the same line for the
+  third, and without that line the third is left out.
+- The golems are unchanged.
+- The rule lives in the finale area's script, stage in the area variable
+  `CIE_BEL_STAGE` (1 waiting, 2 arrived, 3 third arrived, 9 none in this fight).
+
+### Poquelin's transformation
+
+- **Base game:** the transformation spell (`SPIN183`,
+  `INNATE_FLASH_DESTROY_SUMMON_BELHIFET`) dispels everyone around Poquelin without a
+  roll (opcode 58 mode 0), takes summoned weapons and magical berries from them,
+  destroys illusions and shows "Dispel Effects". The cutscene `EEPOQCNG` also forces
+  Dispel Magic on the nearest party member (WeiDU prints the line with
+  `WIZARD_REMOVE_MAGIC`, a name that shares the spell's number on IWD:EE).
+- **Change:** those effects go; so does every spell the cutscene forces on someone
+  other than Poquelin that dispels (opcode 58), found by its effects, not its name.
+  The transformation, its visuals and sound, and Poquelin's replacement by Belhifet
+  stay. Christopher, 2026-10-28: the dispel goes.
+
+### SCS's teleport pause
+
+- SCS 35.21 (`fiend/ssl/bel_conveyance.ssl`) checks the timer
+  `belhifet_bel_conveyance` before a teleport but sets
+  `belhifet_bel_conveyance_timer` after it. Its 24-second pause never applies: he
+  teleports whenever his 6-second spell timer has run out, and since the teleport
+  blocks come before his spell blocks, those rarely get their turn.
+- **Change:** every timer his script sets as `<name>_timer` while it only checks
+  `<name>` is set as `<name>`. Without SCS, or once SCS fixes it, nothing changes
+  (the base game teleports him on its own timers, every 9–26 seconds).

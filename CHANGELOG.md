@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- 300: Belhifet's final fight. No blanket spell immunity (protected only from what
+  would end the fight without taking his hit points), +2 weapons hit him, more hit
+  points from Core Rules up (base game 350: 500, 625, 750), Improved Invisibility
+  when he appears from Core Rules up, his cornugons as a second wave below two
+  thirds of his hit points (a third on Insane below one third), no dispel at
+  Poquelin's transformation, SCS 35.21's teleport pause repaired. Works with and
+  without SCS.
+
 ## v0.1.0 (2026-10-28)
 
 - 100: repairs SCS 35.21 caster AI on IWD:EE (Shadowed Elven Clerics without AI;

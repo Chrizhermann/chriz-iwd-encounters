@@ -8,6 +8,7 @@ SCS.
 |---|---|
 | 100 | Repairs SCS caster AI that misses some IWD:EE casters: two Shadowed Elven Clerics that end up without any AI, and a few shamans and a wizard whose melee script takes over from their spell AI (they walk up to the party and only hit it). |
 | 200 | Enemy priests prepare the moment they first see the party: a self-protection on Core Rules (from Hard, SCS precasts its own), a group blessing from Hard up. They use and spend their own memorised spells, like SCS's precasts. |
+| 300 | Belhifet's final fight: no blanket spell immunity, +2 weapons hit him, more hit points from Core Rules up, Improved Invisibility when he appears, his cornugons come as a second wave (a third on Insane), Poquelin's transformation no longer dispels the party. Works with and without SCS. |
 
 Details per change, written so they can move to the Chriz script engine later:
 [docs/components.md](docs/components.md).
@@ -15,7 +16,8 @@ Details per change, written so they can move to the Chriz script engine later:
 ## Install
 
 Needs IWD:EE (built and tested on 2.7.3.0) and SCS's smarter priests (component 200)
-or smarter mages/priests (component 100). Extract the release zip from the GitHub
+or smarter mages/priests (component 100); component 300 also works without SCS.
+Extract the release zip from the GitHub
 releases into the game folder (it holds `chriz-iwd-encounters/`) and run
 `setup-chriz-iwd-encounters` with WeiDU after SCS.
 
