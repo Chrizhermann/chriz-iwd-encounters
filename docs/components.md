@@ -96,14 +96,15 @@ Belhifet (`BELHIF`, script name `EEBELHI1`) only exists from Poquelin's
 transformation on. Installed on a running game, every change applies as long as the
 party has not entered that area yet.
 
-Lab-tested on 2026-10-28 in IWD:EE 2.7.3.0 with SCS 35.21 and EEex 1.3.1, from a
-save in Easthaven with one level-1 character (kept alive for the measurement), on
-Normal, Hard and Insane, and on Hard without this component for comparison: his
-protection spell (there when he appears, gone before the death animation), hit
-points, preparation, the second wave (and the third cornugon on Insane), the
-transformation without dispel, the teleport pause and the ending. Not tested in the
-game: spells and +2 weapons against him (the install checks cover his items and
-effects), without SCS, and with a real party.
+Lab-tested on 2026-10-28 and 2026-10-29 in IWD:EE 2.7.3.0 with SCS 35.21 and EEex
+1.3.1, from a save in Easthaven with one level-1 character (kept alive for the
+measurement), on Normal, Hard and Insane, and on Hard without this component for
+comparison: his protection spell (there when he appears, gone before the death
+animation), hit points, preparation, the second wave (and the third cornugon on
+Insane), the transformation without dispel (every later dispel on the character came
+from the area's traps, logged effect by effect), the teleport pause and the ending.
+Not tested in the game: spells and +2 weapons against him (the install checks cover
+his items and effects), without SCS, and with a real party.
 
 ### Protections
 
@@ -217,6 +218,10 @@ effects), without SCS, and with a real party.
   other than Poquelin that dispels (opcode 58), found by its effects, not its name.
   The transformation, its visuals and sound, and Poquelin's replacement by Belhifet
   stay. Christopher, 2026-10-28: the dispel goes.
+- **Not changed:** the finale area's six proximity traps (`Trigger Point 1`–`6`,
+  script `GNT2010`, detection 95, removal 100, they reset) cast `SPWI010` on whoever
+  enters: a dispel without a roll (opcode 58 mode 0). Both are base game. In the lab
+  a character panicked by Demon Fear ran into them 17 times in one fight.
 
 ### SCS's teleport pause
 
