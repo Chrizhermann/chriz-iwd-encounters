@@ -106,9 +106,13 @@ from the area's traps, logged effect by effect), the teleport pause and the endi
 With the level 1–3 immunity (2026-10-29, his invisibility and magic resistance taken
 for the test): Magic Missile (twice) and Flame Arrow did no damage, Lower Resistance
 (level 5) took effect, and the spells his own scripts apply to him still worked
-(protection spell, SCS's hit point bonus, invisibility, teleports). Not tested in
-the game: +2 weapons and hold effects against him (the install checks cover his items
-and protections), without SCS, and with a real party.
+(protection spell, SCS's hit point bonus, invisibility, teleports). Fire (2026-10-29,
+Hard): in the game his fire and magic fire resistance read 100; 20 fire and 20 magic
+fire damage took no hit points, 20 electricity damage took 20 (his amulet makes him
+immune to cold, so cold is no control). Not tested in the game: +2 weapons and hold
+effects against him (the install checks cover his items and protections; the hold
+protections are the golems' set, Christopher, 2026-10-29: no lab test needed), without
+SCS, and with a real party.
 
 ### Protections
 
@@ -146,17 +150,22 @@ and protections), without SCS, and with a real party.
     sub-spell, and a few helper spells of other mods; Polymorph Other's polymorph
     falls under the polymorph protection;
   - protection from paralysis and hold (opcodes 109, 175, 185; IWD:EE's Hold Person
-    and Hold Monster hold with 175). Christopher, 2026-10-29;
+    and Hold Monster hold with 175), set up as the game's own hold-immune creatures
+    have it (base game: the golems' `IRONGOL`, `GOLSTONE`, `GOLCLA`): no "Held" or
+    "Paralyzed" text and no hold animation over him. SCS gives every hold-immune
+    creature the spell state `HOLD_IMMUNITY` and makes the hold spells skip creatures
+    in it; he gets it too wherever `SPLSTATE.IDS` has it. Christopher, 2026-10-29;
+  - immune to fire again, as in the base game: fire and magic fire resistance 100 %.
+    SCS 35.21 lowers both to 50 % (improved fiends, component 6510), so his own
+    fireballs and the blast of his teleport hurt him (six hits in one lab fight, about
+    17 hit points per fireball). Christopher, 2026-10-29: fire immune, on theme for a
+    devil;
   - the protections are one spell (`CIEBELPR`: not dispellable, no secondary type
     to breach) that the script running first for him applies when he appears, so
     the ending can take them away again (below).
-- **Kept:** his magic resistance and resistances, the amulet's protections from
-  charm, sleep, stun, poison, horror and morale effects, the minimum hit point and
-  the scripted ending.
-- **SCS:** 35.21 lowers his fire resistance from 100 % to 50 % (component 6510), so
-  his own fireballs and the blast of his teleport hurt him when he stands near their
-  target (six hits in one lab fight, about 17 hit points per fireball). Unchanged
-  here.
+- **Kept:** his magic resistance and his other resistances, the amulet's protections
+  from charm, sleep, stun, poison, horror and morale effects, the minimum hit point
+  and the scripted ending.
 
 ### Ending
 

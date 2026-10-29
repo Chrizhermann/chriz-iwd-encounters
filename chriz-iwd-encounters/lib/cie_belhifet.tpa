@@ -6,6 +6,7 @@
 //     resistance and his other items' protections, and gains protections that keep
 //     the fight going until the scripted ending (instant death, removal from the
 //     fight, spells that set his hit points) and from hold and paralysis.
+//   - Immune to fire again, as in the base game (SCS lowers it to 50 %).
 //   - +2 weapons hit him.
 //   - More hit points from Core Rules up.
 //   - From Core Rules up he appears under Improved Invisibility.
@@ -35,6 +36,7 @@ DEFINE_ACTION_FUNCTION cie_belhifet BEGIN
   END
 
   LAF cie_belhifet_protections END
+  LAF cie_belhifet_fire END
   LAF cie_belhifet_hit_points_and_prep END
   LAF cie_belhifet_ending END
   LAF cie_belhifet_no_dispel END
@@ -158,6 +160,12 @@ DEFINE_ACTION_FUNCTION cie_belhifet_protections BEGIN
   // type). CIEBELEN takes it away for the ending. Spells his own scripts apply to
   // him pass a spell-level immunity (base game: SCS's level 2 invisibility worked
   // through his ring's levels 1-9).
+  // Hold and paralysis as the game's own hold-immune creatures have it (base game:
+  // the iron, stone and clay golems' IRONGOL, GOLSTONE, GOLCLA): no "Held" (14102,
+  // 35606) or "Paralyzed" (35542) text and no hold animation. SCS adds the spell
+  // state HOLD_IMMUNITY to every such creature and makes the hold spells skip
+  // creatures in it; he gets it wherever SPLSTATE.IDS has it.
+  OUTER_SET cie_hold_state = IDS_OF_SYMBOL (~splstate~ ~HOLD_IMMUNITY~)
   OUTER_SET hp_setters = 0
   OUTER_SET low_spells = 0
   CREATE ~spl~ ~CIEBELPR~
@@ -167,6 +175,15 @@ DEFINE_ACTION_FUNCTION cie_belhifet_protections BEGIN
     END
     PATCH_FOR_EACH blocked IN 13 55 134 135 209 211 213 238 109 175 185 BEGIN
       LPF ADD_SPELL_EFFECT INT_VAR opcode = 101 target = 1 timing = 1 parameter2 = blocked resist_dispel = 2 END
+    END
+    PATCH_FOR_EACH strref IN 14102 35542 35606 BEGIN
+      LPF ADD_SPELL_EFFECT INT_VAR opcode = 267 target = 1 timing = 1 parameter1 = strref resist_dispel = 2 END
+    END
+    PATCH_FOR_EACH animation IN ~PARALH~ ~SPFLAYER~ ~SPMINDAT~ BEGIN
+      LPF ADD_SPELL_EFFECT INT_VAR opcode = 296 target = 1 timing = 1 resist_dispel = 2 STR_VAR resource = EVAL ~%animation%~ END
+    END
+    PATCH_IF (cie_hold_state >= 0) BEGIN
+      LPF ADD_SPELL_EFFECT INT_VAR opcode = 328 target = 1 timing = 1 parameter2 = cie_hold_state resist_dispel = 2 END
     END
     PATCH_PHP_EACH cie_hp_setter AS spell => unused BEGIN
       LPF ADD_SPELL_EFFECT INT_VAR opcode = 206 target = 1 timing = 1 parameter1 = (0 - 1) resist_dispel = 2 STR_VAR resource = EVAL ~%spell%~ END
@@ -181,7 +198,22 @@ DEFINE_ACTION_FUNCTION cie_belhifet_protections BEGIN
   CREATE ~spl~ ~CIEBELEN~
     LPF cie_spl_one_ability END
     LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 timing = 1 resist_dispel = 2 STR_VAR resource = ~CIEBELPR~ END
-  PRINT ~chriz-iwd-encounters: Belhifet is immune to spell levels 1-3 (%low_spells% single-spell protections kept for them), protected from instant death, removal from the fight, hold and paralysis, and from %hp_setters% spells that set hit points (CIEBELPR).~
+  PRINT ~chriz-iwd-encounters: Belhifet is immune to spell levels 1-3 (%low_spells% single-spell protections kept for them), protected from instant death, removal from the fight, hold and paralysis (hold-immune spell state %cie_hold_state%, -1 for none), and from %hp_setters% spells that set hit points (CIEBELPR).~
+END
+
+// Fire: immune, as in the base game (fire and magic fire resistance 100). SCS 35.21
+// (improved fiends) lowers both to 50, so his own fireballs and the blast of his
+// teleport hurt him. Christopher, 2026-10-29: fire immune, on theme for a devil.
+DEFINE_ACTION_FUNCTION cie_belhifet_fire BEGIN
+  OUTER_SET fire = 0
+  OUTER_SET magic_fire = 0
+  COPY_EXISTING ~belhif.cre~ ~override~
+    READ_BYTE 0x59 fire
+    READ_BYTE 0x5e magic_fire
+    WRITE_BYTE 0x59 100
+    WRITE_BYTE 0x5e 100
+  BUT_ONLY
+  PRINT ~chriz-iwd-encounters: Belhifet is immune to fire and magic fire (they were %fire% and %magic_fire% percent).~
 END
 
 // The current item's equipped protections from single spells (opcode 206) that

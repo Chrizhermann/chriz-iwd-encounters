@@ -16,6 +16,10 @@ EXT = {CRE_TYPE: "CRE", ARE_TYPE: "ARE", BCS_TYPE: "BCS", ITM_TYPE: "ITM", SPL_T
 # 300: what Belhifet must be protected from (opcode 101 targets): instant death,
 # removal from the fight, paralysis and hold
 BELHIFET_BLOCKED = (13, 55, 134, 135, 209, 211, 213, 238, 109, 175, 185)
+# ... and, as the game's own hold-immune creatures (the golems), the hold texts
+# ("Held", "Paralyzed", "Held") and animations
+BELHIFET_HOLD_STRINGS = (14102, 35542, 35606)
+BELHIFET_HOLD_ANIMATIONS = ("PARALH", "SPFLAYER", "SPMINDAT")
 # script slots by run order (SCRLEV.IDS): override, specifics, class, race, general, default
 ARE_SLOTS = (0x50, 0x78, 0x60, 0x68, 0x58, 0x70)
 CRE_SLOTS = (0x248, None, 0x250, 0x258, 0x260, 0x268)
@@ -321,6 +325,27 @@ def main():
         missing = [op for op in BELHIFET_BLOCKED if op not in blocked]
         c.check(pr is not None and not missing,
                 "CIEBELPR protects from opcodes %s (missing: %s)" % (BELHIFET_BLOCKED, missing or "none"))
+        strings = {e[1] for e in pr_fx if e[0] == 267}
+        animations = {e[3] for e in pr_fx if e[0] == 296}
+        missing = sorted(set(BELHIFET_HOLD_STRINGS) - strings) + sorted(set(BELHIFET_HOLD_ANIMATIONS) - animations)
+        c.check(not missing, "CIEBELPR hides the hold texts %s and animations %s (missing: %s)"
+                % (BELHIFET_HOLD_STRINGS, BELHIFET_HOLD_ANIMATIONS, missing or "none"))
+        # the same as the golems' hold immunity as the game ships it (texts and
+        # animations the data marks with a hold or paralysis opcode)
+        golem = []
+        for item in ("IRONGOL", "GOLSTONE", "GOLCLA"):
+            data = res.original(item, "ITM")
+            golem += itm_equipped(data) if data else []
+        golem_hold = {("267", e[1]) for e in golem if e[0] == 267 and e[2] in (109, 175, 185)} \
+            | {("296", e[3]) for e in golem if e[0] == 296 and e[2] in (109, 175, 185)}
+        ours = {("267", s) for s in strings} | {("296", a) for a in animations}
+        c.check(not golem_hold - ours, "CIEBELPR hides every hold text and animation the base game's golems hide "
+                "(%d; missing: %s)" % (len(golem_hold), sorted(golem_hold - ours) or "none"))
+        hold_state = ids_numbers(res.get("SPLSTATE", "IDS")).get("HOLD_IMMUNITY")
+        c.check(hold_state is None or any(e[0] == 328 and e[2] == hold_state for e in pr_fx),
+                "CIEBELPR sets the hold-immune spell state where SPLSTATE.IDS has one (%s)" % hold_state)
+        c.check(bel[0x59] == 100 and bel[0x5E] == 100,
+                "Belhifet is immune to fire and magic fire (%d, %d)" % (bel[0x59], bel[0x5E]))
         protected = {e[3] for e in pr_fx if e[0] == 206}
         # immune to spell levels 1-3 only (Christopher, 2026-10-29), with the
         # protections from single spells of those levels that his items had
