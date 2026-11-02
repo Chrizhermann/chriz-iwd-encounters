@@ -8,7 +8,8 @@
   without taking his hit points, +2 weapons hit him, more hit
   points from Core Rules up (base game 350: 500, 625, 750; final values, SCS's
   staying power does not add to them), Improved Invisibility
-  when he appears from Core Rules up, his cornugons as a second wave below two
+  when he appears and Haste for 30 seconds out of every 42 from Core Rules up, his
+  cornugons as a second wave below two
   thirds of his hit points (a third on Insane below one third) and fire immune
   again, no dispel at
   Poquelin's transformation, SCS 35.21's teleport pause repaired (as shipped he

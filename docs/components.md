@@ -110,8 +110,12 @@ for the test): Magic Missile (twice) and Flame Arrow did no damage, Lower Resist
 Hard): in the game his fire and magic fire resistance read 100; 20 fire and 20 magic
 fire damage took no hit points, 20 electricity damage took 20 (his amulet makes him
 immune to cold, so cold is no control). Hit points with SCS (2026-11-03, Hard): 625
-when he appears; SCS's staying power was applied once and did not take. Not tested
-in the game: +2 weapons and hold
+when he appears; SCS's staying power was applied once and did not take. Haste
+(2026-11-03, Hard): hasted 30.0 seconds, then 12.0 without, twice in a row; the
+attacks stat read 2 per hasted half round instead of 3 per round (4 per round, as
+IESDP describes; a hasted control character with 1 attack still read 1, so 2 per
+round), and the ending's `CIEBELEN` took the haste away within 2 seconds before the
+ending played. Not tested in the game: +2 weapons and hold
 effects against him (the install checks cover his items and protections; the hold
 protections are the golems' set, Christopher, 2026-10-29: no lab test needed), without
 SCS, and with a real party.
@@ -213,6 +217,19 @@ SCS, and with a real party.
   appears, instantly, like SCS's precasts. With SCS he recasts it in the fight as SCS
   intends. Christopher, 2026-10-28: he buffs before and during the fight, as SCS
   does.
+- **Haste**, Core Rules and up: normal Haste for 30 seconds, then 12 seconds
+  without, again and again, free (`CIEBELHA`). Christopher, 2026-10-29 ("immer
+  wieder … mit irgendeinem Cooldown") and 2026-11-03 (30 on, 12 off; Improved Haste
+  all the time would be too much). Normal Haste halves his round timer and gives one
+  more attack per round (IESDP, opcode 16): 4 attacks instead of 3, and faster
+  movement. It looks and sounds like the game's Haste (its visual, glow, sounds,
+  "Hasted" and the Haste icon) and is dispellable like it, but his immunity to spell
+  levels 1–3 keeps Dispel Magic and Slow away from him, so the party can only wait
+  for the pause.
+- His script starts the cycle once; after that the spell casts itself again 42
+  seconds later (a delayed opcode 146 that no dispel removes), independent of his
+  AI. A script timer was not exact enough: in the lab his AI noticed it 2–5 seconds
+  late while he was busy. The ending's `CIEBELEN` stops the cycle.
 
 ### Second wave
 

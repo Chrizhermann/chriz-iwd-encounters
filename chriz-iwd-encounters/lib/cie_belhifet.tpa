@@ -11,7 +11,8 @@
 //   - +2 weapons hit him.
 //   - More hit points from Core Rules up, as final values: spells that raise his
 //     maximum hit points by a percentage (SCS's fiend "staying power") do not take.
-//   - From Core Rules up he appears under Improved Invisibility.
+//   - From Core Rules up he appears under Improved Invisibility, and Haste comes
+//     over him for 30 seconds, then pauses for 12, again and again.
 //   - His two cornugons (the base game keeps them on Hard and Insane) come through
 //     Poquelin's portal as a second wave when he falls below two thirds of his hit
 //     points; on Insane a third follows below one third.
@@ -40,6 +41,7 @@ DEFINE_ACTION_FUNCTION cie_belhifet BEGIN
   LAF cie_belhifet_protections END
   LAF cie_belhifet_fire END
   LAF cie_belhifet_hit_points_and_prep END
+  LAF cie_belhifet_haste END
   LAF cie_belhifet_ending END
   LAF cie_belhifet_no_dispel END
   LAF cie_belhifet_teleport_pause END
@@ -213,9 +215,12 @@ DEFINE_ACTION_FUNCTION cie_belhifet_protections BEGIN
       END
       SET hp_raisers += 1
     END
+  // CIEBELEN: the ending takes his protections away, and stops his Haste cycle
+  // (CIEBELHA, cie_belhifet_haste)
   CREATE ~spl~ ~CIEBELEN~
     LPF cie_spl_one_ability END
     LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 timing = 1 resist_dispel = 2 STR_VAR resource = ~CIEBELPR~ END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 timing = 1 resist_dispel = 2 STR_VAR resource = ~CIEBELHA~ END
   PRINT ~chriz-iwd-encounters: Belhifet is immune to spell levels 1-3 (%low_spells% single-spell protections kept for them), protected from instant death, removal from the fight, hold and paralysis (hold-immune spell state %cie_hold_state%, -1 for none), from %hp_setters% spells that set hit points and from %hp_raisers% that raise them by a percentage (CIEBELPR).~
 END
 
@@ -512,6 +517,33 @@ DEFINE_ACTION_FUNCTION cie_belhifet_hit_points_and_prep BEGIN
   OUTER_SET cie_hp_hard   += cie_bel_hp
   OUTER_SET cie_hp_insane += cie_bel_hp
   PRINT ~chriz-iwd-encounters: Belhifet has %cie_bel_hp% hit points up to Normal, %cie_hp_core% on Core Rules, %cie_hp_hard% on Hard and %cie_hp_insane% on Insane (script %cie_bel_script%).~
+END
+
+// Haste from Core Rules up, Christopher, 2026-10-29 and 2026-11-03: normal Haste
+// (half the round timer, one more attack per round, faster movement; his attacks
+// stat then reads per half round: 2 instead of 3) for 30 seconds, then 12 seconds
+// without, again and again; free, and independent of his AI. His script starts it
+// once (cie_belhifet.baf); after that the spell casts itself again 42 seconds later
+// (a delayed opcode 146 that no dispel removes). A script timer is not exact enough:
+// in the lab his AI noticed it 2-5 seconds late while he was busy. CIEBELEN stops
+// the cycle for the ending. It looks and sounds like the game's Haste (SPWI305: its
+// visual, glow and sounds, "Hasted" and the Haste icon) and the haste itself is
+// dispellable like it, though his immunity to spell levels 1-3 keeps Dispel Magic
+// and Slow away from him. Power 0, so that immunity does not stop it either.
+DEFINE_ACTION_FUNCTION cie_belhifet_haste BEGIN
+  CREATE ~spl~ ~CIEBELHA~
+    LPF cie_spl_one_ability END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 16 target = 1 timing = 0 duration = 30 parameter2 = 0 resist_dispel = 3 END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 142 target = 1 timing = 0 duration = 30 parameter2 = 38 resist_dispel = 3 END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 139 target = 1 timing = 1 parameter1 = 14023 resist_dispel = 3 END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 215 target = 1 timing = 1 resist_dispel = 3 STR_VAR resource = ~ALTERH~ END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 61 target = 1 timing = 1 parameter1 = 0xa0d24b00 parameter2 = 0x1e0000 resist_dispel = 3 END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 174 target = 1 timing = 1 resist_dispel = 3 STR_VAR resource = ~#EFF_M08~ END
+    // the game's end-of-spell sound when it runs out
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 174 target = 1 timing = 4 duration = 30 resist_dispel = 3 STR_VAR resource = ~#EFF_E01~ END
+    // the next cycle: cast again, instantly, 42 seconds after this one
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 146 target = 1 timing = 4 duration = 42 parameter2 = 1 resist_dispel = 2 STR_VAR resource = ~CIEBELHA~ END
+  PRINT ~chriz-iwd-encounters: from Core Rules up Belhifet is hasted for 30 seconds, then 12 without, again and again (CIEBELHA).~
 END
 
 // The scripted ending kills him with his death animation (the base game's SPIN171,

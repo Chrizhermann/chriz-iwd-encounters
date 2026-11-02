@@ -190,6 +190,26 @@ def takes_hit_points(effects, limit):
     return False
 
 
+def spl_effect_rows(data):
+    """Every ability effect of a spell with the fields the checks need."""
+    if len(data) < 0x72:
+        return []
+    ab_off, = struct.unpack_from("<I", data, 0x64)
+    ab_count, = struct.unpack_from("<H", data, 0x68)
+    fx_off, = struct.unpack_from("<I", data, 0x6A)
+    rows = []
+    for a in range(ab_count):
+        count, first = struct.unpack_from("<HH", data, ab_off + 0x28 * a + 0x1E)
+        for i in range(count):
+            o = fx_off + 0x30 * (first + i)
+            op, _, power = struct.unpack_from("<HBB", data, o)
+            p1, p2 = struct.unpack_from("<ii", data, o + 0x4)
+            duration, = struct.unpack_from("<I", data, o + 0xE)
+            rows.append({"opcode": op, "power": power, "p1": p1, "p2": p2, "timing": data[o + 0xC],
+                         "dispel": data[o + 0xD], "duration": duration, "resource": resref(data, o + 0x14)})
+    return rows
+
+
 def multiplies_hit_points(effects):
     """Effects that raise maximum hit points by a percentage (opcode 18, modes 2 and 5,
     more than 100), such as SCS's fiend "staying power"."""
@@ -394,8 +414,23 @@ def main():
         c.check(any(e[0] == 208 for e in equipped), "Belhifet keeps his minimum hit point")
         first = next((s for s in (slot(bel, o) for o in CRE_SLOTS if o) if s), "")
         c.check(c.script(first).count(b"cie_bel_hp") == 8 and c.script(first).count(b"cie_bel_prep") == 2
-                and c.script(first).count(b'cie_bel_pr"') == 2,
-                "%s carries the protection, hit point and preparation blocks once" % first)
+                and c.script(first).count(b'cie_bel_pr"') == 2 and c.script(first).count(b"cie_bel_haste") == 2,
+                "%s carries the protection, hit point, preparation and Haste blocks once" % first)
+        # Haste from Core Rules up: 30 seconds on, 12 off (Christopher, 2026-11-03);
+        # power 0, so his own spell-level immunity does not stop it
+        haste = spl_effect_rows(res.get("CIEBELHA", "SPL") or b"")
+        on = [r for r in haste if r["opcode"] == 16 and r["p2"] == 0]
+        c.check(len(on) == 1 and on[0]["duration"] == 30 and on[0]["timing"] == 0
+                and all(r["power"] == 0 for r in haste),
+                "CIEBELHA hastes him for 30 seconds at power 0 (%s)" % on)
+        # his script starts it once; the spell casts itself again 42 seconds later
+        # (delayed, not dispellable), and the ending stops it
+        again = [r for r in haste if r["opcode"] == 146 and r["resource"] == "CIEBELHA"]
+        c.check(b'"ciebelha"' in c.script(first) and len(again) == 1 and again[0]["timing"] == 4
+                and again[0]["duration"] == 42 and not again[0]["dispel"] & 1,
+                "%s starts it, and it casts itself again every 42 seconds (%s)" % (first, again))
+        c.check(any(e[0] == 321 and e[3] == "CIEBELHA" for e in spl_ability_effects(res.get("CIEBELEN", "SPL") or b"")),
+                "CIEBELEN stops the Haste cycle")
         # every script that casts the death animation on him drops CIEBELPR first
         death = ids_numbers(res.get("SPELL", "IDS")).get("INNATE_BELHIFETS_DEATH_ANIMATION")
         c.check(death is not None, "SPELL.IDS has INNATE_BELHIFETS_DEATH_ANIMATION")

@@ -7,6 +7,8 @@
 //   at install time from his own hit points); Easy and Normal keep them.
 //   From Core Rules up he casts Improved Invisibility on himself the moment he
 //   appears, instantly, like SCS's precasts.
+//   Haste (CIEBELHA) from Core Rules up: 30 seconds hasted, 12 without, again and
+//   again (the last block starts it once; the spell casts itself again).
 
 IF
   Global("CIE_BEL_PR","LOCALS",0)
@@ -62,5 +64,15 @@ THEN
   RESPONSE #100
     SetGlobal("CIE_BEL_PREP","LOCALS",1)
     ReallyForceSpell(Myself,WIZARD_IMPROVED_INVISIBILITY)
+    Continue()
+END
+
+IF
+  Global("CIE_BEL_HASTE","LOCALS",0)
+  DifficultyGT(EASY)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_BEL_HASTE","LOCALS",1)
+    ApplySpellRES("CIEBELHA",Myself)
     Continue()
 END
