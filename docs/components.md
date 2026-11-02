@@ -109,7 +109,9 @@ for the test): Magic Missile (twice) and Flame Arrow did no damage, Lower Resist
 (protection spell, SCS's hit point bonus, invisibility, teleports). Fire (2026-10-29,
 Hard): in the game his fire and magic fire resistance read 100; 20 fire and 20 magic
 fire damage took no hit points, 20 electricity damage took 20 (his amulet makes him
-immune to cold, so cold is no control). Not tested in the game: +2 weapons and hold
+immune to cold, so cold is no control). Hit points with SCS (2026-11-03, Hard): 625
+when he appears; SCS's staying power was applied once and did not take. Not tested
+in the game: +2 weapons and hold
 effects against him (the install checks cover his items and protections; the hold
 protections are the golems' set, Christopher, 2026-10-29: no lab test needed), without
 SCS, and with a real party.
@@ -160,6 +162,11 @@ SCS, and with a real party.
     fireballs and the blast of his teleport hurt him (six hits in one lab fight, about
     17 hit points per fireball). Christopher, 2026-10-29: fire immune, on theme for a
     devil;
+  - protection from every spell that raises maximum hit points by a percentage
+    (opcode 18, modes 2 and 5, over 100 %), so his hit points stay this component's
+    final values (below). In the reference install: SCS's fiend and dragon "staying
+    power" (`DW#FIEHP`, `DW#DRAHP`), Tenser's Transformation and two more spells
+    (`SPWM153`, `C0APOT04`);
   - the protections are one spell (`CIEBELPR`: not dispellable, no secondary type
     to breach) that the script running first for him applies when he appears, so
     the ending can take them away again (below).
@@ -193,11 +200,12 @@ SCS, and with a real party.
   (opcode 18, mode 0), which his magic resistance does not stop. Built at install
   time as `CIEBHP3`, `CIEBHP4`, `CIEBHP5`; the rule sits on top of the script that
   runs first for him.
-- With SCS: its fiend "staying power" (on Hard and Insane, or on any difficulty its
-  fiend setting asks for) adds half of his hit points on top (`DW#FIEHP`: maximum
-  and current hit points to 150 %, opcode 18 mode 2, renewed before it runs out).
-  It multiplies the raised value: in the lab on Hard 625 became 937; Insane works
-  out at 1,125.
+- Final values, also with SCS. Christopher, 2026-11-03: 625 on Hard and 750 on
+  Insane with SCS too. SCS's fiend "staying power" (on Hard and Insane, or on any
+  difficulty its fiend setting asks for: `DW#FIEHP`, maximum and current hit points
+  to 150 %, opcode 18 mode 2) would multiply the raised value (lab before this
+  change: 625 became 937 on Hard); his protections keep it from taking. Lab, Hard
+  with SCS: 625.
 
 ### Preparation
 
@@ -229,6 +237,10 @@ SCS, and with a real party.
   placement's scripts, script name `CIE_CORNUGON_3`, visible). The ending cutscene
   `EEBELKIL` kills the golems and cornugons by name; it gets the same line for the
   third, and without that line the third is left out.
+- **Fire:** the placed cornugons' creatures (base game `FINCOR01`, `FINCOR02`) get
+  their base game fire and magic fire resistance of 100 % back; their copies inherit
+  it. SCS 35.21 lowers both to 50 % and makes them immune to electricity, which
+  stays. Christopher, 2026-11-03.
 - The golems are unchanged.
 - The rule lives in the finale area's script, stage in the area variable
   `CIE_BEL_STAGE` (1 waiting, 2 arrived, 3 third arrived, 9 none in this fight).

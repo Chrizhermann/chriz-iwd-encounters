@@ -190,6 +190,12 @@ def takes_hit_points(effects, limit):
     return False
 
 
+def multiplies_hit_points(effects):
+    """Effects that raise maximum hit points by a percentage (opcode 18, modes 2 and 5,
+    more than 100), such as SCS's fiend "staying power"."""
+    return any(op == 18 and (p2 & 0xFFFF) in (2, 5) and p1 > 100 for op, p1, p2, _ in effects)
+
+
 def forced_spells(script):
     """(target object fields, spell number) of every ForceSpell (113) and
     ReallyForceSpell (181) in a compiled, lower-cased script."""
@@ -363,17 +369,26 @@ def main():
         c.check(not lost, "CIEBELPR keeps his items' %d protections from spells of levels 1-3 (lost: %s)"
                 % (len(low), ", ".join(lost) or "none"))
         limit = max(10, struct.unpack_from("<H", bel, 0x26)[0] // 10)
-        setters = []
+        setters, raisers = [], []
         for name in res.names("SPL"):
             data = res.get(name, "SPL")
             try:
-                if data[:8] == b"SPL V1  " and takes_hit_points(spl_ability_effects(data), limit):
-                    setters.append(name)
+                if data[:8] != b"SPL V1  ":
+                    continue
+                fx = spl_ability_effects(data)
             except struct.error:
                 continue
+            if takes_hit_points(fx, limit):
+                setters.append(name)
+            if multiplies_hit_points(fx):
+                raisers.append(name)
         unprotected = [s for s in setters if s not in protected]
         c.check(setters and not unprotected, "CIEBELPR protects from the %d spells that set hit points to the bottom "
                 "(unprotected: %s)" % (len(setters), ", ".join(unprotected) or "none"))
+        # his hit points are final values, also with SCS (Christopher, 2026-11-03)
+        unprotected = [s for s in raisers if s not in protected]
+        c.check(not unprotected, "CIEBELPR protects from the %d spells that raise maximum hit points by a "
+                "percentage (unprotected: %s)" % (len(raisers), ", ".join(unprotected) or "none"))
         c.check(any(e[0] == 321 and e[3] == "CIEBELPR" for e in spl_ability_effects(res.get("CIEBELEN", "SPL") or b"")),
                 "CIEBELEN takes CIEBELPR away")
         c.check(any(e[0] == 208 for e in equipped), "Belhifet keeps his minimum hit point")
@@ -426,7 +441,12 @@ def main():
             c.check(cre is not None and cre[0x280:0x2A0].split(b"\0")[0].upper() == name.encode(),
                     "%s keeps the script name %s" % (copy, name))
             c.check(cre is not None and not [e for e in cre_effects(cre) if e[0] == 20], "%s arrives visible" % copy)
+            c.check(cre is not None and cre[0x59] == 100 and cre[0x5E] == 100,
+                    "%s is immune to fire and magic fire" % copy)
             placed = placements.get(name)
+            original = res.get(placed["cre"], "CRE") if placed else None
+            c.check(original is None or (original[0x59] == 100 and original[0x5E] == 100),
+                    "%s (%s) is immune to fire and magic fire" % (name, placed["cre"] if placed else "?"))
             if cre is not None and placed:
                 own = {k: slot(cre, o) for k, o in (("override", 0x248), ("class", 0x250), ("race", 0x258),
                                                     ("general", 0x260), ("default", 0x268))}
@@ -441,6 +461,8 @@ def main():
             c.check(third is not None and third[0x280:0x280 + 14] == b"CIE_CORNUGON_3",
                     "CIEBELC3 has the script name CIE_CORNUGON_3")
             c.check(third is not None and not [e for e in cre_effects(third) if e[0] == 20], "CIEBELC3 arrives visible")
+            c.check(third is not None and third[0x59] == 100 and third[0x5E] == 100,
+                    "CIEBELC3 is immune to fire and magic fire")
             c.check(b"cie_cornugon_3" in c.script("EEBELKIL"), "EEBELKIL kills the third cornugon")
         spell = res.get("SPIN183", "SPL")
         if spell is not None and any(e[0] == 151 and e[3] == "BELHIF" for e in spl_ability_effects(spell)):

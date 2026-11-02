@@ -6,9 +6,11 @@
 //     resistance and his other items' protections, and gains protections that keep
 //     the fight going until the scripted ending (instant death, removal from the
 //     fight, spells that set his hit points) and from hold and paralysis.
-//   - Immune to fire again, as in the base game (SCS lowers it to 50 %).
+//   - Immune to fire again, as in the base game, and so are his cornugons (SCS
+//     lowers it to 50 %).
 //   - +2 weapons hit him.
-//   - More hit points from Core Rules up.
+//   - More hit points from Core Rules up, as final values: spells that raise his
+//     maximum hit points by a percentage (SCS's fiend "staying power") do not take.
 //   - From Core Rules up he appears under Improved Invisibility.
 //   - His two cornugons (the base game keeps them on Hard and Insane) come through
 //     Poquelin's portal as a second wave when he falls below two thirds of his hit
@@ -113,16 +115,25 @@ DEFINE_ACTION_FUNCTION cie_belhifet_protections BEGIN
   ACTION_IF (cie_hp_limit < 10) BEGIN
     OUTER_SET cie_hp_limit = 10
   END
+  // Spells that raise maximum hit points by a percentage: his hit points below are
+  // final values, with and without SCS, whose fiend "staying power" (DW#FIEHP, his
+  // own script applies it on Hard and Insane) would add half on top. Christopher,
+  // 2026-11-03: 625 on Hard and 750 on Insane, also with SCS.
   ACTION_CLEAR_ARRAY cie_hp_setter
+  ACTION_CLEAR_ARRAY cie_hp_raiser
   COPY_EXISTING_REGEXP GLOB ~^.+\.spl$~ ~override~
     PATCH_IF (BUFFER_LENGTH >= 0x72) BEGIN
       READ_ASCII 0x0 signature (8)
       PATCH_IF (~%signature%~ STRING_EQUAL ~SPL V1  ~) BEGIN
+        SPRINT resref ~%SOURCE_RES%~
+        TO_UPPER resref
         LPF cie_spell_sets_hit_points INT_VAR limit = cie_hp_limit RET sets END
         PATCH_IF sets BEGIN
-          SPRINT resref ~%SOURCE_RES%~
-          TO_UPPER resref
           SPRINT $cie_hp_setter(~%resref%~) ~1~
+        END
+        LPF cie_spell_multiplies_hit_points RET raises END
+        PATCH_IF raises BEGIN
+          SPRINT $cie_hp_raiser(~%resref%~) ~1~
         END
       END
     END
@@ -167,6 +178,7 @@ DEFINE_ACTION_FUNCTION cie_belhifet_protections BEGIN
   // creatures in it; he gets it wherever SPLSTATE.IDS has it.
   OUTER_SET cie_hold_state = IDS_OF_SYMBOL (~splstate~ ~HOLD_IMMUNITY~)
   OUTER_SET hp_setters = 0
+  OUTER_SET hp_raisers = 0
   OUTER_SET low_spells = 0
   CREATE ~spl~ ~CIEBELPR~
     LPF cie_spl_one_ability END
@@ -195,25 +207,54 @@ DEFINE_ACTION_FUNCTION cie_belhifet_protections BEGIN
       END
       SET low_spells += 1
     END
+    PATCH_PHP_EACH cie_hp_raiser AS spell => unused BEGIN
+      PATCH_IF !(VARIABLE_IS_SET $cie_hp_setter(~%spell%~)) AND !(VARIABLE_IS_SET $cie_low_spell(~%spell%~)) BEGIN
+        LPF ADD_SPELL_EFFECT INT_VAR opcode = 206 target = 1 timing = 1 parameter1 = (0 - 1) resist_dispel = 2 STR_VAR resource = EVAL ~%spell%~ END
+      END
+      SET hp_raisers += 1
+    END
   CREATE ~spl~ ~CIEBELEN~
     LPF cie_spl_one_ability END
     LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 timing = 1 resist_dispel = 2 STR_VAR resource = ~CIEBELPR~ END
-  PRINT ~chriz-iwd-encounters: Belhifet is immune to spell levels 1-3 (%low_spells% single-spell protections kept for them), protected from instant death, removal from the fight, hold and paralysis (hold-immune spell state %cie_hold_state%, -1 for none), and from %hp_setters% spells that set hit points (CIEBELPR).~
+  PRINT ~chriz-iwd-encounters: Belhifet is immune to spell levels 1-3 (%low_spells% single-spell protections kept for them), protected from instant death, removal from the fight, hold and paralysis (hold-immune spell state %cie_hold_state%, -1 for none), from %hp_setters% spells that set hit points and from %hp_raisers% that raise them by a percentage (CIEBELPR).~
 END
 
-// Fire: immune, as in the base game (fire and magic fire resistance 100). SCS 35.21
-// (improved fiends) lowers both to 50, so his own fireballs and the blast of his
-// teleport hurt him. Christopher, 2026-10-29: fire immune, on theme for a devil.
+// Fire: immune, as in the base game (fire and magic fire resistance 100), Belhifet
+// and his cornugons. SCS 35.21 (improved fiends) lowers both to 50, so his own
+// fireballs and the blast of his teleport hurt him. Christopher, 2026-10-29: fire
+// immune, on theme for devils (the cornugons too); their other resistances stay.
+// The cornugons are patched where they are placed, before the second wave copies
+// them.
 DEFINE_ACTION_FUNCTION cie_belhifet_fire BEGIN
   OUTER_SET fire = 0
   OUTER_SET magic_fire = 0
   COPY_EXISTING ~belhif.cre~ ~override~
-    READ_BYTE 0x59 fire
-    READ_BYTE 0x5e magic_fire
-    WRITE_BYTE 0x59 100
-    WRITE_BYTE 0x5e 100
+    LPF cie_fire_immune RET fire magic_fire END
   BUT_ONLY
   PRINT ~chriz-iwd-encounters: Belhifet is immune to fire and magic fire (they were %fire% and %magic_fire% percent).~
+  OUTER_FOR (n = 1; n <= 2; n += 1) BEGIN
+    LAF cie_cornugon_placement STR_VAR name = EVAL ~CORNUGON_%n%~
+      RET found x y face cre embedded override general class race default specifics END
+    ACTION_IF (found > 0) AND (embedded = 0) AND (~%cre%~ STRING_COMPARE ~~) AND (FILE_EXISTS_IN_GAME ~%cre%.cre~) BEGIN
+      COPY_EXISTING ~%cre%.cre~ ~override~
+        LPF cie_fire_immune RET fire magic_fire END
+      BUT_ONLY
+      PRINT ~chriz-iwd-encounters: Cornugon_%n% (%cre%) is immune to fire and magic fire (they were %fire% and %magic_fire% percent).~
+    END ELSE ACTION_IF (found > 0) BEGIN
+      WARN ~chriz-iwd-encounters: Cornugon_%n%'s creature ("%cre%", embedded: %embedded%) cannot be patched; it keeps its fire resistance.~
+    END
+  END
+END
+
+// Fire and magic fire resistance 100 on the current creature (CRE V1.0 bytes 0x59
+// and 0x5e); returns the old values.
+DEFINE_PATCH_FUNCTION cie_fire_immune
+  RET fire magic_fire
+BEGIN
+  READ_BYTE 0x59 fire
+  READ_BYTE 0x5e magic_fire
+  WRITE_BYTE 0x59 100
+  WRITE_BYTE 0x5e 100
 END
 
 // The current item's equipped protections from single spells (opcode 206) that
@@ -395,6 +436,36 @@ BEGIN
   END
 END
 
+// True if one of the current spell's abilities raises maximum hit points by a
+// percentage (opcode 18, modes 2 and 5, more than 100 percent).
+DEFINE_PATCH_FUNCTION cie_spell_multiplies_hit_points
+  RET raises
+BEGIN
+  SET raises = 0
+  READ_LONG  0x64 ability_offset
+  READ_SHORT 0x68 ability_count
+  READ_LONG  0x6a fx_offset
+  FOR (a = 0; a < ability_count; ++a) BEGIN
+    SET ability = ability_offset + a * 0x28
+    PATCH_IF (ability + 0x28 <= BUFFER_LENGTH) BEGIN
+      READ_SHORT (ability + 0x1e) fx_count
+      READ_SHORT (ability + 0x20) fx_first
+      FOR (i = 0; i < fx_count; ++i) BEGIN
+        SET fx = fx_offset + (fx_first + i) * 0x30
+        PATCH_IF (fx + 0x30 <= BUFFER_LENGTH) BEGIN
+          READ_SHORT fx opcode
+          READ_LONG (fx + 0x4) parameter1
+          READ_LONG (fx + 0x8) parameter2
+          SET mode = parameter2 BAND 0xffff
+          PATCH_IF (opcode = 18) AND ((mode = 2) OR (mode = 5)) AND (parameter1 > 100) BEGIN
+            SET raises = 1
+          END
+        END
+      END
+    END
+  END
+END
+
 // One innate ability with no effects yet (header V1 0x72 bytes, ability 0x28
 // bytes, effects after it); the effects follow with ADD_SPELL_EFFECT.
 DEFINE_PATCH_FUNCTION cie_spl_one_ability BEGIN
@@ -417,7 +488,8 @@ END
 DEFINE_ACTION_FUNCTION cie_belhifet_hit_points_and_prep BEGIN
   // Christopher, 2026-10-28: Core Rules "wesentlich mehr", 875 on Insane perhaps
   // too much. From the base game's 350: Core Rules 500, Hard 625, Insane 750, the
-  // same factors for any other base (rounded).
+  // same factors for any other base (rounded). Final values, also with SCS
+  // (2026-11-03; CIEBELPR keeps SCS's percentage raise away).
   OUTER_SET cie_hp_core   = (cie_bel_hp * 20 + 7) / 14 - cie_bel_hp
   OUTER_SET cie_hp_hard   = (cie_bel_hp * 50 + 14) / 28 - cie_bel_hp
   OUTER_SET cie_hp_insane = (cie_bel_hp * 30 + 7) / 14 - cie_bel_hp
