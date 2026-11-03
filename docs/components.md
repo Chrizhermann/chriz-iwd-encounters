@@ -85,3 +85,213 @@ nicht nackt sind". Graded by difficulty on 2026-10-28: "ab Core ein paar prebuff
 - **Not changed:** mages (SCS prepares them from Normal up), allies, Easy and Normal,
   and priests whose AI is neither an SCS script nor one of the two named above (for
   example priests that other mods add with their own scripts).
+
+## 300: Belhifet's final fight
+
+Works with and without SCS. Designed with Christopher on 2026-10-26 ("Denke der
+letzte Fight sollte etwas dauern und nicht gimicky sein") and 2026-10-28 ("Es ist
+kein geiles Endkampf-Design …, wenn alles gleichzeitig passiert"). The fight takes
+place in `AR1105` (Easthaven, chapter 6), which the party enters once, at the end;
+Belhifet (`BELHIF`, script name `EEBELHI1`) only exists from Poquelin's
+transformation on. Installed on a running game, every change applies as long as the
+party has not entered that area yet.
+
+Lab-tested on 2026-10-28 and 2026-10-29 in IWD:EE 2.7.3.0 with SCS 35.21 and EEex
+1.3.1, from a save in Easthaven with one level-1 character (kept alive for the
+measurement), on Normal, Hard and Insane, and on Hard without this component for
+comparison: his protection spell (there when he appears, gone before the death
+animation), hit points, preparation, the second wave (and the third cornugon on
+Insane), the transformation without dispel (every later dispel on the character came
+from the area's traps, logged effect by effect), the teleport pause and the ending.
+With the level 1–3 immunity (2026-10-29, his invisibility and magic resistance taken
+for the test): Magic Missile (twice) and Flame Arrow did no damage, Lower Resistance
+(level 5) took effect, and the spells his own scripts apply to him still worked
+(protection spell, SCS's hit point bonus, invisibility, teleports). Fire (2026-10-29,
+Hard): in the game his fire and magic fire resistance read 100; 20 fire and 20 magic
+fire damage took no hit points, 20 electricity damage took 20 (his amulet makes him
+immune to cold, so cold is no control). Hit points with SCS (2026-11-03, Hard): 625
+when he appears; SCS's staying power was applied once and did not take. Haste
+(2026-11-03, Hard): hasted 30.0 seconds, then 12.0 without, twice in a row; the
+attacks stat read 2 per hasted half round instead of 3 per round (4 per round, as
+IESDP describes; a hasted control character with 1 attack still read 1, so 2 per
+round), and the ending's `CIEBELEN` took the haste away within 2 seconds before the
+ending played. Not tested in the game: +2 weapons and hold
+effects against him (the install checks cover his items and protections; the hold
+protections are the golems' set, Christopher, 2026-10-29: no lab test needed), without
+SCS, and with a real party.
+
+### Protections
+
+- **Base game:** his ring `BRING` makes him immune to spell levels 1–9 and protects
+  him from 44 single spells, mostly area spells that would slip past the level
+  immunity. His amulet `BEHAMU` makes him immune to non-magical, +1 and +2 weapons
+  and to charm, sleep, stun, poison, horror and morale effects. `MIN1HP` keeps him at
+  1 hit point at least (and protects him from vorpal hits), so the area script plays
+  the ending once he is below 10 hit points. SCS adds 50 % magic resistance.
+- **Change:**
+  - an item that carries a spell-level immunity loses it and its protections from
+    single spells (the ring);
+  - instead he is immune to spell levels 1–3, and keeps the item's protections from
+    single spells that belong to those levels: a priest or wizard spell named by its
+    SPELL.IDS number (`SPPRlnn`, `SPWIlnn`) with level 1–3 in its header. In the
+    reference install 11 of the ring's 44, such as Stinking Cloud and Skull Trap; a
+    Wish option and a part of a level 6 spell that carry a low level stay out.
+    Christopher, 2026-10-29. Spells his own scripts apply to him pass a spell-level
+    immunity (base game: SCS's level 2 invisibility worked through the ring's
+    levels 1–9), so the immunity does not block his own protections;
+  - every item loses its immunities to "enchanted" weapons of enchantment 2 or more
+    (the amulet's +2 entry): +2 weapons hit him;
+  - changed items become copies only Belhifet carries (`CIEBELI1`, `CIEBELI2`, …);
+    the same rules apply to effects on the creature itself;
+  - new protections against what would end the fight without taking his hit
+    points: instant death, slaying, petrification, polymorph, Power Word: Kill,
+    imprisonment, maze, disintegration (opcodes 13, 55, 134, 135, 209, 211, 213,
+    238), and every spell that takes his hit points to the bottom in one go
+    instead of dealing damage. Found at install time over all spell types (such
+    effects often sit in a sub-spell): damage that sets hit points to at most a
+    tenth of his own (at least 10) or to at most 10 %, or takes 90 % or more;
+    current or maximum hit points set the same way (opcodes 12, 17, 18). Spells
+    that only take a small share, or set hit points high, stay. In the reference
+    install: the old Harm that sets hit points to 1–4, a "reduce by 100 %"
+    sub-spell, and a few helper spells of other mods; Polymorph Other's polymorph
+    falls under the polymorph protection;
+  - protection from paralysis and hold (opcodes 109, 175, 185; IWD:EE's Hold Person
+    and Hold Monster hold with 175), set up as the game's own hold-immune creatures
+    have it (base game: the golems' `IRONGOL`, `GOLSTONE`, `GOLCLA`): no "Held" or
+    "Paralyzed" text and no hold animation over him. SCS gives every hold-immune
+    creature the spell state `HOLD_IMMUNITY` and makes the hold spells skip creatures
+    in it; he gets it too wherever `SPLSTATE.IDS` has it. Christopher, 2026-10-29;
+  - immune to fire again, as in the base game: fire and magic fire resistance 100 %.
+    SCS 35.21 lowers both to 50 % (improved fiends, component 6510), so his own
+    fireballs and the blast of his teleport hurt him (six hits in one lab fight, about
+    17 hit points per fireball). Christopher, 2026-10-29: fire immune, on theme for a
+    devil;
+  - protection from every spell that raises maximum hit points by a percentage
+    (opcode 18, modes 2 and 5, over 100 %), so his hit points stay this component's
+    final values (below). In the reference install: SCS's fiend and dragon "staying
+    power" (`DW#FIEHP`, `DW#DRAHP`), Tenser's Transformation and two more spells
+    (`SPWM153`, `C0APOT04`);
+  - the protections are one spell (`CIEBELPR`: not dispellable, no secondary type
+    to breach) that the script running first for him applies when he appears, so
+    the ending can take them away again (below).
+- **Kept:** his magic resistance and his other resistances, the amulet's protections
+  from charm, sleep, stun, poison, horror and morale effects, the minimum hit point
+  and the scripted ending.
+
+### Ending
+
+- **Base game:** below 10 hit points the area script starts the cutscene `EEBELDTH`;
+  with SCS his own script does the same. Both cast his death animation (`SPIN171`,
+  `INNATE_BELHIFETS_DEATH_ANIMATION`: a visual and an instant death at power 10,
+  which the ring's spell-level immunity never blocked), play his death sequence and
+  start `EEBELKIL`, which kills the golems and cornugons and plays the end movies.
+  The instant death itself does not take: `MIN1HP`'s minimum hit point makes him
+  immune to directly applied instant death (IESDP, opcode 208). In the lab he stayed
+  at 1 hit point while the ending played.
+- **Change:** every script that casts the death animation on him first applies
+  `CIEBELEN` (removes `CIEBELPR`) and waits two AI ticks, so he meets the death
+  animation as in the base game, also where another mod kills him for real (for
+  example after taking `MIN1HP`). Lab, Hard: the protections were gone when the
+  animation started, and the ending ran.
+
+### Hit points
+
+- Easy and Normal: unchanged (base game 350).
+- Core Rules ×10/7, Hard ×25/14, Insane ×15/7 of his installed hit points (base
+  game: 500, 625, 750), rounded. Christopher, 2026-10-28: Core Rules "wesentlich
+  mehr", 875 on Insane perhaps too much.
+- Applied once, when he appears: a permanent raise of maximum and current hit points
+  (opcode 18, mode 0), which his magic resistance does not stop. Built at install
+  time as `CIEBHP3`, `CIEBHP4`, `CIEBHP5`; the rule sits on top of the script that
+  runs first for him.
+- Final values, also with SCS. Christopher, 2026-11-03: 625 on Hard and 750 on
+  Insane with SCS too. SCS's fiend "staying power" (on Hard and Insane, or on any
+  difficulty its fiend setting asks for: `DW#FIEHP`, maximum and current hit points
+  to 150 %, opcode 18 mode 2) would multiply the raised value (lab before this
+  change: 625 became 937 on Hard); his protections keep it from taking. Lab, Hard
+  with SCS: 625.
+
+### Preparation
+
+- Core Rules and up: he casts Improved Invisibility on himself the moment he
+  appears, instantly, like SCS's precasts. With SCS he recasts it in the fight as SCS
+  intends. Christopher, 2026-10-28: he buffs before and during the fight, as SCS
+  does.
+- **Haste**, Core Rules and up: normal Haste for 30 seconds, then 12 seconds
+  without, again and again, free (`CIEBELHA`). Christopher, 2026-10-29 ("immer
+  wieder … mit irgendeinem Cooldown") and 2026-11-03 (30 on, 12 off; Improved Haste
+  all the time would be too much). Normal Haste halves his round timer and gives one
+  more attack per round (IESDP, opcode 16): 4 attacks instead of 3, and faster
+  movement. It looks and sounds like the game's Haste (its visual, glow, sounds,
+  "Hasted" and the Haste icon) and is dispellable like it, but his immunity to spell
+  levels 1–3 keeps Dispel Magic and Slow away from him, so the party can only wait
+  for the pause.
+- His script starts the cycle once; after that the spell casts itself again 42
+  seconds later (a delayed opcode 146 that no dispel removes), independent of his
+  AI. A script timer was not exact enough: in the lab his AI noticed it 2–5 seconds
+  late while he was busy. The ending's `CIEBELEN` stops the cycle.
+
+### Second wave
+
+- **Base game:** two invisible cornugons (`Cornugon_1`, `Cornugon_2`) are destroyed
+  on entry below Hard, unless Icasaracht's soul gem has been destroyed
+  (`SPRITE_IS_DEADGEM`, the end of Heart of Winter). During Poquelin's talk they come
+  through his portal (cutscene `EECRNENT`) and fight from the first moment, together
+  with Belhifet and the two iron golems.
+- **Change:** where the base game keeps them, they leave when the party enters (as
+  the base game has them do below Hard) and come back through the portal when
+  Belhifet falls below two thirds of his hit points: copies of their creatures with
+  the placements' scripts and the same script names (`CIEBELC1`, `CIEBELC2`),
+  visible, at their old places by the portal, with the Gate visual (`SPSUMGTE`).
+  The ending cutscene and every script that names them find them as before.
+  Deactivating them while they wait is not enough: a deactivated creature keeps
+  running its scripts, and in the lab the waiting cornugons teleported after the
+  party.
+- A cornugon whose creature cannot be copied (stored inside the area file) stays as
+  in the base game and fights from the start; the installer says so.
+- **Insane:** below one third, a third cornugon comes through, between the two
+  cornugons' places (`CIEBELC3`: a copy of `Cornugon_1`'s creature with that
+  placement's scripts, script name `CIE_CORNUGON_3`, visible). The ending cutscene
+  `EEBELKIL` kills the golems and cornugons by name; it gets the same line for the
+  third, and without that line the third is left out.
+- **Fire:** the placed cornugons' creatures (base game `FINCOR01`, `FINCOR02`) get
+  their base game fire and magic fire resistance of 100 % back; their copies inherit
+  it. SCS 35.21 lowers both to 50 % and makes them immune to electricity, which
+  stays. Christopher, 2026-11-03.
+- The golems are unchanged.
+- The rule lives in the finale area's script, stage in the area variable
+  `CIE_BEL_STAGE` (1 waiting, 2 arrived, 3 third arrived, 9 none in this fight).
+
+### Poquelin's transformation
+
+- **Base game:** the transformation spell (`SPIN183`,
+  `INNATE_FLASH_DESTROY_SUMMON_BELHIFET`) dispels everyone around Poquelin without a
+  roll (opcode 58 mode 0), takes summoned weapons and magical berries from them,
+  destroys illusions and shows "Dispel Effects". The cutscene `EEPOQCNG` also forces
+  Dispel Magic on the nearest party member (WeiDU prints the line with
+  `WIZARD_REMOVE_MAGIC`, a name that shares the spell's number on IWD:EE).
+- **Change:** those effects go; so does every spell the cutscene forces on someone
+  other than Poquelin that dispels (opcode 58), found by its effects, not its name.
+  The transformation, its visuals and sound, and Poquelin's replacement by Belhifet
+  stay. Christopher, 2026-10-28: the dispel goes.
+- **Not changed:** the finale area's six proximity traps (`Trigger Point 1`–`6`,
+  script `GNT2010`, detection 95, removal 100, they reset) cast `SPWI010` on whoever
+  enters: a dispel without a roll (opcode 58 mode 0). Both are base game. In the lab
+  a character panicked by Demon Fear ran into them 17 times in one fight.
+
+### SCS's teleport pause
+
+- SCS 35.21 (`fiend/ssl/bel_conveyance.ssl`; installed as the timers
+  `belhifet_bel_conveyance` and `belhifet_bel_conveyance_timer`) checks one timer
+  before a teleport but sets the other after it. Its 24-second pause never applies:
+  he teleports whenever his 6-second spell timer has run out, and since the teleport
+  blocks come before his spell blocks, those rarely get their turn. Lab, Hard, SCS
+  as shipped: 34 teleports in 198 seconds (every 6 seconds on average), each with
+  Demon Fear, no Fiend Fireball.
+- **Change:** every timer his script sets as `<name>_timer` while it only checks
+  `<name>` is set as `<name>`. Lab, Hard and Normal: his Infernal Conveyance every
+  24–31 seconds (SCS's Teleport Without Error now and then on top, 18–21 seconds
+  between teleports of either kind on average), Demon Fear every 6–14 seconds,
+  Fiend Fireball every 6–52 seconds, melee in between. Without SCS, or once SCS
+  fixes it, nothing changes (the base game teleports him on its own timers, every
+  9–26 seconds).

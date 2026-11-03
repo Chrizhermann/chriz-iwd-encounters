@@ -15,6 +15,10 @@ LANGUAGE ~English~ ~english~ ~chriz-iwd-encounters/languages/english/setup.tra~
 // 100 SCS caster-AI repairs: enemy casters SCS meant to convert but leaves
 //     without a working spell AI on IWD:EE
 // 200 enemy priests prepare when they first see the party (Core Rules and up)
+// 300 Belhifet's final fight (works with and without SCS)
+//
+// Boss fights follow from 300 on, one component each, so a later version can add
+// one at the end of an existing install.
 //
 // docs/components.md describes each change in engine-neutral terms.
 // ============================================================
@@ -32,3 +36,10 @@ REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
 REQUIRE_PREDICATE MOD_IS_INSTALLED ~stratagems/setup-stratagems.tp2~ ~6040~ @9002
 INCLUDE ~chriz-iwd-encounters/lib/cie_priest_prep.tpa~
 LAF cie_priest_prep END
+
+BEGIN @300 DESIGNATED 300
+LABEL ~chriz-iwd-encounters-belhifet~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~belhif.cre~) AND (FILE_EXISTS_IN_GAME ~ar1105.are~) @9003
+INCLUDE ~chriz-iwd-encounters/lib/cie_belhifet.tpa~
+LAF cie_belhifet END

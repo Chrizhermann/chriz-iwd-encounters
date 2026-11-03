@@ -1,0 +1,18 @@
+// chriz-iwd-encounters 300, Insane: a third cornugon comes through the portal when
+// Belhifet falls below one third of his hit points (after the second wave). The
+// ending cutscene EEBELKIL kills it with the other two.
+
+IF
+  Global("CIE_BEL_STAGE","MYAREA",2)
+  Difficulty(HARDEST)
+  Global("END_PORTAL","GLOBAL",10)
+  Global("IWD_COMPLETE","MYAREA",0)
+  Exists("EEBELHI1")
+  HPPercentLT("EEBELHI1",34)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_BEL_STAGE","MYAREA",3)
+    CreateVisualEffect("SPSUMGTE",[%cie_c3_x%.%cie_c3_y%])
+    CreateCreature("CIEBELC3",[%cie_c3_x%.%cie_c3_y%],S)
+    Continue()
+END
