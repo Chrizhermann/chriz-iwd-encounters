@@ -674,7 +674,10 @@ True Sight) lift the images' illusion: they turn translucent and glow (`OHPOMREV
   - The sentries' target list had the nearest enemy inside the same OR as the caster
     checks, so it always won; the casters now come first.
 - **Not changed:** his wand, the taunts, the images' own heal and jump when they are
-  hit, the panic at the end, the exits and the doors.
+  hit, the panic at the end, the exits and the doors. After a shuffle, party members
+  who were attacking the real Pomab keep following him; only his last attacker is
+  stopped, as in the base game (SCS leaves this fight alone). Kept with Christopher's
+  agreement (2026-11-04).
 
 Lab-tested on 2026-11-04 in IWD:EE 2.7.3.0 with SCS 35.21 and EEex 1.3.1 on Hard, from a
 save with one level-1 character, two runs: all six showed the name Pomab. Each of five
@@ -766,7 +769,9 @@ of Winter.
   spells, only on Icasaracht and the gem) does not work in IWD:EE: in the lab her Cure
   Critical and Cure Serious Wounds landed on Icasaracht without raising her hit points
   (also when applied directly), the Cure spells do not work on golems or undead (the
-  gem is a golem), and the gem stays invisible, so she cannot target it.- **Repairs:**
+  gem is a golem), and the gem stays invisible, so she cannot target it. Left out with
+  Christopher's agreement (2026-11-04: balancing it another way is too much for now).
+- **Repairs:**
   - Should Icasaracht die without her last-hit-point cutscene, the area script's
     fallback created a second gem next to the first (created on the first visit) and its
     cutscene ran `EquipItemEx("RING91",0)` on the gem. With the gem there, the fallback
