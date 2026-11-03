@@ -1,6 +1,6 @@
 BACKUP ~weidu_external/backup/chriz-iwd-encounters~
 AUTHOR ~Christopher Hermann (github.com/Chrizhermann/chriz-iwd-encounters)~
-VERSION ~v0.1.0~
+VERSION ~v0.2.0~
 
 ALWAYS
   INCLUDE ~chriz-iwd-encounters/lib/cie_shared.tpa~

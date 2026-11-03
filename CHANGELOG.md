@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.2.0 (2026-11-04)
 
 - 300: Belhifet's final fight. Immune to spell levels 1–3 instead of all levels,
   immune to fire again as in the base game (SCS lowers it to 50 %), protected from
@@ -86,7 +86,7 @@
   quick slot, where they did nothing). Works with and without SCS.
 - 410: the Luremaster. He opens the fight with his Improved Invisibility and, while he has
   spells, hops away by Dimension Door when an enemy reaches him (SCS had taken his hop
-  script off). His Dispel Magic entry checks the spell he memorises, so his three Dispel
+  script off; without SCS this replaces his hop after every spell). His Dispel Magic entry checks the spell he memorises, so his three Dispel
   Magic come. A fallen spectral hero brings its replacement again (up to six). Works with
   and without SCS.
 
