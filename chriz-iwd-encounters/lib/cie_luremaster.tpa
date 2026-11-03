@@ -57,8 +57,9 @@ DEFINE_ACTION_FUNCTION cie_luremaster BEGIN
   LAF cie_luremaster_heroes END
 END
 
-// The hop script CIELURHP, in his class slot when that points at a missing script (SCS
-// leaves NULL there), else in his first free slot.
+// The hop script CIELURHP: in place of his old hop circuit DULURWRP where it still runs,
+// else in his class slot when that points at a missing script (SCS leaves NULL there),
+// else in his first free slot.
 DEFINE_ACTION_FUNCTION cie_luremaster_hop BEGIN
   ACTION_IF (cie_lur_points = 0) BEGIN
     WARN ~chriz-iwd-encounters: the Luremaster's hop points (dulurwrp.bcs) are missing; he does not hop.~
@@ -80,9 +81,19 @@ DEFINE_ACTION_FUNCTION cie_luremaster_hop BEGIN
         READ_ASCII (actor + 0x80) cre (8) NULL
         TO_UPPER cre
         PATCH_IF (~%cre%~ STRING_EQUAL ~TRGBARD~) AND (cie_lur_slotted = 0) BEGIN
-          // the class slot first when its script is missing, then the free slots in run order
+          // in place of his old hop circuit where it still runs (without SCS): the
+          // reactive hop replaces it, it does not hop on top of it
+          FOR (slot = 0x50; slot < 0x80; slot += 8) BEGIN
+            LPF cie_read_script_slot INT_VAR offset = (actor + slot) RET script END
+            PATCH_IF (cie_lur_slotted = 0) AND (~%script%~ STRING_EQUAL ~DULURWRP~) BEGIN
+              WRITE_ASCII (actor + slot) ~CIELURHP~ (8)
+              SET cie_lur_slotted = 1
+            END
+          END
+          // else the class slot when its script is missing (SCS leaves NULL there), then
+          // the free slots in run order
           LPF cie_read_script_slot INT_VAR offset = (actor + 0x60) RET script END
-          PATCH_IF (~%script%~ STRING_COMPARE ~~) AND (!FILE_EXISTS_IN_GAME ~%script%.bcs~) BEGIN
+          PATCH_IF (cie_lur_slotted = 0) AND (~%script%~ STRING_COMPARE ~~) AND (!FILE_EXISTS_IN_GAME ~%script%.bcs~) BEGIN
             WRITE_ASCII (actor + 0x60) ~CIELURHP~ (8)
             SET cie_lur_slotted = 1
           END

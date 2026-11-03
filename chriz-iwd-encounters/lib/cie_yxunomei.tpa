@@ -73,7 +73,8 @@ END
 
 // The mages: the area's spawn block waits for YXUN_ATTACK (the fight with her)
 // instead of MAP_GROUP_HOSTILE5 (her archers' team, which sees the party long before
-// she talks), and every mage it creates gets CIEYXPUR, which walks it to the party.
+// she talks), and creates copies of its mages (CIEYXM1, ...) that run CIEYXPUR, which walks
+// them to the party; the originals stay as they are for the other areas.
 DEFINE_ACTION_FUNCTION cie_yxunomei_mages BEGIN
   OUTER_SET cie_yxu_moved = 0
   OUTER_SPRINT cie_yxu_block ~~
@@ -88,7 +89,22 @@ DEFINE_ACTION_FUNCTION cie_yxunomei_mages BEGIN
       PATCH_IF (start >= 0) BEGIN
         SET end = INDEX_BUFFER (CASE_SENSITIVE EVALUATE_REGEXP ~^END~ start)
         PATCH_IF (end > start) BEGIN
+          // the block creates its own copies of the mages: the base game's YUANMAG
+          // also comes in the temple's other areas (AR4004)
           READ_ASCII start cie_yxu_block (end - start)
+          SET n = 0
+          INNER_PATCH_SAVE cie_yxu_block ~%cie_yxu_block%~ BEGIN
+            REPLACE_EVALUATE CASE_INSENSITIVE ~CreateCreature("\([^"]+\)"~ BEGIN
+              SPRINT mage ~%MATCH1%~
+              TO_UPPER mage
+              PATCH_IF (!VARIABLE_IS_SET $cie_yxu_clone(~%mage%~)) BEGIN
+                SET n += 1
+                SPRINT $cie_yxu_clone(~%mage%~) ~CIEYXM%n%~
+              END
+              SPRINT clone $cie_yxu_clone(~%mage%~)
+            END ~CreateCreature("%clone%"~
+          END
+          LPF cie_replace_text INT_VAR start length = (end - start) STR_VAR text = EVAL ~%cie_yxu_block%~ END
         END
       END
     END
@@ -96,25 +112,17 @@ DEFINE_ACTION_FUNCTION cie_yxunomei_mages BEGIN
   ACTION_IF (cie_yxu_moved = 0) BEGIN
     WARN ~chriz-iwd-encounters: %cie_yxu_area_script%.bcs has no spawn block for Yxunomei's mages on MAP_GROUP_HOSTILE5; the mages come as before.~
   END ELSE BEGIN
-    ACTION_CLEAR_ARRAY cie_yxu_mages
-    OUTER_PATCH ~%cie_yxu_block%~ BEGIN
-      REPLACE_EVALUATE CASE_INSENSITIVE ~CreateCreature("\([^"]+\)"~ BEGIN
-        SPRINT mage ~%MATCH1%~
-        TO_UPPER mage
-        SPRINT $cie_yxu_mages(~%mage%~) ~1~
-      END ~%MATCH0%~
-    END
     COMPILE ~chriz-iwd-encounters/baf/cieyxpur.baf~
     OUTER_SET cie_yxu_pursue = 0
-    ACTION_PHP_EACH cie_yxu_mages AS mage => unused BEGIN
+    ACTION_PHP_EACH cie_yxu_clone AS mage => clone BEGIN
       ACTION_IF FILE_EXISTS_IN_GAME ~%mage%.cre~ BEGIN
-        COPY_EXISTING ~%mage%.cre~ ~override~
+        COPY_EXISTING ~%mage%.cre~ ~override/%clone%.cre~
           LPF cie_read_script_slot INT_VAR offset = 0x248 RET script END
           PATCH_IF (~%script%~ STRING_EQUAL ~~) BEGIN
             WRITE_ASCII 0x248 ~CIEYXPUR~ (8)
             SET cie_yxu_pursue += 1
           END ELSE BEGIN
-            PATCH_WARN ~chriz-iwd-encounters: the mage %mage% already has an override script (%script%); it waits where it appears.~
+            PATCH_WARN ~chriz-iwd-encounters: the mage %mage% (%clone%) already has an override script (%script%); it waits where it appears.~
           END
         BUT_ONLY
       END

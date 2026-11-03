@@ -35,7 +35,9 @@ releases into the game folder (it holds `chriz-iwd-encounters/`) and run
 ## Tests
 
 `tests/check_install.py` reads an installed game and checks what the components
-changed. It never writes to the game.
+changed. It never writes to the game. It checks the components the game's `WeiDU.log`
+lists (without a log, the components whose changes it finds), so a listed component
+whose changes are missing fails.
 
 ## Credits
 

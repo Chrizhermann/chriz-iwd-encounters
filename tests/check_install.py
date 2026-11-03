@@ -9,6 +9,7 @@ import os
 import re
 import struct
 import sys
+from pathlib import Path
 
 PRIEST_TYPE = 0
 CRE_TYPE, ARE_TYPE, BCS_TYPE, ITM_TYPE, SPL_TYPE, IDS_TYPE = 0x3F1, 0x3F2, 0x3EF, 0x3ED, 0x3EE, 0x3F0
@@ -161,6 +162,11 @@ def spl_ability_effects(data):
     return out
 
 
+def apr_halves(value):
+    """Attacks per round in half attacks: 0-5 whole attacks, 6-10 = 1/2, 3/2, 5/2, 7/2, 9/2."""
+    return value * 2 if value <= 5 else (value - 6) * 2 + 1
+
+
 def ids_numbers(data):
     """SYMBOL -> number of an IDS file (decimal or 0x numbers)."""
     out = {}
@@ -223,6 +229,18 @@ def forced_spells(script):
             re.findall(rb"ac\n(113|181)ob\n.*?ob\nob\n(.*?)ob\nob\n.*?ob\n(-?\d+) ", script, re.S)]
 
 
+def response_actions(script):
+    """(response number, action id, action text) of every action of a compiled,
+    lower-cased script, in order."""
+    out = []
+    for number, response in enumerate(script.split(b"re\n")):
+        heads = [(m.start(), int(m.group(1))) for m in re.finditer(rb"ac\n(\d+)ob\n", response)]
+        for k, (start, ident) in enumerate(heads):
+            end = heads[k + 1][0] if k + 1 < len(heads) else len(response)
+            out.append((number, ident, response[start:end]))
+    return out
+
+
 def is_myself(fields):
     """Object fields of Myself: identifier 1 (the eighth number), all else 0."""
     return len(fields) >= 8 and fields[7] == b"1" and not any(int(x) for x in fields[:7])
@@ -279,11 +297,40 @@ class Checker:
         return []
 
 
+def installed_components(game):
+    """Component numbers of this mod that the game's WeiDU.log lists, or None without a log."""
+    log = Path(game) / "WeiDU.log"
+    if not log.exists():
+        return None
+    found = set()
+    for line in log.read_text(encoding="latin-1").splitlines():
+        if line.lstrip().startswith("//"):
+            continue
+        m = re.match(r"\s*~?[^~]*SETUP-CHRIZ-IWD-ENCOUNTERS\.TP2~?\s+#\d+\s+#(\d+)", line, re.I)
+        if m:
+            found.add(int(m.group(1)))
+    return found
+
+
 def main():
     res = Resources(sys.argv[1])
     c = Checker(res)
     cres = {n: res.get(n, "CRE") for n in res.names("CRE")}
     cres = {n: d for n, d in cres.items() if d and d[:8] == b"CRE V1.0" and len(d) >= 0x2D4}
+    installed = installed_components(sys.argv[1])
+
+    def expect(component, detected):
+        """Whether to check a component: by WeiDU.log when the game has one (a component
+        it lists whose changes are missing fails), else by the component's own marker."""
+        if installed is None:
+            return detected
+        if component in installed and not detected:
+            c.check(False, "component %d is in WeiDU.log, but its changes are missing" % component)
+            return False
+        if component not in installed and detected:
+            c.check(False, "component %d is not in WeiDU.log, but its changes are there" % component)
+            return False
+        return component in installed
 
     # 100: Shadowed Elven Clerics
     pointing = [n for n, d in cres.items() if "SDELFCS1" in [slot(d, o) for o in CRE_SLOTS if o]]
@@ -335,7 +382,7 @@ def main():
 
     # 300: Belhifet's final fight (only when installed: it brings CIEBHP3)
     bel = cres.get("BELHIF")
-    if bel and res.get("CIEBHP3", "SPL") is not None:
+    if expect(300, bool(bel) and res.get("CIEBHP3", "SPL") is not None):
         equipped = []
         for item in cre_items(bel):
             data = res.get(item, "ITM")
@@ -434,16 +481,27 @@ def main():
         # every script that casts the death animation on him drops CIEBELPR first
         death = ids_numbers(res.get("SPELL", "IDS")).get("INNATE_BELHIFETS_DEATH_ANIMATION")
         c.check(death is not None, "SPELL.IDS has INNATE_BELHIFETS_DEATH_ANIMATION")
+        # in the same response, right before each such cast: ApplySpellRES("CIEBELEN",Myself)
+        # then SmallWait (the protections are gone two AI ticks before the animation)
+        action_ids = ids_numbers(res.get("ACTION", "IDS"))
+        apply_id = next((n for s, n in action_ids.items() if s.startswith("APPLYSPELLRES(")), None)
+        wait_id = next((n for s, n in action_ids.items() if s.startswith("SMALLWAIT(")), None)
         enders, unguarded = [], []
         for name in res.names("BCS"):
             script = (res.get(name, "BCS") or b"").lower()
-            casts = [1 for fields, number in forced_spells(script) if number == death and is_myself(fields)]
-            if casts:
-                enders.append(name)
-                if script.count(b'"ciebelen"') < len(casts):
+            acts = response_actions(script)
+            for i, (response, ident, text) in enumerate(acts):
+                if ident not in (113, 181) or not any(n == death and is_myself(f) for f, n in forced_spells(text)):
+                    continue
+                if name not in enders:
+                    enders.append(name)
+                guarded = (i >= 2 and acts[i - 1][0] == response and acts[i - 1][1] == wait_id
+                           and acts[i - 2][0] == response and acts[i - 2][1] == apply_id
+                           and b'"ciebelen"' in acts[i - 2][2])
+                if not guarded and name not in unguarded:
                     unguarded.append(name)
-        c.check(enders and not unguarded, "the death animation comes after CIEBELEN in %s (missing in: %s)"
-                % (", ".join(enders) or "no script", ", ".join(unguarded) or "none"))
+        c.check(enders and not unguarded, "the death animation comes right after CIEBELEN and a short wait in %s "
+                "(missing in: %s)" % (", ".join(enders) or "no script", ", ".join(unguarded) or "none"))
         # compiled actions keep a timer as "LOCALS<name>", the timer triggers as
         # "<name>"; a timer set as <name>_timer next to a check of <name> is SCS's
         # broken teleport pause
@@ -517,7 +575,7 @@ def main():
 
     # 310: Yxunomei and her temple (only when installed: it brings CIEYXPUR)
     area = res.get("AR4005", "ARE")
-    if area and res.get("CIEYXPUR", "BCS") is not None:
+    if expect(310, bool(area) and res.get("CIEYXPUR", "BCS") is not None):
         area_script = slot(area, 0x94)
         text = c.script(area_script)
         blocks = re.findall(rb"cr\n(.*?)cr\n", text, re.S)
@@ -532,6 +590,9 @@ def main():
                             if res.get(s.decode(), "CRE") is not None})
         for mage in mages:
             c.check(slot(res.get(mage, "CRE"), 0x248) == "CIEYXPUR", "the mage %s runs CIEYXPUR first" % mage)
+        # copies of their own: the base game's YUANMAG also comes in AR4004
+        c.check(mages and all(m.startswith("CIEYXM") for m in mages),
+                "the spawn block creates its own copies of the mages (%s)" % ", ".join(mages))
         c.check(b'"localscie_yxu_pursue"' in c.script("CIEYXPUR"), "CIEYXPUR walks the mages to the party")
         # the champions jump to her and join her guards' team
         off, = struct.unpack_from("<I", area, 0x54)
@@ -587,7 +648,7 @@ def main():
 
     # 320: the orog raid on Kuldahar (only when installed: it brings CIEKULMA)
     area = res.get("AR2100", "ARE")
-    if area and res.get("CIEKULMA", "BCS") is not None:
+    if expect(320, bool(area) and res.get("CIEKULMA", "BCS") is not None):
         text = c.script(slot(area, 0x94))
         blocks = re.findall(rb"cr\n(.*?)cr\n", text, re.S)
         raid = [b for b in blocks if b'"myarea#spawn_group_1"' in b.split(b"rs\n")[0]]
@@ -601,7 +662,7 @@ def main():
         for n, d in sorted(orogs.items()):
             hp, = struct.unpack_from("<H", d, 0x26)
             if n in leaders:
-                c.check(hp >= 70 and d[0x53] >= 2 and d[0x52] <= 10 and slot(d, 0x260) == "CIEKULMA",
+                c.check(hp >= 70 and apr_halves(d[0x53]) >= 4 and d[0x52] <= 10 and slot(d, 0x260) == "CIEKULMA",
                         "the leader %s: %d hit points, %d attacks, THAC0 %d, waits for the horn (%s)"
                         % (n, hp, d[0x53], d[0x52], slot(d, 0x260)))
             else:
@@ -638,7 +699,7 @@ def main():
     placed = are_actors(area)
     court = sorted({s for p in placed.values() if p["cre"] in ("JORIL", "GIANTFS", "GIANTFG")
                     for s in p["scripts"].values() if s and s != "EFDELDEF" and not s.startswith("GNTEAM")})
-    if court and any(b'"localscie_jor_rage"' in c.script(s) for s in court):
+    if expect(330, bool(court) and any(b'"localscie_jor_rage"' in c.script(s) for s in court)):
         joril = cres.get("JORIL")
         c.check(joril is not None and struct.unpack_from("<H", joril, 0x26)[0] >= 185,
                 "Joril has %d hit points" % (struct.unpack_from("<H", joril, 0x26)[0] if joril else 0))
@@ -664,7 +725,7 @@ def main():
     placed = are_actors(area)
     ilm = placed.get("MAIDEN ILMADIA")
     ilm_scripts = [s for s in ilm["scripts"].values() if s and not s.startswith("GNTEAM")] if ilm else []
-    if ilm_scripts and any(b'"localscie_ilm_aura"' in c.script(s) for s in ilm_scripts):
+    if expect(340, bool(ilm_scripts) and any(b'"localscie_ilm_aura"' in c.script(s) for s in ilm_scripts)):
         cre = cres.get("ILMADIA")
         c.check(cre is not None and struct.unpack_from("<H", cre, 0x26)[0] >= 135,
                 "Maiden Ilmadia has %d hit points" % (struct.unpack_from("<H", cre, 0x26)[0] if cre else 0))
@@ -689,7 +750,7 @@ def main():
     placed = are_actors(area)
     idol = placed.get("THE IDOL")
     idol_script = next((s for s in idol["scripts"].values() if s), "") if idol else ""
-    if idol_script and b'"localscie_idol_cast"' in c.script(idol_script):
+    if expect(350, bool(idol_script) and b'"localscie_idol_cast"' in c.script(idol_script)):
         text_i = c.script(idol_script)
         spells = ids_numbers(res.get("SPELL", "IDS"))
         pwk = spells.get("WIZARD_POWER_WORD_KILL")
@@ -719,7 +780,7 @@ def main():
 
     # 360: Poquelin in the Ascension Cave (only when installed: it brings CIEPOQ)
     area = res.get("AR8013", "ARE")
-    if area and res.get("CIEPOQ", "CRE") is not None:
+    if expect(360, bool(area) and res.get("CIEPOQ", "CRE") is not None):
         off, = struct.unpack_from("<I", area, 0x54)
         count, = struct.unpack_from("<H", area, 0x58)
         poq = None
@@ -753,7 +814,7 @@ def main():
     # 370: Cryshal-Tirith (only when installed: it brings CIEPOMRC)
     area = res.get("AR1103", "ARE")
     real = cres.get("EEPOMAB")
-    if area and real and res.get("CIEPOMRC", "SPL") is not None:
+    if expect(370, bool(area) and bool(real) and res.get("CIEPOMRC", "SPL") is not None):
         name, = struct.unpack_from("<I", real, 0x08)
         images = {n: cres.get("POMIMG%d" % n) for n in range(1, 6)}
         c.check(all(d is not None and struct.unpack_from("<I", d, 0x08)[0] == name for d in images.values()),
@@ -803,7 +864,7 @@ def main():
     meb = next((p for p in placed.values() if p["cre"] == "MEBDING"), None)
     meb_scripts = [s for s in meb["scripts"].values() if s] if meb else []
     wail = next((s for s in meb_scripts if b'"localscie_meb_wail"' in c.script(s)), "")
-    if wail:
+    if expect(380, bool(wail)):
         t = c.script(wail)
         c.check(b'"#localtimer"' not in t, "Mebdinga's %s no longer shares her lines' timer" % wail)
         c.check(b'"localscie_meb_run"' in t, "she runs from an attacker at most every three rounds")
@@ -835,7 +896,7 @@ def main():
     text = c.script(slot(area, 0x94)) if area else b""
     blocks = re.findall(rb"cr\n(.*?)cr\n", text, re.S)
     fallback = [b for b in blocks if b'"ildrgded"' in b]
-    if len(fallback) == 2:
+    if expect(390, len(fallback) == 2):
         for name, hp in (("ICASA", 650), ("DLSGEM", 250)):
             cre = cres.get(name)
             c.check(cre is not None and struct.unpack_from("<H", cre, 0x26)[0] >= hp,
@@ -853,7 +914,7 @@ def main():
     lord = next((p for p in placed.values() if p["cre"] == "LORDM"), None)
     lord_scripts = [s for s in lord["scripts"].values() if s] if lord else []
     banish = next((s for s in lord_scripts if b'"localscie_mal_alarm"' in c.script(s)), "")
-    if banish:
+    if expect(400, bool(banish)):
         t = c.script(banish)
         blocks = re.findall(rb"cr\n(.*?)cr\n", t, re.S)
         for room in (b"1", b"2", b"3"):
@@ -889,9 +950,10 @@ def main():
             a = off + 0x110 * i
             if resref(area, a + 0x80) == "TRGBARD" and not lure_scripts:
                 lure_scripts = [s for s in (slot(area, a + o) for o in ARE_SLOTS) if s]
-    if "CIELURHP" in lure_scripts:
+    if expect(410, "CIELURHP" in lure_scripts):
         missing = [s for s in lure_scripts if res.get(s, "BCS") is None]
         c.check(not missing, "every script slot of the Luremaster points at a script (%s)" % (", ".join(missing) or "ok"))
+        c.check("DULURWRP" not in lure_scripts, "his old hop circuit no longer runs beside the new hop")
         t = c.script("CIELURHP")
         c.check(b'"cie_lur_hop" "locals"' in t and t.count(b"ac\n") >= 9,
                 "he opens with Improved Invisibility and hops away from an enemy next to him")

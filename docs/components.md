@@ -318,7 +318,9 @@ her dialogue. Hard and Insane: all three walked 540–700 pixels to the party an
 then cast. Core Rules: they left on their first round, as in the base game. On every
 difficulty both champions jumped beside her 1.1–1.5 seconds after she appeared and
 fought; the High Torturer stayed neutral in the torture chamber. Hard: two elites,
-Insane: three, 6.4 seconds after she appeared; Core Rules: none. Not tested in the
+Insane: three, 6.4 seconds after she appeared; Core Rules: none. Re-run on Hard
+with the mages as copies (`CIEYXM1`–`3`): they came 0.7 seconds after `YXUN_ATTACK`,
+walked 413–798 pixels to the party and cast. Not tested in the
 game: the traps and the telekinesis block (the install checks cover the scripts),
 without SCS, and with a real party.
 
@@ -331,10 +333,12 @@ without SCS, and with a real party.
   talks, and the base game's difficulty script on them (`EFDELDEF`) removes them on
   their first round below Hard unless they see a party member. They have no orders to
   look for the party.
-- **Change:** the spawn waits for `YXUN_ATTACK`, and each mage's creature file gets
-  `CIEYXPUR` in its override slot (the first to run; SCS's mage AI ends with a block
-  that holds every idle mage): when the mage has nothing to do and detects no enemy,
-  it walks to Player1. The first round only marks the mage, so `EFDELDEF` still
+- **Change:** the spawn waits for `YXUN_ATTACK` and creates copies of its mages
+  (`CIEYXM1`, `CIEYXM2`, ..., one per creature file it names) that run `CIEYXPUR` in
+  their override slot (the first to run; SCS's mage AI ends with a block that holds
+  every idle mage): when the mage has nothing to do and detects no enemy, it walks to
+  Player1. The originals stay as they are: the base game's `YUANMAG` also comes in
+  the hall before her rooms (`AR4004`; SCS gives that hall its own `DWYUMAG1`–`4`). The first round only marks the mage, so `EFDELDEF` still
   decides in that round: below Hard (unless Heart of Winter is finished) the mages
   still leave, as in the base game.
 
@@ -445,7 +449,8 @@ real party.
   over the map) and sets it. A Marauder the party reaches or attacks first still
   fights at once, as in the base game.
 - **Stronger:** Marauders 70 hit points (base game 42), 2 attacks per round (1),
-  THAC0 10 (12); Avengers 45 hit points (31). Values are only raised, never lowered.
+  THAC0 10 (12); Avengers 45 hit points (31). Values are only raised, never lowered
+  (attacks per round by their real number: 1½ becomes 2, 2½ stays).
 
 ### Repairs
 
@@ -843,7 +848,9 @@ slot pointing at a missing `NULL.BCS`; since then he stands at his throne.
 - **He opens with Improved Invisibility** (memorised) once the fight starts.
 - **He hops away when cornered:** while he has spells and is not beaten, an enemy next to
   him makes him Dimension Door to one of the eight points of his old circuit, every 12
-  or 18 seconds at most (`CIELURHP`, in the slot that pointed at `NULL.BCS`).
+  or 18 seconds at most (`CIELURHP`, in his class slot: with SCS in place of the
+  missing `NULL.BCS`, without SCS in place of `DULURWRP`, so he hops the same way in
+  both and never after every spell on top of it).
 - **Repairs:** his spell script's Dispel Magic entry checked `WIZARD_REMOVE_MAGIC` (2302,
   Remove Magic in IWD:EE), which he does not memorise, so his three Dispel Magic
   (`SPWI323`, 2323) never came; the entry checks and casts 2323 now.

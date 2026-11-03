@@ -141,7 +141,11 @@ BEGIN
     WRITE_SHORT 0x24 hp
     WRITE_SHORT 0x26 hp
   END
-  PATCH_IF (apr > old_apr) AND (old_apr < 6) BEGIN
+  // attacks per round are stored as 0-5 whole attacks, 6-10 as 1/2, 3/2, 5/2, 7/2,
+  // 9/2: compared in half attacks
+  SET old_halves = (old_apr <= 5) ? (old_apr * 2) : ((old_apr - 6) * 2 + 1)
+  SET new_halves = (apr <= 5) ? (apr * 2) : ((apr - 6) * 2 + 1)
+  PATCH_IF (apr > 0) AND (old_apr <= 10) AND (new_halves > old_halves) BEGIN
     WRITE_BYTE 0x53 apr
   END
   PATCH_IF (thac0 > 0) AND (thac0 < old_thac0) BEGIN
