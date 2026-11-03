@@ -16,6 +16,12 @@ LANGUAGE ~English~ ~english~ ~chriz-iwd-encounters/languages/english/setup.tra~
 //     without a working spell AI on IWD:EE
 // 200 enemy priests prepare when they first see the party (Core Rules and up)
 // 300 Belhifet's final fight (works with and without SCS)
+// 310 Yxunomei and her temple in Dragon's Eye (works with and without SCS)
+// 320 the orog raid on Kuldahar (works with and without SCS)
+// 330 Joril's throne room in Wyrm's Tooth (works with and without SCS)
+// 340 Maiden Ilmadia's forge in Lower Dorn's Deep (works with and without SCS)
+// 350 the Idol in Poquelin's temple (works with and without SCS)
+// 360 Poquelin in the Ascension Cave (works with and without SCS)
 //
 // Boss fights follow from 300 on, one component each, so a later version can add
 // one at the end of an existing install.
@@ -43,3 +49,80 @@ REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
 REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~belhif.cre~) AND (FILE_EXISTS_IN_GAME ~ar1105.are~) @9003
 INCLUDE ~chriz-iwd-encounters/lib/cie_belhifet.tpa~
 LAF cie_belhifet END
+
+BEGIN @310 DESIGNATED 310
+LABEL ~chriz-iwd-encounters-yxunomei~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar4005.are~) AND (FILE_EXISTS_IN_GAME ~tanarri.cre~) @9004
+INCLUDE ~chriz-iwd-encounters/lib/cie_yxunomei.tpa~
+LAF cie_yxunomei END
+
+BEGIN @320 DESIGNATED 320
+LABEL ~chriz-iwd-encounters-kuldahar-raid~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE FILE_EXISTS_IN_GAME ~ar2100.are~ @9005
+INCLUDE ~chriz-iwd-encounters/lib/cie_kuldahar.tpa~
+LAF cie_kuldahar END
+
+BEGIN @330 DESIGNATED 330
+LABEL ~chriz-iwd-encounters-joril~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE FILE_EXISTS_IN_GAME ~ar7004.are~ @9006
+INCLUDE ~chriz-iwd-encounters/lib/cie_joril.tpa~
+LAF cie_joril END
+
+BEGIN @340 DESIGNATED 340
+LABEL ~chriz-iwd-encounters-ilmadia~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar8011.are~) AND (FILE_EXISTS_IN_GAME ~ilmadia.cre~) @9007
+INCLUDE ~chriz-iwd-encounters/lib/cie_ilmadia.tpa~
+LAF cie_ilmadia END
+
+BEGIN @350 DESIGNATED 350
+LABEL ~chriz-iwd-encounters-idol~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar8012.are~) AND (FILE_EXISTS_IN_GAME ~idol.cre~) @9008
+INCLUDE ~chriz-iwd-encounters/lib/cie_idol.tpa~
+LAF cie_idol END
+
+BEGIN @360 DESIGNATED 360
+LABEL ~chriz-iwd-encounters-poquelin~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar8013.are~) AND (FILE_EXISTS_IN_GAME ~poquelin.cre~) @9009
+INCLUDE ~chriz-iwd-encounters/lib/cie_poquelin.tpa~
+LAF cie_poquelin END
+
+BEGIN @370 DESIGNATED 370
+LABEL ~chriz-iwd-encounters-cryshal-tirith~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar1103.are~) AND (FILE_EXISTS_IN_GAME ~eepomab.cre~) @9010
+INCLUDE ~chriz-iwd-encounters/lib/cie_cryshal.tpa~
+LAF cie_cryshal END
+
+BEGIN @380 DESIGNATED 380
+LABEL ~chriz-iwd-encounters-mebdinga~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar9400.are~) AND (FILE_EXISTS_IN_GAME ~mebding.cre~) @9011
+INCLUDE ~chriz-iwd-encounters/lib/cie_mebdinga.tpa~
+LAF cie_mebdinga END
+
+BEGIN @390 DESIGNATED 390
+LABEL ~chriz-iwd-encounters-icasaracht~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar9604.are~) AND (FILE_EXISTS_IN_GAME ~icasa.cre~) @9012
+INCLUDE ~chriz-iwd-encounters/lib/cie_icasaracht.tpa~
+LAF cie_icasaracht END
+
+BEGIN @400 DESIGNATED 400
+LABEL ~chriz-iwd-encounters-maluradek~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar9712.are~) AND (FILE_EXISTS_IN_GAME ~lordm.cre~) @9013
+INCLUDE ~chriz-iwd-encounters/lib/cie_maluradek.tpa~
+LAF cie_maluradek END
+
+BEGIN @410 DESIGNATED 410
+LABEL ~chriz-iwd-encounters-luremaster~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar9711.are~) AND (FILE_EXISTS_IN_GAME ~trgbard.cre~) @9014
+INCLUDE ~chriz-iwd-encounters/lib/cie_luremaster.tpa~
+LAF cie_luremaster END

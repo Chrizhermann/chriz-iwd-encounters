@@ -1,0 +1,41 @@
+// chriz-iwd-encounters 360: Poquelin below three quarters of his hit points (and not
+// yet below half, where he escapes): once, a Dimension Door to the other of his two
+// places, then Fire Storm around himself; the next wave comes at once (CIE_POQ_WAVE,
+// answered by the area script). On top of his script. Uninterruptible: otherwise his
+// own script takes over once he has jumped and the Fire Storm never comes.
+
+IF
+  Allegiance(Myself,ENEMY)
+  Global("CIE_POQ_JUMP","LOCALS",0)
+  Global("DONE_HERE","LOCALS",0)
+  HPPercentLT(Myself,75)
+  !HPPercentLT(Myself,50)
+  NearLocation(Myself,%cie_poq_door_x%,%cie_poq_door_y%,20)
+THEN
+  RESPONSE #100
+    SetInterrupt(FALSE)
+    SetGlobal("CIE_POQ_JUMP","LOCALS",1)
+    SetGlobal("CIE_POQ_WAVE","MYAREA",1)
+    ForceSpellPoint([%cie_poq_x%.%cie_poq_y%],WIZARD_DIMENSION_DOOR)
+    Wait(2)
+    ForceSpell(Myself,CLERIC_FIRE_STORM)
+    SetInterrupt(TRUE)
+END
+
+IF
+  Allegiance(Myself,ENEMY)
+  Global("CIE_POQ_JUMP","LOCALS",0)
+  Global("DONE_HERE","LOCALS",0)
+  HPPercentLT(Myself,75)
+  !HPPercentLT(Myself,50)
+  !NearLocation(Myself,%cie_poq_door_x%,%cie_poq_door_y%,20)
+THEN
+  RESPONSE #100
+    SetInterrupt(FALSE)
+    SetGlobal("CIE_POQ_JUMP","LOCALS",1)
+    SetGlobal("CIE_POQ_WAVE","MYAREA",1)
+    ForceSpellPoint([%cie_poq_door_x%.%cie_poq_door_y%],WIZARD_DIMENSION_DOOR)
+    Wait(2)
+    ForceSpell(Myself,CLERIC_FIRE_STORM)
+    SetInterrupt(TRUE)
+END

@@ -1,0 +1,236 @@
+// Component 340: Maiden Ilmadia's forge in Lower Dorn's Deep (AR8011), designed with
+// Christopher on 2026-11-03 and 2026-11-04. Works with and without SCS.
+//   - Ilmadia has 135 hit points (base game 102).
+//   - As the Blackguard SCS makes her, she uses the abilities of a level-12
+//     Blackguard: Aura of Despair, Poison Weapon (three times), Absorb Health.
+//   - Once she turns hostile, her fire giants and drow turn with her and the giants
+//     gather at her side.
+//   - The drow priest-mages bless the giants (component 200 does that when it is
+//     installed; without it, this component gives them the blessing).
+//   - Repairs: a team SCS adds here shares the fire giants' hostility switch, so
+//     meeting some elementals and salamanders turned the whole forge hostile before
+//     her dialogue; SCS's giants check her death under a name that does not exist.
+// docs/components.md describes each change in engine-neutral terms.
+
+DEFINE_ACTION_FUNCTION cie_ilmadia BEGIN
+  OUTER_SPRINT cie_ilm_area_script ~~
+  COPY_EXISTING ~ar8011.are~ ~override~
+    READ_ASCII 0x94 cie_ilm_area_script (8) NULL
+  BUT_ONLY
+  ACTION_IF (~%cie_ilm_area_script%~ STRING_EQUAL ~~) OR (~%cie_ilm_area_script%~ STRING_EQUAL_CASE ~NONE~)
+      OR (!FILE_EXISTS_IN_GAME ~%cie_ilm_area_script%.bcs~) BEGIN
+    FAIL ~chriz-iwd-encounters: ar8011.are has no area script.~
+  END
+  // the forge's placements: Ilmadia (her script name and scripts), her fire giants
+  // and drow by script name, the drow's caster scripts, every team script in use
+  OUTER_SPRINT cie_ilm_name ~~
+  OUTER_SPRINT cie_ilm_giants ~~
+  OUTER_SET cie_ilm_giant_count = 0
+  ACTION_CLEAR_ARRAY cie_ilm_scripts
+  ACTION_CLEAR_ARRAY cie_ilm_drow_scripts
+  ACTION_CLEAR_ARRAY cie_ilm_teams
+  COPY_EXISTING ~ar8011.are~ ~override~
+    GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+    PHP_EACH actors AS index => actor BEGIN
+      READ_ASCII (actor + 0x80) cre (8) NULL
+      TO_UPPER cre
+      READ_LONG (actor + 0x28) flags
+      READ_ASCII actor name (32) NULL
+      INNER_PATCH_SAVE name ~%name%~ BEGIN
+        REPLACE_TEXTUALLY ~ ~ ~~
+      END
+      FOR (slot = 0x50; slot < 0x80; slot += 8) BEGIN
+        LPF cie_read_script_slot INT_VAR offset = (actor + slot) RET script END
+        PATCH_IF ((~%script%~ STRING_CONTAINS_REGEXP ~^GNTEAM~) = 0) BEGIN
+          SPRINT $cie_ilm_teams(~%script%~) ~1~
+        END
+        PATCH_IF (~%cre%~ STRING_EQUAL ~ILMADIA~) AND (~%script%~ STRING_COMPARE ~~)
+            AND ((~%script%~ STRING_CONTAINS_REGEXP ~^GNTEAM~) != 0) BEGIN
+          SPRINT $cie_ilm_scripts(~%script%~) ~1~
+        END
+        PATCH_IF ((~%cre%~ STRING_EQUAL ~DROWPM~) OR (~%cre%~ STRING_EQUAL ~DW#DRPM2~)) AND (~%script%~ STRING_COMPARE ~~)
+            AND (~%script%~ STRING_COMPARE ~EFDELDEF~) AND ((~%script%~ STRING_CONTAINS_REGEXP ~^GNTEAM~) != 0) BEGIN
+          SPRINT $cie_ilm_drow_scripts(~%script%~) ~1~
+        END
+      END
+      PATCH_IF (flags BAND 8) BEGIN
+        PATCH_IF (~%cre%~ STRING_EQUAL ~ILMADIA~) BEGIN
+          SPRINT cie_ilm_name ~%name%~
+        END
+        PATCH_IF (~%cre%~ STRING_EQUAL ~GIANTFIR~) OR (~%cre%~ STRING_EQUAL ~GIANTFI2~) BEGIN
+          SET cie_ilm_giant_count += 1
+          SPRINT cie_ilm_giants ~%cie_ilm_giants%
+    ActionOverride("%name%",Enemy())
+    ActionOverride("%name%",MoveToObject("@@ILMADIA@@"))~
+        END
+        PATCH_IF (~%cre%~ STRING_EQUAL ~DROWPM~) OR (~%cre%~ STRING_EQUAL ~DW#DRPM2~) BEGIN
+          SPRINT cie_ilm_giants ~%cie_ilm_giants%
+    ActionOverride("%name%",Enemy())~
+        END
+      END
+    END
+  BUT_ONLY
+  ACTION_IF (~%cie_ilm_name%~ STRING_EQUAL ~~) BEGIN
+    FAIL ~chriz-iwd-encounters: ar8011.are has no Maiden Ilmadia placed by name (ILMADIA).~
+  END
+  OUTER_PATCH_SAVE cie_ilm_giants ~%cie_ilm_giants%~ BEGIN
+    REPLACE_TEXTUALLY EXACT_MATCH ~@@ILMADIA@@~ ~%cie_ilm_name%~
+  END
+
+  LAF cie_ilmadia_hit_points END
+  LAF cie_ilmadia_blackguard END
+  LAF cie_ilmadia_rally END
+  LAF cie_ilmadia_bless END
+  LAF cie_ilmadia_team END
+  LAF cie_ilmadia_death_name END
+END
+
+// Ilmadia's hit points: 135, never lower than what she has.
+DEFINE_ACTION_FUNCTION cie_ilmadia_hit_points BEGIN
+  COPY_EXISTING ~ilmadia.cre~ ~override~
+    LPF cie_raise_creature INT_VAR hp = 135 RET old_hp old_apr old_thac0 END
+  PRINT ~chriz-iwd-encounters: Maiden Ilmadia has %old_hp% -> 135 hit points.~
+END
+
+// On top of her scripts: the Blackguard abilities (only while she has that kit).
+DEFINE_ACTION_FUNCTION cie_ilmadia_blackguard BEGIN
+  ACTION_IF (FILE_EXISTS_IN_GAME ~spcl102.spl~) AND (FILE_EXISTS_IN_GAME ~spcl103.spl~) AND (FILE_EXISTS_IN_GAME ~spcl423.spl~) BEGIN
+    OUTER_SET cie_ilm_done = 0
+    ACTION_PHP_EACH cie_ilm_scripts AS script => unused BEGIN
+      ACTION_IF FILE_EXISTS_IN_GAME ~%script%.bcs~ BEGIN
+        EXTEND_TOP ~%script%.bcs~ ~chriz-iwd-encounters/baf/cie_ilmadia_blackguard.baf~
+        OUTER_SET cie_ilm_done += 1
+      END
+    END
+    PRINT ~chriz-iwd-encounters: Maiden Ilmadia uses Aura of Despair, Poison Weapon and Absorb Health as a Blackguard (%cie_ilm_done% script).~
+  END ELSE BEGIN
+    WARN ~chriz-iwd-encounters: the Blackguard abilities (SPCL102, SPCL103, SPCL423) are missing; Ilmadia fights as before.~
+  END
+END
+
+// The area script: once she is hostile, her giants and drow turn with her and the
+// giants go to her. Ordered from the area script: in the lab far neutral creatures
+// did not run their own scripts.
+DEFINE_ACTION_FUNCTION cie_ilmadia_rally BEGIN
+  ACTION_IF (cie_ilm_giant_count = 0) BEGIN
+    WARN ~chriz-iwd-encounters: no fire giants placed by name in ar8011.are; they keep their own rules.~
+  END ELSE BEGIN
+    EXTEND_TOP ~%cie_ilm_area_script%.bcs~ ~chriz-iwd-encounters/baf/cie_ilmadia_rally.baf~ EVALUATE_BUFFER
+    PRINT ~chriz-iwd-encounters: when Maiden Ilmadia turns hostile, %cie_ilm_giant_count% fire giants and her drow turn with her and the giants gather at her side.~
+  END
+END
+
+// The drow's group blessing: component 200 gives it when installed (its marker
+// CIE_GROUP in their scripts); without it, their memorised Bless when they first
+// see the party.
+DEFINE_ACTION_FUNCTION cie_ilmadia_bless BEGIN
+  ACTION_PHP_EACH cie_ilm_drow_scripts AS script => unused BEGIN
+    ACTION_IF FILE_EXISTS_IN_GAME ~%script%.bcs~ BEGIN
+      OUTER_SET prep = 0
+      COPY_EXISTING ~%script%.bcs~ ~override~
+        PATCH_IF (INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~"LOCALSCIE_GROUP"~) >= 0) BEGIN
+          SET prep = 1
+        END
+      BUT_ONLY
+      ACTION_IF (prep = 0) BEGIN
+        EXTEND_TOP ~%script%.bcs~ ~chriz-iwd-encounters/baf/cie_ilmadia_bless.baf~
+        PRINT ~chriz-iwd-encounters: the drow priest-mage's %script% blesses the giants with its own Bless.~
+      END
+    END
+  END
+END
+
+// The team collision: placements here that run GNTEAM2M share its variable
+// MAP_GROUP_HOSTILE2 with the fire giants' hostility rule (Ilmadia's and the
+// giants' scripts). They move to the first team script GNTEAM3M-8M that exists,
+// that no placement here uses and whose variable no script here reads.
+DEFINE_ACTION_FUNCTION cie_ilmadia_team BEGIN
+  OUTER_SET cie_ilm_moved = 0
+  ACTION_IF VARIABLE_IS_SET $cie_ilm_teams(~GNTEAM2M~) BEGIN
+    // what the forge's scripts read
+    OUTER_SPRINT cie_ilm_read ~~
+    ACTION_CLEAR_ARRAY cie_ilm_all
+    COPY_EXISTING ~ar8011.are~ ~override~
+      GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+      PHP_EACH actors AS index => actor BEGIN
+        FOR (slot = 0x50; slot < 0x80; slot += 8) BEGIN
+          LPF cie_read_script_slot INT_VAR offset = (actor + slot) RET script END
+          PATCH_IF (~%script%~ STRING_COMPARE ~~) BEGIN
+            SPRINT $cie_ilm_all(~%script%~) ~1~
+          END
+        END
+      END
+    BUT_ONLY
+    OUTER_SPRINT $cie_ilm_all(~%cie_ilm_area_script%~) ~1~
+    OUTER_SPRINT cie_ilm_free ~~
+    OUTER_FOR (n = 3; n <= 8; n += 1) BEGIN
+      ACTION_IF (~%cie_ilm_free%~ STRING_EQUAL ~~) AND (FILE_EXISTS_IN_GAME ~gnteam%n%m.bcs~)
+          AND !(VARIABLE_IS_SET $cie_ilm_teams(~GNTEAM%n%M~)) BEGIN
+        OUTER_SET read = 0
+        ACTION_PHP_EACH cie_ilm_all AS script => unused BEGIN
+          ACTION_IF FILE_EXISTS_IN_GAME ~%script%.bcs~ BEGIN
+            COPY_EXISTING ~%script%.bcs~ ~override~
+              PATCH_IF (INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~"MYAREAMAP_GROUP_HOSTILE%n%"~) >= 0) BEGIN
+                SET read = 1
+              END
+            BUT_ONLY
+          END
+        END
+        ACTION_IF (read = 0) BEGIN
+          OUTER_SPRINT cie_ilm_free ~GNTEAM%n%M~
+        END
+      END
+    END
+    ACTION_IF (~%cie_ilm_free%~ STRING_EQUAL ~~) BEGIN
+      WARN ~chriz-iwd-encounters: no free team script for the elementals and salamanders on GNTEAM2M; they stay in it.~
+    END ELSE BEGIN
+      COPY_EXISTING ~ar8011.are~ ~override~
+        GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+        PHP_EACH actors AS index => actor BEGIN
+          FOR (slot = 0x50; slot < 0x80; slot += 8) BEGIN
+            LPF cie_read_script_slot INT_VAR offset = (actor + slot) RET script END
+            PATCH_IF (~%script%~ STRING_EQUAL ~GNTEAM2M~) BEGIN
+              WRITE_ASCIIE (actor + slot) ~%cie_ilm_free%~ (8)
+              SET cie_ilm_moved += 1
+            END
+          END
+        END
+      BUT_ONLY
+      PRINT ~chriz-iwd-encounters: %cie_ilm_moved% elementals and salamanders move from GNTEAM2M to %cie_ilm_free%, so meeting them no longer turns the fire giants hostile.~
+    END
+  END
+END
+
+// SCS's giants check Dead("Maiden_Ilmadia"); her death variable comes from her
+// placement's name ("Maiden Ilmadia", SPRITE_IS_DEADMAIDENILMADIA).
+DEFINE_ACTION_FUNCTION cie_ilmadia_death_name BEGIN
+  OUTER_SET cie_ilm_typos = 0
+  ACTION_CLEAR_ARRAY cie_ilm_typo_scripts
+  COPY_EXISTING ~ar8011.are~ ~override~
+    GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+    PHP_EACH actors AS index => actor BEGIN
+      FOR (slot = 0x50; slot < 0x80; slot += 8) BEGIN
+        LPF cie_read_script_slot INT_VAR offset = (actor + slot) RET script END
+        PATCH_IF (~%script%~ STRING_COMPARE ~~) BEGIN
+          SPRINT $cie_ilm_typo_scripts(~%script%~) ~1~
+        END
+      END
+    END
+  BUT_ONLY
+  ACTION_PHP_EACH cie_ilm_typo_scripts AS script => unused BEGIN
+    ACTION_IF FILE_EXISTS_IN_GAME ~%script%.bcs~ BEGIN
+      COPY_EXISTING ~%script%.bcs~ ~override~
+        PATCH_IF (INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~"Maiden_Ilmadia"~) >= 0) BEGIN
+          DECOMPILE_AND_PATCH BEGIN
+            REPLACE_EVALUATE CASE_INSENSITIVE ~"Maiden_Ilmadia"~ BEGIN
+              SET cie_ilm_typos += 1
+            END ~"%cie_ilm_name%"~
+          END
+        END
+      BUT_ONLY
+    END
+  END
+  ACTION_IF (cie_ilm_typos > 0) BEGIN
+    PRINT ~chriz-iwd-encounters: %cie_ilm_typos% check(s) of "Maiden_Ilmadia" now name her (%cie_ilm_name%).~
+  END
+END

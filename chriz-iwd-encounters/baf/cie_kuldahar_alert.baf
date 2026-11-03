@@ -1,0 +1,10 @@
+// chriz-iwd-encounters 320: the first raider or defender that wakes wakes the raid's
+// orogs (on top of the raid's awake script). CIE_KUL_ALERT (area): 1 the raid is awake.
+
+IF
+  Global("CIE_KUL_ALERT","MYAREA",0)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_KUL_ALERT","MYAREA",1)
+    Continue()
+END

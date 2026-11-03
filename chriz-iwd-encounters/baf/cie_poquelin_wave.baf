@@ -1,0 +1,16 @@
+// chriz-iwd-encounters 360: Poquelin has jumped (CIE_POQ_WAVE 1, set by his script):
+// the pause before the next of his five waves ends now (on top of the cave's area
+// script). Only between waves (FLUSH_SPAWNS 0) and while waves are left (TRAP_PHASE
+// 1-4); in a spawn window it waits for the pause. CIE_POQ_WAVE (area): 2 done.
+
+IF
+  Global("CIE_POQ_WAVE","MYAREA",1)
+  Global("FLUSH_SPAWNS","MYAREA",0)
+  GlobalGT("TRAP_PHASE","MYAREA",0)
+  GlobalLT("TRAP_PHASE","MYAREA",5)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_POQ_WAVE","MYAREA",2)
+    SetGlobalTimer("SPAWN_TIMER","MYAREA",0)
+    Continue()
+END

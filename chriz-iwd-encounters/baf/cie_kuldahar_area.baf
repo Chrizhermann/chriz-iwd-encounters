@@ -1,0 +1,24 @@
+// chriz-iwd-encounters 320: the raid's second wave (on top of Kuldahar's area
+// script). Three rounds after the raid woke (CIE_KUL_ALERT), a war horn sounds and
+// the Marauders, the raid's leaders, wake and charge: their asleep script waits for
+// CIE_KUL_WAVE 2. CIE_KUL_WAVE (area): 1 waiting, 2 sounded.
+
+IF
+  !Global("CIE_KUL_ALERT","MYAREA",0)
+  Global("CIE_KUL_WAVE","MYAREA",0)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_KUL_WAVE","MYAREA",1)
+    SetGlobalTimer("CIE_KUL_WAVE_TIMER","MYAREA",THREE_ROUNDS)
+    Continue()
+END
+
+IF
+  Global("CIE_KUL_WAVE","MYAREA",1)
+  GlobalTimerExpired("CIE_KUL_WAVE_TIMER","MYAREA")
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_KUL_WAVE","MYAREA",2)
+    PlaySoundNotRanged("S_HORN")
+    Continue()
+END

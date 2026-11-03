@@ -1,0 +1,28 @@
+// chriz-iwd-encounters 330: Joril's court (on top of its giants' script). Whoever has
+// Hold Person memorised (his bodyguards) casts it at the enemy it sees; a Berserker
+// (SCS's kit for Joril, his bodyguards and his guards) uses the kit's rage when an
+// enemy comes close. Once per creature each.
+
+IF
+  Allegiance(Myself,ENEMY)
+  HaveSpell(CLERIC_HOLD_PERSON)
+  See(NearestEnemyOf(Myself))
+  !StateCheck(LastSeenBy(Myself),STATE_HELPLESS)
+  Global("CIE_JOR_HOLD","LOCALS",0)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_JOR_HOLD","LOCALS",1)
+    Spell(LastSeenBy(Myself),CLERIC_HOLD_PERSON)
+END
+
+IF
+  Allegiance(Myself,ENEMY)
+  Kit(Myself,BERSERKER)
+  See(NearestEnemyOf(Myself))
+  Range(LastSeenBy(Myself),10)
+  Global("CIE_JOR_RAGE","LOCALS",0)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_JOR_RAGE","LOCALS",1)
+    ReallyForceSpell(Myself,BERSERKER_RAGE)
+END

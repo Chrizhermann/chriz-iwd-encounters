@@ -1,0 +1,14 @@
+// chriz-iwd-encounters 370: on top of the first script of the real Pomab and of each
+// image. Once a revealing spell has shown what it is (POMAB_ILLUSION, set by its own
+// reveal block) and the shuffle has hidden it again (Detect Illusions back to 20),
+// it can be revealed again and carries the real Pomab's name.
+
+IF
+  Global("POMAB_ILLUSION","LOCALS",1)
+  CheckStatGT(Myself,19,DETECTILLUSIONS)
+THEN
+  RESPONSE #100
+    SetGlobal("POMAB_ILLUSION","LOCALS",0)
+    SetName(%cie_cry_name%)
+    Continue()
+END

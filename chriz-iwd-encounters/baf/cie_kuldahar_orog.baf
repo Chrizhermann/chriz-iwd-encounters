@@ -1,0 +1,20 @@
+// chriz-iwd-encounters 320: the raid's orogs once awake (at the end of their combat
+// script). They fight back against the town's defenders, who attack them on sight
+// but are not their enemies, and they come for the party when they see no enemy.
+
+IF
+  Global("CREATURE_STATE_VARBit6","LOCALS",1)
+  AttackedBy([NEUTRAL],DEFAULT)
+THEN
+  RESPONSE #100
+    AttackReevaluate(LastAttackerOf(Myself),75)
+END
+
+IF
+  Global("CREATURE_STATE_VARBit6","LOCALS",1)
+  ActionListEmpty()
+  !See(NearestEnemyOf(Myself))
+THEN
+  RESPONSE #100
+    MoveToObject(Player1)
+END

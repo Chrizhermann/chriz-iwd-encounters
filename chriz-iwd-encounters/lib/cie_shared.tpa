@@ -51,6 +51,68 @@ BEGIN
   END
 END
 
+// Removes from a decompiled script (the patch buffer, BAF text) every block that
+// contains the given text. A block runs from its "IF" line to its "END" line;
+// inside a block every line is indented.
+DEFINE_PATCH_FUNCTION cie_remove_baf_blocks
+  STR_VAR text = ~~
+  RET removed
+BEGIN
+  SET removed = 0
+  SET at = INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~%text%~)
+  WHILE (at >= 0) BEGIN
+    SET start = RINDEX_BUFFER (CASE_SENSITIVE EVALUATE_REGEXP ~^IF~ at)
+    SET end = INDEX_BUFFER (CASE_SENSITIVE EVALUATE_REGEXP ~^END~ at)
+    PATCH_IF (start < 0) OR (end < 0) BEGIN
+      PATCH_WARN ~chriz-iwd-encounters: "%text%" stands outside a script block in %SOURCE_FILE%; left as it is.~
+      SET at = 0 - 1
+    END ELSE BEGIN
+      DELETE_BYTES start (end + 3 - start)
+      SET removed += 1
+      SET at = INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~%text%~ start)
+    END
+  END
+END
+
+// Finds in a decompiled script (the patch buffer, BAF text) the first block at or
+// after "from" that contains the given text: the start of its "IF" line and the end
+// of its "END" line, both -1 when there is none.
+DEFINE_PATCH_FUNCTION cie_find_baf_block
+  INT_VAR from = 0
+  STR_VAR text = ~~
+  RET start end
+BEGIN
+  SET start = 0 - 1
+  SET end = 0 - 1
+  SET at = INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~%text%~ from)
+  PATCH_IF (at >= 0) BEGIN
+    SET start = RINDEX_BUFFER (CASE_SENSITIVE EVALUATE_REGEXP ~^IF~ at)
+    SET end = INDEX_BUFFER (CASE_SENSITIVE EVALUATE_REGEXP ~^END~ at)
+    PATCH_IF (start < 0) OR (end < 0) BEGIN
+      SET start = 0 - 1
+      SET end = 0 - 1
+    END ELSE BEGIN
+      SET end += 3
+    END
+  END
+END
+
+// Replaces "length" bytes of the patch buffer at "start" with the given text
+// (length 0 inserts it).
+DEFINE_PATCH_FUNCTION cie_replace_text
+  INT_VAR start = 0 length = 0
+  STR_VAR text = ~~
+BEGIN
+  PATCH_IF (length > 0) BEGIN
+    DELETE_BYTES start length
+  END
+  SET size = STRING_LENGTH ~%text%~
+  PATCH_IF (size > 0) BEGIN
+    INSERT_BYTES start size
+    WRITE_ASCIIE start ~%text%~ (size)
+  END
+END
+
 // An area actor carries its creature inside the area file unless flag bit 0
 // ("not attached") is set (ARE actor: flags +0x28, creature offset +0x88, size
 // +0x8c). Returns the offset of that creature in the area file, or 0.
@@ -63,5 +125,30 @@ BEGIN
   READ_LONG (actor + 0x8c) size
   PATCH_IF ((flags BAND 1) OR (size < 0x2d4) OR (offset = 0)) BEGIN
     SET offset = 0
+  END
+END
+
+// CRE V1.0: current and maximum hit points (0x24, 0x26), THAC0 (0x52), attacks
+// per round (0x53). Only raises.
+DEFINE_PATCH_FUNCTION cie_raise_creature
+  INT_VAR hp = 0 apr = 0 thac0 = 0
+  RET old_hp old_apr old_thac0
+BEGIN
+  READ_SHORT 0x26 old_hp
+  READ_BYTE 0x53 old_apr
+  READ_BYTE 0x52 old_thac0
+  PATCH_IF (hp > old_hp) BEGIN
+    WRITE_SHORT 0x24 hp
+    WRITE_SHORT 0x26 hp
+  END
+  // attacks per round are stored as 0-5 whole attacks, 6-10 as 1/2, 3/2, 5/2, 7/2,
+  // 9/2: compared in half attacks
+  SET old_halves = (old_apr <= 5) ? (old_apr * 2) : ((old_apr - 6) * 2 + 1)
+  SET new_halves = (apr <= 5) ? (apr * 2) : ((apr - 6) * 2 + 1)
+  PATCH_IF (apr > 0) AND (old_apr <= 10) AND (new_halves > old_halves) BEGIN
+    WRITE_BYTE 0x53 apr
+  END
+  PATCH_IF (thac0 > 0) AND (thac0 < old_thac0) BEGIN
+    WRITE_BYTE 0x52 thac0
   END
 END

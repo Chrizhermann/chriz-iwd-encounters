@@ -1,0 +1,12 @@
+// chriz-iwd-encounters 320: the orog raid on Kuldahar, on top of %cie_kul_copy%, the
+// %cie_kul_who%' copy of the raid's "stand still until the party comes close"
+// script (%cie_kul_sleep%): they also wake when %cie_kul_wake_reason%.
+
+IF
+  %cie_kul_wake%
+  !Global("CREATURE_STATE_VARBit6","LOCALS",1)
+THEN
+  RESPONSE #100
+    SetGlobal("CREATURE_STATE_VARBit6","LOCALS",1)
+    ChangeAIScript("%cie_kul_awake%",GENERAL)
+END
