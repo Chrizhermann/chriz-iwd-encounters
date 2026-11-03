@@ -1,0 +1,14 @@
+// chriz-iwd-encounters 380: on top of Mebdinga's talk script. If she turns hostile
+// without the talk (the tomb's trap or an attack on her team), she becomes mortal and
+// the party knows of the soul (Know_Soul) as after the talk.
+
+IF
+  Allegiance(Myself,ENEMY)
+  HasItem("MINHP1",Myself)
+THEN
+  RESPONSE #100
+    SetInterrupt(FALSE)
+    DestroyItem("MINHP1")
+    SetGlobal("Know_Soul","GLOBAL",1)
+    SetInterrupt(TRUE)
+END

@@ -63,6 +63,16 @@
   an image (his own full heal could come first), his script reads the image counter, a
   sentry healed while it plays dead still stands up, and the sentries' caster targeting
   works. Works with and without SCS.
+- 380: Mebdinga's barrow. Her wails come on time (her floating lines no longer push her
+  cast timer back, and stop once she is hostile), and she runs from an attacker at most
+  once every three rounds. When her team turns hostile, the barrow wight and drowned
+  dead nearest to her join her team and come to her (two of each on Hard and Insane);
+  she sends her War Cry to one of them, and the wailing virgins send theirs only to male
+  allies that are not hasted yet. On Hard and Insane, once below half her hit points,
+  she shows it and lets out an Undying Lament a round later. Hostile before the talk,
+  she no longer stays immortal and the party learns of the soul. The barrow's spawn file
+  runs again the ten difficulty gates SCS replaced with its team scripts. Works with and
+  without SCS.
 
 ## v0.1.0 (2026-10-28)
 

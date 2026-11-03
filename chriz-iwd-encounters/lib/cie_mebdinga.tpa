@@ -1,0 +1,448 @@
+// Component 380: Mebdinga's barrow (AR9400, the Burial Isle, Heart of Winter), designed
+// with Christopher on 2026-11-03 and 2026-11-04. Works with and without SCS.
+//   - Her wails come on time: her own cast timer (her floating lines shared it and pushed
+//     it back), no floating lines once she is hostile, and she runs from an attacker at
+//     most once every three rounds, so she stays where her wails reach the party.
+//   - An honour guard: when her team turns hostile, the barrow wight and the drowned dead
+//     nearest to her (two of each on Hard and Insane) join her team and come to her; she
+//     sends her War Cry to one of them; the wailing virgins send theirs only to male
+//     allies that are not hasted yet.
+//   - Hard and Insane: once she can die and is below half her hit points, a telegraphed
+//     Undying Lament.
+//   - Repairs: hostile before the talk, she no longer stays immortal, and the party learns
+//     of the soul (Know_Soul) as from the talk; the difficulty gates of the barrow's spawn
+//     file (AR9400.INI) that SCS replaced with its team scripts run again, together with
+//     them.
+// docs/components.md describes each change in engine-neutral terms.
+
+DEFINE_ACTION_FUNCTION cie_mebdinga BEGIN
+  OUTER_SPRINT cie_meb_area_script ~~
+  COPY_EXISTING ~ar9400.are~ ~override~
+    READ_ASCII 0x94 cie_meb_area_script (8) NULL
+  BUT_ONLY
+  ACTION_IF (~%cie_meb_area_script%~ STRING_EQUAL ~~) OR (~%cie_meb_area_script%~ STRING_EQUAL_CASE ~NONE~)
+      OR (!FILE_EXISTS_IN_GAME ~%cie_meb_area_script%.bcs~) BEGIN
+    FAIL ~chriz-iwd-encounters: ar9400.are has no area script.~
+  END
+
+  // her placement: script name (actor flag bit 3), place, scripts, team scripts
+  OUTER_SET cie_meb_found = 0
+  OUTER_SPRINT cie_meb_name ~~
+  OUTER_SET cie_meb_x = 0
+  OUTER_SET cie_meb_y = 0
+  OUTER_SPRINT cie_meb_gn ~~
+  OUTER_SPRINT cie_meb_ba ~~
+  COPY_EXISTING ~ar9400.are~ ~override~
+    GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+    PHP_EACH actors AS index => actor BEGIN
+      READ_ASCII (actor + 0x80) cre (8) NULL
+      TO_UPPER cre
+      PATCH_IF (~%cre%~ STRING_EQUAL ~MEBDING~) AND (cie_meb_found = 0) BEGIN
+        SET cie_meb_found = 1
+        READ_LONG (actor + 0x28) flags
+        READ_ASCII actor name (32) NULL
+        READ_SHORT (actor + 0x20) cie_meb_x
+        READ_SHORT (actor + 0x22) cie_meb_y
+        PATCH_IF (flags BAND 8) BEGIN
+          INNER_PATCH_SAVE cie_meb_name ~%name%~ BEGIN
+            REPLACE_TEXTUALLY ~ ~ ~~
+          END
+        END
+        FOR (slot = 0x50; slot < 0x80; slot += 8) BEGIN
+          LPF cie_read_script_slot INT_VAR offset = (actor + slot) RET script END
+          PATCH_IF (~%script%~ STRING_COMPARE ~~) AND (FILE_EXISTS_IN_GAME ~%script%.bcs~) BEGIN
+            SPRINT $cie_meb_scripts(~%script%~) ~1~
+            PATCH_IF ((~%script%~ STRING_CONTAINS_REGEXP ~^GNTEAM~) = 0) BEGIN
+              SPRINT cie_meb_gn ~%script%~
+            END
+            PATCH_IF ((~%script%~ STRING_CONTAINS_REGEXP ~^BATEAM~) = 0) BEGIN
+              SPRINT cie_meb_ba ~%script%~
+            END
+          END
+        END
+      END
+    END
+  BUT_ONLY
+  ACTION_IF (cie_meb_found = 0) BEGIN
+    FAIL ~chriz-iwd-encounters: ar9400.are has no Mebdinga (MEBDING).~
+  END
+
+  // her scripts by what they do: the wails, the floating lines, the talk
+  OUTER_SPRINT cie_meb_wail ~~
+  OUTER_SPRINT cie_meb_lines ~~
+  OUTER_SPRINT cie_meb_talk ~~
+  ACTION_PHP_EACH cie_meb_scripts AS script => unused BEGIN
+    COPY_EXISTING ~%script%.bcs~ ~override~
+      DECOMPILE_AND_PATCH BEGIN
+        SET wail = INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~INNATE_MOURNFUL_WAIL~)
+        SET lines = INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~DisplayStringHead(~)
+        SET timer = INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~"#localtimer"~)
+        SET talk = INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~DestroyItem("MINHP1")~)
+        PATCH_IF (wail >= 0) AND (~%cie_meb_wail%~ STRING_EQUAL ~~) BEGIN
+          SPRINT cie_meb_wail ~%script%~
+        END
+        PATCH_IF (wail < 0) AND (lines >= 0) AND (timer >= 0) AND (~%cie_meb_lines%~ STRING_EQUAL ~~) BEGIN
+          SPRINT cie_meb_lines ~%script%~
+        END
+        PATCH_IF (talk >= 0) AND (~%cie_meb_talk%~ STRING_EQUAL ~~) BEGIN
+          SPRINT cie_meb_talk ~%script%~
+        END
+      END
+    BUT_ONLY
+  END
+
+  LAF cie_mebdinga_wails END
+  LAF cie_mebdinga_guard END
+  LAF cie_mebdinga_virgins END
+  LAF cie_mebdinga_gates END
+END
+
+// Her own scripts.
+DEFINE_ACTION_FUNCTION cie_mebdinga_wails BEGIN
+  ACTION_IF (~%cie_meb_wail%~ STRING_EQUAL ~~) BEGIN
+    WARN ~chriz-iwd-encounters: none of Mebdinga's scripts casts her wails; her fight stays as it is.~
+  END ELSE BEGIN
+    OUTER_SET cie_meb_timers = 0
+    OUTER_SET cie_meb_runs = 0
+    COPY_EXISTING ~%cie_meb_wail%.bcs~ ~override~
+      DECOMPILE_AND_PATCH BEGIN
+        // her own cast timer: her floating lines (another script) reset "#localtimer" too
+        PATCH_IF (~%cie_meb_lines%~ STRING_COMPARE ~~) BEGIN
+          REPLACE_EVALUATE CASE_INSENSITIVE ~"#localtimer","LOCALS"~ BEGIN
+            SET cie_meb_timers += 1
+          END ~"CIE_MEB_WAIL","LOCALS"~
+        END
+        // she runs from an attacker at most once every three rounds
+        SET from = 0
+        WHILE (from >= 0) BEGIN
+          LPF cie_find_baf_block INT_VAR from STR_VAR text = ~RunAwayFromNoLeaveArea(~ RET start end END
+          PATCH_IF (start < 0) BEGIN
+            SET from = 0 - 1
+          END ELSE BEGIN
+            READ_ASCII start block (end - start)
+            INNER_PATCH_SAVE block ~%block%~ BEGIN
+              REPLACE_TEXTUALLY ~^IF~ ~IF%LNL%  !GlobalTimerNotExpired("CIE_MEB_RUN","LOCALS")~
+              REPLACE_TEXTUALLY ~\([ ]*\)RunAwayFromNoLeaveArea(~ ~\1SetGlobalTimer("CIE_MEB_RUN","LOCALS",18)%LNL%\1RunAwayFromNoLeaveArea(~
+            END
+            LPF cie_replace_text INT_VAR start length = (end - start) STR_VAR text = EVAL ~%block%~ END
+            SET from = start + STRING_LENGTH ~%block%~
+            SET cie_meb_runs += 1
+          END
+        END
+      END
+    BUT_ONLY
+    EXTEND_TOP ~%cie_meb_wail%.bcs~ ~chriz-iwd-encounters/baf/cie_mebdinga_fight.baf~
+    PRINT ~chriz-iwd-encounters: Mebdinga's %cie_meb_wail% has its own cast timer (%cie_meb_timers% place(s)), runs at most every three rounds (%cie_meb_runs% block(s)), sends her War Cry and, on Hard and Insane, her Lament below half.~
+  END
+
+  // no floating lines once she is hostile
+  ACTION_IF (~%cie_meb_lines%~ STRING_COMPARE ~~) BEGIN
+    OUTER_SET cie_meb_quiet = 0
+    COPY_EXISTING ~%cie_meb_lines%.bcs~ ~override~
+      DECOMPILE_AND_PATCH BEGIN
+        SET from = 0
+        WHILE (from >= 0) BEGIN
+          LPF cie_find_baf_block INT_VAR from STR_VAR text = ~DisplayStringHead(~ RET start end END
+          PATCH_IF (start < 0) BEGIN
+            SET from = 0 - 1
+          END ELSE BEGIN
+            READ_ASCII start block (end - start)
+            INNER_PATCH_SAVE block ~%block%~ BEGIN
+              REPLACE_TEXTUALLY ~^IF~ ~IF%LNL%  !Allegiance(Myself,ENEMY)~
+            END
+            LPF cie_replace_text INT_VAR start length = (end - start) STR_VAR text = EVAL ~%block%~ END
+            SET from = start + STRING_LENGTH ~%block%~
+            SET cie_meb_quiet += 1
+          END
+        END
+      END
+    BUT_ONLY
+    PRINT ~chriz-iwd-encounters: Mebdinga's floating lines (%cie_meb_lines%, %cie_meb_quiet% block(s)) stop once she is hostile.~
+  END
+
+  // hostile before the talk: mortal, and the party knows of the soul
+  ACTION_IF (~%cie_meb_talk%~ STRING_EQUAL ~~) BEGIN
+    WARN ~chriz-iwd-encounters: none of Mebdinga's scripts takes her minimum hit point (MINHP1); left as it is.~
+  END ELSE BEGIN
+    EXTEND_TOP ~%cie_meb_talk%.bcs~ ~chriz-iwd-encounters/baf/cie_mebdinga_mortal.baf~
+  END
+END
+
+// The honour guard: the named, ungated barrow wights (WIGHTBA) and drowned dead (DROWNED)
+// placed nearest to her; the nearest of each always, the second of each on Hard and
+// Insane. Each moves into her team (her GNTEAM/BATEAM scripts in place of its own, so its
+// old team does not turn hostile through it), turns hostile and goes to her.
+DEFINE_ACTION_FUNCTION cie_mebdinga_guard BEGIN
+  ACTION_DEFINE_ASSOCIATIVE_ARRAY cie_meb_level BEGIN
+    80 => ~OVERRIDE~
+    88 => ~GENERAL~
+    96 => ~CLASS~
+    104 => ~RACE~
+    112 => ~DEFAULT~
+    120 => ~SPECIFICS~
+  END
+  // her team: the id between TEAM and M of her team script
+  OUTER_SPRINT cie_meb_team ~~
+  OUTER_SPRINT team_script ~%cie_meb_gn%%cie_meb_ba%~
+  OUTER_INNER_PATCH ~%team_script%~ BEGIN
+    REPLACE_EVALUATE CASE_INSENSITIVE ~TEAM\([0-9A-Z]\)M~ BEGIN
+      PATCH_IF (~%cie_meb_team%~ STRING_EQUAL ~~) BEGIN
+        SPRINT cie_meb_team ~%MATCH1%~
+      END
+    END ~%MATCH0%~
+  END
+  OUTER_SPRINT cie_meb_to_gn ~%cie_meb_gn%~
+  ACTION_IF (~%cie_meb_to_gn%~ STRING_EQUAL ~~) AND (~%cie_meb_team%~ STRING_COMPARE ~~) BEGIN
+    ACTION_IF FILE_EXISTS_IN_GAME ~gnteam%cie_meb_team%m.bcs~ BEGIN
+      OUTER_SPRINT cie_meb_to_gn ~GNTEAM%cie_meb_team%M~
+    END
+  END
+  OUTER_SPRINT cie_meb_to_ba ~%cie_meb_ba%~
+  ACTION_IF (~%cie_meb_to_ba%~ STRING_EQUAL ~~) AND (~%cie_meb_team%~ STRING_COMPARE ~~) BEGIN
+    ACTION_IF FILE_EXISTS_IN_GAME ~bateam%cie_meb_team%m.bcs~ BEGIN
+      OUTER_SPRINT cie_meb_to_ba ~BATEAM%cie_meb_team%M~
+    END
+  END
+
+  OUTER_SET cie_meb_count = 0
+  COPY_EXISTING ~ar9400.are~ ~override~
+    GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+    PHP_EACH actors AS index => actor BEGIN
+      READ_ASCII (actor + 0x80) cre (8) NULL
+      TO_UPPER cre
+      READ_LONG (actor + 0x28) flags
+      PATCH_IF ((~%cre%~ STRING_EQUAL ~WIGHTBA~) OR (~%cre%~ STRING_EQUAL ~DROWNED~)) AND (flags BAND 8) BEGIN
+        READ_ASCII actor name (32) NULL
+        INNER_PATCH_SAVE name ~%name%~ BEGIN
+          REPLACE_TEXTUALLY ~ ~ ~~
+        END
+        SET gated = 0
+        SPRINT lines ~~
+        FOR (slot = 0x50; slot < 0x80; slot += 8) BEGIN
+          LPF cie_read_script_slot INT_VAR offset = (actor + slot) RET script END
+          PATCH_IF ((~%script%~ STRING_CONTAINS_REGEXP ~^EFDEL~) = 0) BEGIN
+            SET gated = 1
+          END
+          SPRINT target ~-~
+          PATCH_IF ((~%script%~ STRING_CONTAINS_REGEXP ~^GNTEAM~) = 0) BEGIN
+            SPRINT target ~%cie_meb_to_gn%~
+          END
+          PATCH_IF ((~%script%~ STRING_CONTAINS_REGEXP ~^BATEAM~) = 0) BEGIN
+            SPRINT target ~%cie_meb_to_ba%~
+          END
+          PATCH_IF (~%target%~ STRING_COMPARE ~-~) AND (~%target%~ STRING_COMPARE_CASE ~%script%~) BEGIN
+            SPRINT level $cie_meb_level(~%slot%~)
+            SPRINT lines ~%lines%    ActionOverride("%name%",ChangeAIScript("%target%",%level%))%LNL%~
+          END
+        END
+        PATCH_IF (gated = 0) BEGIN
+          READ_SHORT (actor + 0x20) x
+          READ_SHORT (actor + 0x22) y
+          SET $cie_meb_dist(~%cie_meb_count%~) = ((x - cie_meb_x) * (x - cie_meb_x)) + ((y - cie_meb_y) * (y - cie_meb_y))
+          SPRINT $cie_meb_kind(~%cie_meb_count%~) ~%cre%~
+          SPRINT $cie_meb_cname(~%cie_meb_count%~) ~%name%~
+          SPRINT $cie_meb_lines(~%cie_meb_count%~) ~%lines%~
+          SET $cie_meb_used(~%cie_meb_count%~) = 0
+          SET cie_meb_count += 1
+        END
+      END
+    END
+  BUT_ONLY
+
+  // the nearest wight and drowned dead, then the next of each
+  ACTION_IF (~%cie_meb_name%~ STRING_COMPARE ~~) BEGIN
+    OUTER_SPRINT cie_meb_goal ~MoveToObject("%cie_meb_name%")~
+  END ELSE BEGIN
+    OUTER_SPRINT cie_meb_goal ~MoveToPoint([%cie_meb_x%.%cie_meb_y%])~
+  END
+  OUTER_SPRINT cie_meb_first ~~
+  OUTER_SPRINT cie_meb_second ~~
+  OUTER_SPRINT cie_meb_chosen ~~
+  OUTER_FOR (round = 1; round <= 2; ++round) BEGIN
+    ACTION_FOR_EACH kind IN ~WIGHTBA~ ~DROWNED~ BEGIN
+      OUTER_SET best = 0 - 1
+      OUTER_FOR (k = 0; k < cie_meb_count; ++k) BEGIN
+        ACTION_IF ($cie_meb_used(~%k%~) = 0) BEGIN
+          OUTER_SPRINT this_kind $cie_meb_kind(~%k%~)
+          ACTION_IF (~%this_kind%~ STRING_EQUAL ~%kind%~) BEGIN
+            ACTION_IF (best < 0) BEGIN
+              OUTER_SET best = k
+            END ELSE ACTION_IF ($cie_meb_dist(~%k%~) < $cie_meb_dist(~%best%~)) BEGIN
+              OUTER_SET best = k
+            END
+          END
+        END
+      END
+      ACTION_IF (best >= 0) BEGIN
+        OUTER_SET $cie_meb_used(~%best%~) = 1
+        OUTER_SPRINT name $cie_meb_cname(~%best%~)
+        OUTER_SPRINT lines $cie_meb_lines(~%best%~)
+        OUTER_SPRINT text ~%lines%    ActionOverride("%name%",Enemy())%LNL%    ActionOverride("%name%",%cie_meb_goal%)%LNL%~
+        ACTION_IF (round = 1) BEGIN
+          OUTER_SPRINT cie_meb_first ~%cie_meb_first%%text%~
+        END ELSE BEGIN
+          OUTER_SPRINT cie_meb_second ~%cie_meb_second%%text%~
+        END
+        OUTER_SPRINT cie_meb_chosen ~%cie_meb_chosen% %name%~
+      END
+    END
+  END
+
+  ACTION_IF (~%cie_meb_first%~ STRING_EQUAL ~~) BEGIN
+    WARN ~chriz-iwd-encounters: no named, ungated barrow wight or drowned dead in ar9400.are; Mebdinga has no honour guard.~
+  END ELSE BEGIN
+    // when her team turns hostile or she does
+    OUTER_SPRINT cie_meb_when ~~
+    ACTION_IF (~%cie_meb_team%~ STRING_COMPARE ~~) AND (~%cie_meb_name%~ STRING_COMPARE ~~) BEGIN
+      OUTER_SPRINT cie_meb_when ~  OR(2)%LNL%    !Global("MAP_GROUP_HOSTILE%cie_meb_team%","MYAREA",0)%LNL%    Allegiance("%cie_meb_name%",ENEMY)~
+    END ELSE ACTION_IF (~%cie_meb_team%~ STRING_COMPARE ~~) BEGIN
+      OUTER_SPRINT cie_meb_when ~  !Global("MAP_GROUP_HOSTILE%cie_meb_team%","MYAREA",0)~
+    END ELSE ACTION_IF (~%cie_meb_name%~ STRING_COMPARE ~~) BEGIN
+      OUTER_SPRINT cie_meb_when ~  Allegiance("%cie_meb_name%",ENEMY)~
+    END
+    ACTION_IF (~%cie_meb_when%~ STRING_EQUAL ~~) BEGIN
+      WARN ~chriz-iwd-encounters: Mebdinga has neither a team nor a script name; no honour guard.~
+    END ELSE BEGIN
+      EXTEND_TOP ~%cie_meb_area_script%.bcs~ ~chriz-iwd-encounters/baf/cie_mebdinga_guard.baf~ EVALUATE_BUFFER
+      PRINT ~chriz-iwd-encounters: Mebdinga's honour guard (team %cie_meb_team%):%cie_meb_chosen%.~
+    END
+  END
+END
+
+// The wailing virgins send their War Cry (haste for male allies) only to a male ally that
+// is not hasted yet: the old check (not in STATE_NORMAL, which is 0) held for anyone.
+DEFINE_ACTION_FUNCTION cie_mebdinga_virgins BEGIN
+  OUTER_SET cie_meb_cries = 0
+  ACTION_IF FILE_EXISTS_IN_GAME ~bawail0.bcs~ BEGIN
+    COPY_EXISTING ~bawail0.bcs~ ~override~
+      DECOMPILE_AND_PATCH BEGIN
+        LPF cie_find_baf_block STR_VAR text = ~INNATE_WAR_CRY~ RET start end END
+        PATCH_IF (start >= 0) BEGIN
+          READ_ASCII start block (end - start)
+          SET changed = 0
+          INNER_PATCH_SAVE block ~%block%~ BEGIN
+            REPLACE_EVALUATE CASE_INSENSITIVE ~See(\[ENEMY\])~ BEGIN
+              SET changed += 1
+            END ~See([ENEMY.0.0.0.0.MALE])~
+            REPLACE_EVALUATE CASE_INSENSITIVE ~!StateCheck(LastSeenBy(Myself),STATE_NORMAL)~ BEGIN
+              SET changed += 1
+            END ~!StateCheck(LastSeenBy(Myself),STATE_HASTED)~
+          END
+          PATCH_IF (changed = 2) BEGIN
+            LPF cie_replace_text INT_VAR start length = (end - start) STR_VAR text = EVAL ~%block%~ END
+            SET cie_meb_cries = 1
+          END
+        END
+      END
+    BUT_ONLY
+  END
+  ACTION_IF (cie_meb_cries = 0) BEGIN
+    WARN ~chriz-iwd-encounters: the wailing virgins' War Cry check (bawail0.bcs) is not the known one; left as it is.~
+  END
+END
+
+// The barrow's spawn file: the base game's difficulty gates (EFDELINS, EFDELEAS,
+// EFDELHRD in script_override). SCS 6020 writes its team script into script_override
+// and so replaced ten of them. Each such entry gets a script that runs the gate first
+// and then the script that stands there now.
+DEFINE_ACTION_FUNCTION cie_mebdinga_gates BEGIN
+  ACTION_DEFINE_ASSOCIATIVE_ARRAY cie_meb_gate BEGIN
+    ~VIRGIN01~ => ~EFDELINS~
+    ~VIRGIN09~ => ~EFDELINS~
+    ~VIRGIN15~ => ~EFDELINS~
+    ~VIRGIN26~ => ~EFDELINS~
+    ~DDEAD18~ => ~EFDELINS~
+    ~DDEAD20~ => ~EFDELINS~
+    ~BWIGHT25~ => ~EFDELINS~
+    ~VIRGIN03~ => ~EFDELEAS~
+    ~VIRGIN22~ => ~EFDELEAS~
+    ~VIRGIN25~ => ~EFDELEAS~
+    ~DDEAD05~ => ~EFDELHRD~
+    ~DDEAD08~ => ~EFDELHRD~
+    ~BWIGHT12~ => ~EFDELHRD~
+  END
+  OUTER_SET cie_meb_kept = 0
+  OUTER_SET cie_meb_restored = 0
+  OUTER_SET cie_meb_combos = 0
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar9400.ini~ BEGIN
+    ACTION_PHP_EACH cie_meb_gate AS section => gate BEGIN
+      ACTION_IF FILE_EXISTS_IN_GAME ~%gate%.bcs~ BEGIN
+        // the script in the entry's script_override now ("?" when the entry is missing)
+        OUTER_SPRINT current ~?~
+        COPY_EXISTING ~ar9400.ini~ ~override~
+          LPF cie_ini_section STR_VAR section RET head next END
+          PATCH_IF (head >= 0) BEGIN
+            READ_ASCII head text (next - head)
+            SPRINT current ~~
+            INNER_PATCH ~%text%~ BEGIN
+              REPLACE_EVALUATE CASE_INSENSITIVE ~^script_override[ %TAB%]*=[ %TAB%]*\([^ %TAB%%LNL%%MNL%]*\)~ BEGIN
+                SPRINT current ~%MATCH1%~
+              END ~%MATCH0%~
+            END
+          END
+        BUT_ONLY
+        ACTION_IF (~%current%~ STRING_EQUAL_CASE ~%gate%~) BEGIN
+          OUTER_SET cie_meb_kept += 1
+        END ELSE ACTION_IF (~%current%~ STRING_COMPARE ~?~) BEGIN
+          OUTER_SPRINT script ~%gate%~
+          ACTION_IF (~%current%~ STRING_COMPARE ~~) AND (FILE_EXISTS_IN_GAME ~%current%.bcs~) BEGIN
+            ACTION_TO_UPPER current
+            ACTION_IF VARIABLE_IS_SET $cie_meb_combo(~%gate%~ ~%current%~) BEGIN
+              OUTER_SPRINT script $cie_meb_combo(~%gate%~ ~%current%~)
+            END ELSE BEGIN
+              OUTER_SET cie_meb_combos += 1
+              OUTER_SPRINT script ~CIEMG%cie_meb_combos%~
+              OUTER_SPRINT $cie_meb_combo(~%gate%~ ~%current%~) ~%script%~
+              OUTER_SPRINT cie_meb_text ~~
+              COPY_EXISTING ~%current%.bcs~ ~override~
+                DECOMPILE_AND_PATCH BEGIN
+                  READ_ASCII 0 cie_meb_text (BUFFER_LENGTH)
+                END
+              BUT_ONLY
+              COPY_EXISTING ~%gate%.bcs~ ~override/%script%.bcs~
+                DECOMPILE_AND_PATCH BEGIN
+                  LPF cie_replace_text INT_VAR start = BUFFER_LENGTH STR_VAR text = EVAL ~%LNL%%cie_meb_text%~ END
+                END
+            END
+          END
+          COPY_EXISTING ~ar9400.ini~ ~override~
+            LPF cie_ini_section STR_VAR section RET head next END
+            PATCH_IF (head >= 0) BEGIN
+              READ_ASCII head text (next - head)
+              SET had = 0
+              INNER_PATCH_SAVE text ~%text%~ BEGIN
+                REPLACE_EVALUATE CASE_INSENSITIVE ~^script_override[ %TAB%]*=[^%LNL%%MNL%]*~ BEGIN
+                  SET had += 1
+                END ~script_override=%script%~
+              END
+              PATCH_IF (had = 0) BEGIN
+                INNER_PATCH_SAVE text ~%text%~ BEGIN
+                  REPLACE_TEXTUALLY ~^\(\[[^]]*\][^%LNL%]*%LNL%\)~ ~\1script_override=%script%%LNL%~
+                END
+              END
+              LPF cie_replace_text INT_VAR start = head length = (next - head) STR_VAR text = EVAL ~%text%~ END
+            END
+          BUT_ONLY
+          OUTER_SET cie_meb_restored += 1
+        END
+      END
+    END
+    PRINT ~chriz-iwd-encounters: AR9400.INI: %cie_meb_restored% difficulty gate(s) run again (%cie_meb_combos% combined script(s)), %cie_meb_kept% were still in place.~
+  END
+END
+
+// An INI section in the patch buffer: from its "[name]" line to the next section or
+// the end (head -1 when it is missing).
+DEFINE_PATCH_FUNCTION cie_ini_section
+  STR_VAR section = ~~
+  RET head next
+BEGIN
+  SET head = INDEX_BUFFER (CASE_INSENSITIVE EVALUATE_REGEXP ~^\[%section%\]~)
+  SET next = BUFFER_LENGTH
+  PATCH_IF (head >= 0) BEGIN
+    SET next = INDEX_BUFFER (EVALUATE_REGEXP ~^\[~ (head + 1))
+    PATCH_IF (next < 0) BEGIN
+      SET next = BUFFER_LENGTH
+    END
+  END
+END

@@ -98,3 +98,10 @@ REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
 REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar1103.are~) AND (FILE_EXISTS_IN_GAME ~eepomab.cre~) @9010
 INCLUDE ~chriz-iwd-encounters/lib/cie_cryshal.tpa~
 LAF cie_cryshal END
+
+BEGIN @380 DESIGNATED 380
+LABEL ~chriz-iwd-encounters-mebdinga~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar9400.are~) AND (FILE_EXISTS_IN_GAME ~mebding.cre~) @9011
+INCLUDE ~chriz-iwd-encounters/lib/cie_mebdinga.tpa~
+LAF cie_mebdinga END

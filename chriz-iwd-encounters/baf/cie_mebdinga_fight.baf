@@ -1,0 +1,34 @@
+// chriz-iwd-encounters 380: on top of Mebdinga's wail script. Once hostile she sends
+// her War Cry (haste, only for male allies) to one of her guards; on Hard and Insane,
+// once she can die and is below half her hit points, she shows it for a round and then
+// lets out an Undying Lament.
+
+IF
+  Allegiance(Myself,ENEMY)
+  Global("CIE_MEB_CRY","LOCALS",0)
+  See(NearestEnemyOf(Myself))
+  See([ENEMY.0.0.0.0.MALE])
+  !StateCheck(LastSeenBy(Myself),STATE_HASTED)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_MEB_CRY","LOCALS",1)
+    ForceSpell(LastSeenBy(Myself),INNATE_WAR_CRY)
+END
+
+IF
+  Allegiance(Myself,ENEMY)
+  DifficultyGT(NORMAL)
+  Global("CIE_MEB_SURGE","LOCALS",0)
+  HPPercentLT(Myself,50)
+  !HasItem("MINHP1",Myself)
+  See(NearestEnemyOf(Myself))
+THEN
+  RESPONSE #100
+    SetInterrupt(FALSE)
+    SetGlobal("CIE_MEB_SURGE","LOCALS",1)
+    ApplySpellRES("WVHITH",Myself)
+    DisplayStringHead(Myself,24902)
+    Wait(6)
+    ForceSpell(NearestEnemyOf(Myself),INNATE_UNDYING_LAMENT)
+    SetInterrupt(TRUE)
+END

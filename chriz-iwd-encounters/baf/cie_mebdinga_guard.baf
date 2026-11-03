@@ -1,0 +1,21 @@
+// chriz-iwd-encounters 380: on top of the barrow's area script. When Mebdinga's team
+// turns hostile (or she does), the barrow wight and the drowned dead nearest to her join
+// her team, turn hostile and come to her; on Hard and Insane the next two as well.
+
+IF
+  Global("CIE_MEB_GUARD","MYAREA",0)
+%cie_meb_when%
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_MEB_GUARD","MYAREA",1)
+%cie_meb_first%    Continue()
+END
+
+IF
+  Global("CIE_MEB_GUARD","MYAREA",1)
+  DifficultyGT(NORMAL)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_MEB_GUARD","MYAREA",2)
+%cie_meb_second%    Continue()
+END

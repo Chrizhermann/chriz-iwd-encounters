@@ -690,3 +690,61 @@ dead stood up 10.7 seconds after it went down, at full hit points; after the cha
 attacked Pomab the sentries saw his last attacker, and the pressed signal followed the
 character's distance to him. Not tested in the game: without SCS, with a real party
 (who the sentries pick between several characters), the revealing spells themselves.
+
+## 380: Mebdinga's barrow
+
+Works with and without SCS. Designed with Christopher on 2026-11-03 and 2026-11-04 (the
+package; the Lament below half on Hard and Insane, "gerade bei höheren
+Schwierigkeitsstufen"; the honour guard from the barrow's own undead, no new spawns;
+the spawn file's gates back). The barrow (`AR9400`, under the Burial Isle in Heart of
+Winter): Mebdinga (`MEBDING`, a spectre; talk `OHMEBTLK`, floating lines `BAMEBD`, wails
+`BAMEMBA`, team `GNTEAM2M`) stands at Wylfdene's tomb. Her minimum hit point (`MINHP1`)
+goes once the party has talked to her and knows of the soul (`Know_Soul`). Her wails
+burst around herself: Mournful Wail (stun), Undying Lament (4d10 magic damage), Death
+Knell (instant death). Wailing virgins, barrow wights and drowned dead fill the barrow
+in teams.
+
+- **Her wails come on time:** her wail script shared the timer `#localtimer` with her
+  floating lines, which set it to 16–18 seconds while she saw the party; it has its own
+  now (`CIE_MEB_WAIL`). Her lines stop once she is hostile. She runs from an attacker at
+  most once every three rounds (`CIE_MEB_RUN`), so she stays where her wails reach the
+  party.
+- **Honour guard:** when her team turns hostile (or she does), the barrow wight and the
+  drowned dead placed nearest to her (named, without a difficulty gate) join her team
+  (her team scripts in place of theirs, so their own teams stay calm), turn hostile and
+  come to her; on Hard and Insane the next wight and drowned dead as well. In the base
+  game that is Barrow Wight 3 and Drowned Dead 2, then Barrow Wight 2 and Drowned Dead 7.
+- **War Cry:** she sends her War Cry (haste for 18 seconds, only for male allies) once,
+  to a male ally that is not hasted. The wailing virgins (`BAWAIL0`) sent theirs to the
+  nearest hostile creature not in `STATE_NORMAL` (which is 0, so to anyone, mostly to
+  other virgins it cannot affect); now only to a male ally that is not hasted yet.
+- **Lament below half (Hard and Insane):** once she can die and is below half her hit
+  points, she shows it (her hit visual `WVHITH` and "There is no water pure enough to
+  cleanse this stain!"), stands for a round and then lets out an Undying Lament.
+- **Repairs:**
+  - Hostile before the talk (the tomb's trap or an attack on her team turns her team
+    hostile), she kept her minimum hit point for good and the party never learned of
+    the soul. Now she loses it once hostile, and `Know_Soul` is set as by the talk.
+  - SCS 6020 writes its team script into `script_override` of spawn file entries and so
+    replaced 10 of the base game's 13 difficulty gates in `AR9400.INI` (`EFDELINS`,
+    `EFDELEAS`, `EFDELHRD`): those virgins, drowned dead and a wight spawned on every
+    difficulty. Each such entry now runs a script that does the gate first and then what
+    stands there (`CIEMG1`, `CIEMG2`, …).
+- **Not changed:** the virgins' own wails and numbers, her Death Knell, her talk and the
+  tomb, and the `EndCutSceneMode()` that EE Fixpack removed on purpose before her
+  re-talk (a cutscene that ends right before a dialogue leaves two ticks for other
+  actions).
+
+Lab-tested on 2026-11-04 in IWD:EE 2.7.3.0 with SCS 35.21 and EEex 1.3.1 on Hard, from a
+save with one level-1 character, two runs: on arrival the seven Insane-only spawns of the
+spawn file were gone within a second (four of them had lost their gate to SCS). Hurt from
+afar, she turned hostile and, within 1.2 seconds and without a talk, lost her minimum hit
+point and set `Know_Soul`; Barrow Wight 3 and Drowned Dead 2, then (Hard) Barrow Wight 2
+and Drowned Dead 7 walked 400–580 px to her and stood beside her. Once the character
+stood next to her: War Cry on Drowned Dead 2, then Undying Lament, Mournful Wail and
+Mournful Wail 6.5 and 7.5 seconds apart; the virgins' War Cries hasted Barrow Wight 3 and
+two more drowned dead. Hurt below half, she called out at once and let out her Lament 6.2
+seconds later. Not seen: her running away (the character, stunned by her wails, hardly
+attacked her). Also seen: hostile or not, she still starts her talk once the party comes
+close to her, so the base game kept her immortal only for a party that fought her from
+afar. Not tested in the game: without SCS, with a real party.

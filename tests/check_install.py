@@ -797,6 +797,39 @@ def main():
             c.check(len(wake) == 1 and b"tr\n16402 " not in wake[0],
                     "%s: a sentry stands up when its time is up, however many hit points it has" % script)
 
+    # 380: Mebdinga's barrow (only when installed: her wail script has its own timer)
+    area = res.get("AR9400", "ARE")
+    placed = are_actors(area)
+    meb = next((p for p in placed.values() if p["cre"] == "MEBDING"), None)
+    meb_scripts = [s for s in meb["scripts"].values() if s] if meb else []
+    wail = next((s for s in meb_scripts if b'"localscie_meb_wail"' in c.script(s)), "")
+    if wail:
+        t = c.script(wail)
+        c.check(b'"#localtimer"' not in t, "Mebdinga's %s no longer shares her lines' timer" % wail)
+        c.check(b'"localscie_meb_run"' in t, "she runs from an attacker at most every three rounds")
+        c.check(b'"localscie_meb_cry"' in t and b'"localscie_meb_surge"' in t,
+                "she sends her War Cry and has her Lament below half on Hard and Insane")
+        c.check(any(c.script(s).count(b'"globalknow_soul"') >= 2 and b'"minhp1"' in c.script(s) for s in meb_scripts),
+                "hostile before the talk she becomes mortal and the party learns of the soul")
+        text = c.script(slot(area, 0x94))
+        c.check(b'"myareacie_meb_guard"' in text and text.count(b'"mebdinga"') >= 2,
+                "the area sends her honour guard to her")
+        ini = (res.get("AR9400", "INI") or b"").decode("latin-1")
+        gates = {"VIRGIN01": "EFDELINS", "VIRGIN09": "EFDELINS", "VIRGIN15": "EFDELINS", "VIRGIN26": "EFDELINS",
+                 "DDEAD18": "EFDELINS", "DDEAD20": "EFDELINS", "BWIGHT25": "EFDELINS", "VIRGIN03": "EFDELEAS",
+                 "VIRGIN22": "EFDELEAS", "VIRGIN25": "EFDELEAS", "DDEAD05": "EFDELHRD", "DDEAD08": "EFDELHRD",
+                 "BWIGHT12": "EFDELHRD"}
+        missing = []
+        for section, gate in gates.items():
+            m = re.search(r"^\[%s\](.*?)(?=^\[|\Z)" % section, ini, re.S | re.M | re.I)
+            if not m:
+                continue
+            o = re.search(r"^script_override\s*=\s*(\S*)", m.group(1), re.M | re.I)
+            script = (o.group(1) if o else "").upper()
+            if script != gate and b'"locals%s_inactive"' % gate.lower().encode() not in c.script(script):
+                missing.append("%s=%s" % (section, script or "-"))
+        c.check(not missing, "the barrow's spawn file runs all its difficulty gates (%s)" % (", ".join(missing) or "ok"))
+
     print("%d check(s) failed" % c.failed if c.failed else "all checks passed")
     return 1 if c.failed else 0
 

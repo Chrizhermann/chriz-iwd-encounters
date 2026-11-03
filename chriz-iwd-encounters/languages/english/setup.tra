@@ -8,6 +8,7 @@
 @350 = ~The Idol: one spell per round on cooldowns and only where it works, more hit points, its undead come when it is attacked~
 @360 = ~Poquelin in the Ascension Cave: more hit points, a jump with Fire Storm and the next wave at three quarters, no outright death~
 @370 = ~Cryshal-Tirith: Pomab's images look like him and hide him again after every hit, his sentries guard him~
+@380 = ~Mebdinga's barrow: her wails come on time, an honour guard of wights and drowned dead, a Lament below half on Hard and Insane~
 
 @9000 = ~This mod is for Icewind Dale: Enhanced Edition.~
 @9001 = ~This component needs Sword Coast Stratagems' smarter mages or smarter priests.~
@@ -20,3 +21,4 @@
 @9008 = ~This component needs the Idol (idol.cre) and Poquelin's temple (ar8012.are).~
 @9009 = ~This component needs Poquelin (poquelin.cre) and the Ascension Cave (ar8013.are).~
 @9010 = ~This component needs Cryshal-Tirith (ar1103.are) and Pomab (eepomab.cre).~
+@9011 = ~This component needs Mebdinga (mebding.cre) and her barrow (ar9400.are).~
