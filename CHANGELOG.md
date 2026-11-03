@@ -55,6 +55,14 @@
   more (that skipped his escape and the move to Easthaven), and his escape cutscenes
   find him by his placement's name. The finale's Poquelin is unchanged. Works with and
   without SCS.
+- 370: Cryshal-Tirith. Pomab's five images carry his name. Each time the real Pomab is
+  hit, he and every image left jump to other points and the images hide again what a
+  revealing spell showed; between shots they keep their distance. His Cryshal Sentries
+  go for whoever last attacked him and for enemies close to him, have 240 hit points and
+  play dead for 10 seconds instead of 20 from Core Rules up. Every hit on him now removes
+  an image (his own full heal could come first), his script reads the image counter, a
+  sentry healed while it plays dead still stands up, and the sentries' caster targeting
+  works. Works with and without SCS.
 
 ## v0.1.0 (2026-10-28)
 

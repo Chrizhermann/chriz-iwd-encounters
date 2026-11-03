@@ -1,0 +1,20 @@
+// chriz-iwd-encounters 370: on top of the real Pomab's first script, so it runs in
+// every phase. Tells his sentries whether an enemy is close to him.
+
+IF
+  Range(NearestEnemyOf(Myself),10)
+  !Global("CIE_POM_PRESSED","MYAREA",1)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_POM_PRESSED","MYAREA",1)
+    Continue()
+END
+
+IF
+  !Range(NearestEnemyOf(Myself),10)
+  Global("CIE_POM_PRESSED","MYAREA",1)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_POM_PRESSED","MYAREA",0)
+    Continue()
+END

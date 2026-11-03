@@ -1,0 +1,27 @@
+// chriz-iwd-encounters 370: on top of the Cryshal Sentries' script. While Pomab lives,
+// a sentry that is hostile and neither down nor about to play dead goes for whoever
+// last attacked him, then for the enemy nearest to him once one is close to him
+// (CIE_POM_PRESSED, set by his script); otherwise its own targeting runs.
+
+IF
+  Global("SPRITE_IS_DEAD%cie_cry_real%","GLOBAL",0)
+  Allegiance(Myself,ENEMY)
+  Global("OH_Dead","LOCALS",0)
+  !HPLT(Myself,%cie_cry_down_hp%)
+  See(LastAttackerOf("%cie_cry_real%"))
+THEN
+  RESPONSE #100
+    AttackReevaluate(LastAttackerOf("%cie_cry_real%"),30)
+END
+
+IF
+  Global("SPRITE_IS_DEAD%cie_cry_real%","GLOBAL",0)
+  Allegiance(Myself,ENEMY)
+  Global("OH_Dead","LOCALS",0)
+  !HPLT(Myself,%cie_cry_down_hp%)
+  Global("CIE_POM_PRESSED","MYAREA",1)
+  See(NearestEnemyOf("%cie_cry_real%"))
+THEN
+  RESPONSE #100
+    AttackReevaluate(NearestEnemyOf("%cie_cry_real%"),30)
+END

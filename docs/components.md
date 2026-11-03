@@ -630,3 +630,63 @@ place, cast Fire Storm (SCS's fire cloud appeared next to him), and the second w
 2.3 seconds after the damage instead of about 15 seconds later. Damage to 190 (45 %)
 started his escape. Not tested in the game: without SCS, with a real party, the
 protections (the install checks cover them).
+
+## 370: Cryshal-Tirith
+
+Works with and without SCS. Designed with Christopher on 2026-11-03 and 2026-11-04 (the
+package without the optional sentry recall). The tower room (`AR1103`, the last fight
+before Belhifet): the shopkeeper Pomab reveals himself, and a cutscene creates the real
+Pomab (`EEPOMAB`, script name `PomabR`) and five images (`POMIMG1`–`5`) on one spot; four
+Cryshal Sentries (`SENTRY`, ice golems) turn hostile. Each time the real one takes
+damage, the area script removes an image (`SPRITE_IS_DEADFAKE_POMAB`); after the fifth
+he drops to 25 hit points, loses his minimum hit point and runs; his death opens the
+exits and kills the sentries. Revealing spells (Detect Illusion, True Seeing, Oracle,
+True Sight) lift the images' illusion: they turn translucent and glow (`OHPOMREV`).
+
+- **A true shell game:**
+  - The images carry the real Pomab's name (base game: "False Pomab", which gave the
+    real one away).
+  - Each counted hit: a block on top of the area script (`CIE_POM_SHUFFLE`, set by the
+    counting blocks) heals him fully, lifts a reveal from him and every image left
+    (`CIEPOMRC`: opcode 321 removes `OHPOMREV`'s effects; `CIEPOMIL`, his illusion
+    spell aimed at its target, makes them illusions again) and makes them all jump,
+    each to another of his nine points (nine arrangements, one picked at random). Their
+    scripts let them be revealed again (`POMAB_ILLUSION` back to 0 once Detect
+    Illusions is 20 again) and give the images his name back.
+  - Between shots they keep their distance: an enemy within 8 makes them run before
+    they wander to a point.
+- **The sentries guard him:**
+  - They go for whoever last attacked him, then, while an enemy is within 10 of him
+    (`CIE_POM_PRESSED`, from his first script so it runs in every phase), for the
+    enemy nearest to him; otherwise their own targeting runs; with nothing to do they
+    return to him.
+  - 240 hit points (base game 100, 160 with Tweaks Anthology's maximum hit points) on a
+    copy of their creature (`CIESENTR`) for this room.
+  - From Core Rules up they play dead for 10 seconds instead of 20.
+- **Repairs:**
+  - His own full heal could come before the area script had counted the hit, so a hit
+    sometimes removed no image. His script no longer heals him; the shuffle does, after
+    the count.
+  - His script read `FAKE_POMAB_DEAD`, a variable nothing sets, instead of the image
+    counter.
+  - A sentry healed while it played dead stayed down for good (its wake-up also checked
+    for fewer than 10 hit points); it now stands up when its time is up.
+  - The sentries' target list had the nearest enemy inside the same OR as the caster
+    checks, so it always won; the casters now come first.
+- **Not changed:** his wand, the taunts, the images' own heal and jump when they are
+  hit, the panic at the end, the exits and the doors.
+
+Lab-tested on 2026-11-04 in IWD:EE 2.7.3.0 with SCS 35.21 and EEex 1.3.1 on Hard, from a
+save with one level-1 character, two runs: all six showed the name Pomab. Each of five
+hits on the real one was counted (an image gone 1.2 seconds after the hit), and one
+second later he was back at full hit points and he and every image left had jumped to
+other points. After a reveal on all of them (what Detect Illusion does) the images
+turned translucent; the next hit's shuffle made all of them illusions again, took the
+translucency away, and their scripts let them be revealed again within a second. Both
+Pomab and the images ran from the character next to them between shots. After the fifth
+hit he had 25 hit points and no minimum hit point; his death killed the four sentries.
+The sentries had 240 hit points; one knocked down to 5 and healed to 65 while playing
+dead stood up 10.7 seconds after it went down, at full hit points; after the character
+attacked Pomab the sentries saw his last attacker, and the pressed signal followed the
+character's distance to him. Not tested in the game: without SCS, with a real party
+(who the sentries pick between several characters), the revealing spells themselves.

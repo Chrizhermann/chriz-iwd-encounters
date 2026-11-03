@@ -91,3 +91,10 @@ REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
 REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar8013.are~) AND (FILE_EXISTS_IN_GAME ~poquelin.cre~) @9009
 INCLUDE ~chriz-iwd-encounters/lib/cie_poquelin.tpa~
 LAF cie_poquelin END
+
+BEGIN @370 DESIGNATED 370
+LABEL ~chriz-iwd-encounters-cryshal-tirith~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar1103.are~) AND (FILE_EXISTS_IN_GAME ~eepomab.cre~) @9010
+INCLUDE ~chriz-iwd-encounters/lib/cie_cryshal.tpa~
+LAF cie_cryshal END

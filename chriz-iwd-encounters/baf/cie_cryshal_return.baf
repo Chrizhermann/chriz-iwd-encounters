@@ -1,0 +1,13 @@
+// chriz-iwd-encounters 370: at the end of the Cryshal Sentries' script. A hostile
+// sentry with nothing else to do returns to Pomab.
+
+IF
+  Global("SPRITE_IS_DEAD%cie_cry_real%","GLOBAL",0)
+  Allegiance(Myself,ENEMY)
+  Global("OH_Dead","LOCALS",0)
+  Exists("%cie_cry_real%")
+  !Range("%cie_cry_real%",8)
+THEN
+  RESPONSE #100
+    MoveToObject("%cie_cry_real%")
+END

@@ -750,6 +750,53 @@ def main():
                 c.check(b'"poquelin"' not in c.script(scene) and b'"' + name.lower().encode() + b'"' in c.script(scene),
                         "the escape cutscene %s names him %s" % (scene, name))
 
+    # 370: Cryshal-Tirith (only when installed: it brings CIEPOMRC)
+    area = res.get("AR1103", "ARE")
+    real = cres.get("EEPOMAB")
+    if area and real and res.get("CIEPOMRC", "SPL") is not None:
+        name, = struct.unpack_from("<I", real, 0x08)
+        images = {n: cres.get("POMIMG%d" % n) for n in range(1, 6)}
+        c.check(all(d is not None and struct.unpack_from("<I", d, 0x08)[0] == name for d in images.values()),
+                "the five images carry the real Pomab's name (%d)" % name)
+        c.check(("OHPOMREV" in [e[3] for e in spl_ability_effects(res.get("CIEPOMRC", "SPL")) if e[0] == 321]),
+                "CIEPOMRC lifts OHPOMREV's reveal")
+        c.check(res.get("CIEPOMIL", "SPL") is not None and 276 in [e[0] for e in spl_ability_effects(res.get("CIEPOMIL", "SPL"))],
+                "CIEPOMIL makes them illusions again")
+        text = c.script(slot(area, 0x94))
+        blocks = re.findall(rb"cr\n(.*?)cr\n", text, re.S)
+        shuffle = [b for b in blocks if b'"myareacie_pom_shuffle"' in b.split(b"rs\n")[0]]
+        names = [b'"pomabr"'] + [b'"pomimg%d"' % n for n in range(1, 6)]
+        c.check(len(shuffle) == 1 and all(n in shuffle[0] for n in names + [b'"cdhp3000"', b'"ciepomrc"', b'"ciepomil"']),
+                "the area heals, re-hides and shuffles Pomab and his images (%d block(s))" % len(shuffle))
+        counting = [b for b in blocks if b'"globalsprite_is_deadfake_pomab"' in b.split(b"rs\n", 1)[-1]
+                    and b'"myareacie_pom_shuffle"' in b.split(b"rs\n", 1)[-1]]
+        c.check(len(counting) >= 5, "each counted hit on Pomab starts the shuffle (%d block(s))" % len(counting))
+        mine = [s for s in (slot(real, o) for o in CRE_SLOTS if o) if s]
+        c.check(mine and not any(b'"cdhp3000"' in c.script(s) or b'"globalfake_pomab_dead"' in c.script(s) for s in mine),
+                "Pomab's own scripts (%s) neither heal him nor read FAKE_POMAB_DEAD" % ", ".join(mine))
+        c.check(mine and b'"myareacie_pom_pressed"' in c.script(mine[0]) and c.script(mine[0]).count(b'"localspomab_illusion"') >= 2,
+                "Pomab's first script (%s) tells the sentries when he is pressed and can be revealed again" % (mine[0] if mine else "-"))
+        firsts = sorted({next((s for s in (slot(d, o) for o in CRE_SLOTS if o) if s), "") for d in images.values() if d})
+        c.check(firsts and all(c.script(s).count(b'"localspomab_illusion"') >= 4 for s in firsts),
+                "the images' %s can be revealed again after a shuffle" % ", ".join(firsts))
+        placed = are_actors(area)
+        sentries = [p for p in placed.values() if p["cre"] in ("SENTRY", "CIESENTR")]
+        c.check(sentries and all(p["cre"] == "CIESENTR" for p in sentries), "the %d sentries use CIESENTR" % len(sentries))
+        cre = res.get("CIESENTR", "CRE")
+        c.check(cre is not None and struct.unpack_from("<H", cre, 0x26)[0] >= 240,
+                "CIESENTR has %d hit points" % (struct.unpack_from("<H", cre, 0x26)[0] if cre else 0))
+        for script in sorted({s for p in sentries for s in p["scripts"].values() if s}):
+            t = c.script(script)
+            sb = re.findall(rb"cr\n(.*?)cr\n", t, re.S)
+            # the wake-up block heals with CDHP3000; HPLT is trigger 0x4012 (16402)
+            wake = [b for b in sb if b'"localsoh_dead"' in b.split(b"rs\n")[0] and b'"cdhp3000"' in b]
+            c.check(b'"myareacie_pom_pressed"' in t and b'"pomabr"' in t, "%s guards Pomab" % script)
+            # SetGlobalTimer stores scope and name in one string, the timer triggers two
+            c.check(len([b for b in sb if b'"localsoh_dead_timer"' in b.split(b"rs\n", 1)[-1]]) == 2,
+                    "%s plays dead for half as long from Core Rules up" % script)
+            c.check(len(wake) == 1 and b"tr\n16402 " not in wake[0],
+                    "%s: a sentry stands up when its time is up, however many hit points it has" % script)
+
     print("%d check(s) failed" % c.failed if c.failed else "all checks passed")
     return 1 if c.failed else 0
 
