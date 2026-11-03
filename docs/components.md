@@ -466,3 +466,83 @@ real party.
 - The raid's places and size, the defenders' own AI and wake rule, the fleeing
   townsfolk, the plot (Arundel's house, `KULDAHAR_FORCEREMOVE`, `2100_ATTACK`, the
   town-hostility chain), the music.
+
+## 330: Joril's throne room
+
+Works with and without SCS. Designed with Christopher on 2026-11-03 and 2026-11-04
+(no Flame Blade: "jo besser so"; the rage as the kit has it: "jo"; Gorg's pack: "Wäre
+das nicht das, was Sinn machen würde im Game?"). The court of Wyrm's Tooth (`AR7004`,
+chapter 5): Joril (`JORIL`), two bodyguards (`GIANTFS`) and three to six guards
+(`GIANTFG`) run `WTGIANT1`; ten frost giants elsewhere in the area turn hostile with
+them (`MAP_GROUP_1_HOSTILE`). SCS gives Joril, the bodyguards and the guards the
+Berserker kit, but its IWD melee AI has no rage block.
+
+Lab-tested on 2026-11-04 in IWD:EE 2.7.3.0 with SCS 35.21 and EEex 1.3.1 on Hard, from
+a save with one level-1 character brought next to Joril: Joril had 185 hit points,
+both bodyguards cast Hold Person in the first two seconds, Joril, the bodyguards and
+the guards that reached the party raged (15 extra hit points each), the guard far
+away did not. Gorg turned hostile on command; his eight wolves walked towards him at
+once (and, in that run, stayed neutral on the way: their own team script did not run
+that far from the party, so the component now turns them hostile with the same order).
+Not tested in the game: the badge experience, without SCS, and with a real party.
+
+- **Hit points:** Joril 185 (base game 145). Only raised.
+- **The court:** on top of `WTGIANT1` (only the court runs it): a creature that has
+  Hold Person memorised (the bodyguards; no script of theirs cast it) casts it once at
+  the enemy it sees, unless that one is helpless; a Berserker (`Kit(Myself,BERSERKER)`)
+  uses the kit's rage (`BERSERKER_RAGE`) once when an enemy is within range 10. In
+  IWD:EE the rage lasts a turn: +2 to hit, damage and AC, immunity to charm,
+  confusion, fear, feeblemind, hold, imprisonment, level drain, maze, stun and sleep,
+  and some extra hit points. Without SCS they have no kit and no rage. The bodyguards'
+  Flame Blade stays unused: it would replace their giant weapon (2d10) with a 1d4+4
+  fire blade.
+- **Gorg's pack:** when Gorg (`WTGORG`) is hostile, he sets his pack's group variable
+  `MAP_GROUP_HOSTILE1` and `CIE_JOR_GORG`; the area script then turns the eight placed
+  winter wolves of the pack (`WINWOLFP`, Winter Wolf 9–16) hostile and sends them to
+  him. In the base game they only turned on their own or when Joril died.
+- **The badge:** the area script pays `Level_10_AVERAGE` when the party has Joril's
+  badge; his dialogue pays the same when he hands it over peacefully (`DJORIL`,
+  `Got_Joril_Badge` 1). The payment moves into its own block that also needs
+  `Got_Joril_Badge` 0; the badge block keeps the rest (`JORIL_BADGE`, the text).
+
+## 340: Maiden Ilmadia's forge
+
+Works with and without SCS. Designed with Christopher on 2026-11-03 and 2026-11-04 (her
+Blackguard abilities: "wäre das nicht cool?"; no fire elementals from the lava). The
+Great Forge (`AR8011`, Lower Dorn's Deep): Maiden Ilmadia (`ILMADIA`, an elf warrior;
+SCS makes her a level-12 Blackguard paladin), nine fire giants (`GIANTFIR`,
+`GIANTFI2`), on Hard and Insane two drow priest-mages (`DROWPM`, `DW#DRPM2`), and
+elementals and salamanders. Her dialogue always ends in `Enemy()`; the giants' group
+(`MAP_GROUP_HOSTILE2`) turns with her.
+
+Lab-tested on 2026-11-04 in IWD:EE 2.7.3.0 with SCS 35.21 and EEex 1.3.1 on Hard, from
+a save with one level-1 character brought next to her house: the probe clicked through
+her dialogue; 0.7 seconds after she turned hostile all nine fire giants and both drow
+turned hostile, and the giants walked 170–1350 pixels to her; she had 135 hit points
+and used Poison Weapon twice, five rounds apart. Not seen in the lab: Aura of Despair
+(needs two enemies close; the save has one character) and Absorb Health (she stayed
+above half her hit points). Also seen: the drow's area spells hit the giants crowding
+around the character (SCS's casting, not this component). Not tested in the game: the
+team move and the name repair (the install checks cover them), without SCS, and with a
+real party.
+
+- **Hit points:** Ilmadia 135 (base game 102). Only raised.
+- **Blackguard:** on top of her script, while she has the kit
+  (`Kit(Myself,BLACKGUARD)`): Aura of Despair (`SPCL103`) once when two enemies are
+  within range 10; Poison Weapon (`SPCL423`) up to three times, five rounds apart,
+  when an enemy is within reach; Absorb Health (`SPCL102`) once below half her hit
+  points, at the enemy she sees. The kit's own table gives a level-12 Blackguard these
+  uses (`CLABPA06`); no script of hers used them.
+- **Her giants gather at her side:** once she is hostile, the area script turns her
+  fire giants and drow (placed by name) hostile and sends the giants to her
+  (`CIE_ILM_RALLY`); their own scripts take over when they see the party. Ordered from
+  the area script, because far neutral creatures did not run their own scripts in the
+  lab (component 320).
+- **The drow bless the giants:** component 200 gives them their group blessing (Bless,
+  Hard and Insane, where they exist); without it, this component gives their scripts
+  the same once-only Bless.
+- **Repairs:** SCS 6020's group for two salamanders and two water elementals got team
+  ID 2 (`GNTEAM2M`), whose variable `MAP_GROUP_HOSTILE2` is the fire giants' switch, so
+  meeting them turned Ilmadia and the giants hostile before her dialogue; they move to
+  the first free team script (`GNTEAM3M` in this install). SCS's giant script checks
+  `Dead("Maiden_Ilmadia")`, a name that does not exist; it now names her.

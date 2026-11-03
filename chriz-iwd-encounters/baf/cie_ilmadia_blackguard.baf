@@ -1,0 +1,45 @@
+// chriz-iwd-encounters 340: Maiden Ilmadia fights as the Blackguard SCS makes her
+// (on top of her script) with the abilities of a level-12 Blackguard, which no
+// script of hers used: Aura of Despair once when two enemies stand close, Poison
+// Weapon up to three times (each lasts five rounds) when an enemy is within reach,
+// Absorb Health once below half her hit points. Only while she has the kit.
+
+IF
+  Allegiance(Myself,ENEMY)
+  Kit(Myself,BLACKGUARD)
+  See(NearestEnemyOf(Myself))
+  Range(NearestEnemyOf(Myself),10)
+  Range(SecondNearestEnemyOf(Myself),10)
+  Global("CIE_ILM_AURA","LOCALS",0)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_ILM_AURA","LOCALS",1)
+    ReallyForceSpellRES("SPCL103",Myself)
+END
+
+IF
+  Allegiance(Myself,ENEMY)
+  Kit(Myself,BLACKGUARD)
+  See(NearestEnemyOf(Myself))
+  Range(LastSeenBy(Myself),4)
+  GlobalLT("CIE_ILM_POISON","LOCALS",3)
+  !GlobalTimerNotExpired("CIE_ILM_POISON_TIMER","LOCALS")
+THEN
+  RESPONSE #100
+    IncrementGlobal("CIE_ILM_POISON","LOCALS",1)
+    SetGlobalTimer("CIE_ILM_POISON_TIMER","LOCALS",FIVE_ROUNDS)
+    ReallyForceSpellRES("SPCL423",Myself)
+END
+
+IF
+  Allegiance(Myself,ENEMY)
+  Kit(Myself,BLACKGUARD)
+  HPPercentLT(Myself,50)
+  See(NearestEnemyOf(Myself))
+  Range(LastSeenBy(Myself),10)
+  Global("CIE_ILM_ABSORB","LOCALS",0)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_ILM_ABSORB","LOCALS",1)
+    ReallyForceSpellRES("SPCL102",LastSeenBy(Myself))
+END

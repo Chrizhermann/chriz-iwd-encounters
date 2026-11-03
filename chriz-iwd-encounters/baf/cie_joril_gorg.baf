@@ -1,0 +1,13 @@
+// chriz-iwd-encounters 330: when Gorg turns hostile, his wolf pack turns with him
+// (MAP_GROUP_HOSTILE1, the pack's group variable) and comes to him (the area script
+// answers CIE_JOR_GORG 1). On top of his script.
+
+IF
+  Allegiance(Myself,ENEMY)
+  Global("CIE_JOR_GORG","MYAREA",0)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_JOR_GORG","MYAREA",1)
+    SetGlobal("MAP_GROUP_HOSTILE1","MYAREA",1)
+    Continue()
+END

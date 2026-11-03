@@ -18,6 +18,8 @@ LANGUAGE ~English~ ~english~ ~chriz-iwd-encounters/languages/english/setup.tra~
 // 300 Belhifet's final fight (works with and without SCS)
 // 310 Yxunomei and her temple in Dragon's Eye (works with and without SCS)
 // 320 the orog raid on Kuldahar (works with and without SCS)
+// 330 Joril's throne room in Wyrm's Tooth (works with and without SCS)
+// 340 Maiden Ilmadia's forge in Lower Dorn's Deep (works with and without SCS)
 //
 // Boss fights follow from 300 on, one component each, so a later version can add
 // one at the end of an existing install.
@@ -59,3 +61,17 @@ REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
 REQUIRE_PREDICATE FILE_EXISTS_IN_GAME ~ar2100.are~ @9005
 INCLUDE ~chriz-iwd-encounters/lib/cie_kuldahar.tpa~
 LAF cie_kuldahar END
+
+BEGIN @330 DESIGNATED 330
+LABEL ~chriz-iwd-encounters-joril~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE FILE_EXISTS_IN_GAME ~ar7004.are~ @9006
+INCLUDE ~chriz-iwd-encounters/lib/cie_joril.tpa~
+LAF cie_joril END
+
+BEGIN @340 DESIGNATED 340
+LABEL ~chriz-iwd-encounters-ilmadia~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar8011.are~) AND (FILE_EXISTS_IN_GAME ~ilmadia.cre~) @9007
+INCLUDE ~chriz-iwd-encounters/lib/cie_ilmadia.tpa~
+LAF cie_ilmadia END

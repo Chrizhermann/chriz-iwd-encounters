@@ -1,0 +1,13 @@
+// chriz-iwd-encounters 330: Gorg has turned hostile (CIE_JOR_GORG 1, set by his
+// script): the wolves of his pack turn hostile and come to him (on top of the area
+// script). They turn here, not through their team script: in the lab far wolves did
+// not run their scripts and stayed neutral on the way. CIE_JOR_GORG (area): 2 the
+// pack has been sent.
+
+IF
+  Global("CIE_JOR_GORG","MYAREA",1)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_JOR_GORG","MYAREA",2)%cie_jor_pack%
+    Continue()
+END

@@ -1,0 +1,17 @@
+// chriz-iwd-encounters 340, without component 200: a drow priest-mage of the forge
+// blesses the giants around it with its memorised Bless when it first sees the
+// party, and spends that copy (component 200's group blessing, same variable).
+
+IF
+  Global("CIE_GROUP","LOCALS",0)
+  Allegiance(Myself,ENEMY)
+  See(NearestEnemyOf(Myself))
+  !StateCheck(Myself,STATE_REALLY_DEAD)
+  HaveSpell(CLERIC_BLESS)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_GROUP","LOCALS",1)
+    ReallyForceSpell(Myself,CLERIC_BLESS)
+    RemoveSpell(CLERIC_BLESS)
+    Continue()
+END

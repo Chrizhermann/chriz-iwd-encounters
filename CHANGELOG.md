@@ -30,6 +30,18 @@
   defenders, raiders who never woke leave after four days like the others, and the
   town alarm no longer brings out a second, living Arundel. Works with and without
   SCS.
+- 330: Joril's throne room. Joril has 185 hit points; he, his bodyguards and his guards
+  use the Berserker rage of SCS's kit, the bodyguards cast their memorised Hold
+  Person. When Gorg turns hostile, his eight winter wolves turn with him and come to
+  him. The peaceful handover of Joril's badge no longer pays its experience twice.
+  Works with and without SCS.
+- 340: Maiden Ilmadia's forge. Ilmadia has 135 hit points and uses the abilities of
+  the level-12 Blackguard SCS makes her (Aura of Despair, Poison Weapon three times,
+  Absorb Health). Once she turns hostile, her fire giants and drow turn with her and
+  the giants gather at her side; the drow bless the giants (component 200, or this
+  one without it). Meeting the elementals and salamanders of an SCS team no longer
+  turns the forge hostile before her dialogue, and SCS's giants check her death under
+  her real name. Works with and without SCS.
 
 ## v0.1.0 (2026-10-28)
 

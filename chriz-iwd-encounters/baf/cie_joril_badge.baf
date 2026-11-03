@@ -1,0 +1,14 @@
+// chriz-iwd-encounters 330: the experience for Joril's badge (on top of the area
+// script), only when he did not hand it over himself: the peaceful handover in his
+// dialogue pays the same and sets Got_Joril_Badge. Fires in the same pass as the
+// badge block, which no longer pays.
+
+IF
+  Global("JORIL_BADGE","GLOBAL",0)
+  Global("Got_Joril_Badge","GLOBAL",0)
+  PartyHasItem("JORIL")
+THEN
+  RESPONSE #100
+    AddXP2DA("%cie_jor_xp%")
+    Continue()
+END

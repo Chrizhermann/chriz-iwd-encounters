@@ -11,6 +11,8 @@ SCS.
 | 300 | Belhifet's final fight: immune to spell levels 1–3 only, +2 weapons hit him, fire immune as in the base game, more hit points from Core Rules up, Improved Invisibility when he appears and Haste for 30 seconds out of every 42, his cornugons come as a second wave (a third on Insane), Poquelin's transformation no longer dispels the party. Works with and without SCS. |
 | 310 | Yxunomei and her temple: her three mages come when the fight with her starts and walk to the party (as in the base game only on Hard and Insane), her two champions leave the torture chamber for her side if they still live, two yuan-ti elites come into her room on Hard (three on Insane), the pentagram's traps go off only for the party, and SCS's telekinesis that IWD:EE lacks no longer costs her a round. Works with and without SCS. |
 | 320 | The orog raid on Kuldahar: once one group wakes, all the orogs wake and come for the party; the three leaders charge after a war horn, a bit stronger (70 hit points, two attacks, THAC0 10); the orogs fight back against the town's defenders; no second, living Arundel on the town alarm. Works with and without SCS. |
+| 330 | Joril's throne room: Joril has 185 hit points; he, his bodyguards and his guards use their Berserker rage, the bodyguards cast Hold Person; Gorg's wolves come to him when he turns hostile; no double experience for the peaceful badge. Works with and without SCS. |
+| 340 | Maiden Ilmadia's forge: 135 hit points and her Blackguard abilities (Aura of Despair, Poison Weapon, Absorb Health); her fire giants gather at her side and her drow bless them; the forge no longer turns hostile before her dialogue. Works with and without SCS. |
 
 Details per change, written so they can move to the Chriz script engine later:
 [docs/components.md](docs/components.md).
@@ -18,7 +20,7 @@ Details per change, written so they can move to the Chriz script engine later:
 ## Install
 
 Needs IWD:EE (built and tested on 2.7.3.0) and SCS's smarter priests (component 200)
-or smarter mages/priests (component 100); components 300, 310 and 320 also work without SCS.
+or smarter mages/priests (component 100); components 300 to 340 also work without SCS.
 Extract the release zip from the GitHub
 releases into the game folder (it holds `chriz-iwd-encounters/`) and run
 `setup-chriz-iwd-encounters` with WeiDU after SCS.

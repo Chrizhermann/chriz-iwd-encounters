@@ -129,27 +129,6 @@ DEFINE_ACTION_FUNCTION cie_kuldahar_stats BEGIN
   END
 END
 
-// CRE V1.0: current and maximum hit points (0x24, 0x26), THAC0 (0x52), attacks
-// per round (0x53). Only raises.
-DEFINE_PATCH_FUNCTION cie_raise_creature
-  INT_VAR hp = 0 apr = 0 thac0 = 0
-  RET old_hp old_apr old_thac0
-BEGIN
-  READ_SHORT 0x26 old_hp
-  READ_BYTE 0x53 old_apr
-  READ_BYTE 0x52 old_thac0
-  PATCH_IF (hp > old_hp) BEGIN
-    WRITE_SHORT 0x24 hp
-    WRITE_SHORT 0x26 hp
-  END
-  PATCH_IF (apr > old_apr) AND (old_apr < 6) BEGIN
-    WRITE_BYTE 0x53 apr
-  END
-  PATCH_IF (thac0 > 0) AND (thac0 < old_thac0) BEGIN
-    WRITE_BYTE 0x52 thac0
-  END
-END
-
 // Waking: raiders and defenders share the asleep script. The Avengers get a copy
 // (CIEKULAV) that also wakes them when the raid is awake (CIE_KUL_ALERT), the
 // Marauders one (CIEKULMA) that wakes them with the war horn (CIE_KUL_WAVE 2). The

@@ -633,6 +633,57 @@ def main():
         c.check(len(arundel) == 1 and b'"globalsprite_is_deadyxunomei"' in arundel[0].split(b"rs\n")[0],
                 "the town alarm's Arundel only comes while Yxunomei lives")
 
+    # 330: Joril's throne room (only when installed: the court's script carries it)
+    area = res.get("AR7004", "ARE")
+    placed = are_actors(area)
+    court = sorted({s for p in placed.values() if p["cre"] in ("JORIL", "GIANTFS", "GIANTFG")
+                    for s in p["scripts"].values() if s and s != "EFDELDEF" and not s.startswith("GNTEAM")})
+    if court and any(b'"localscie_jor_rage"' in c.script(s) for s in court):
+        joril = cres.get("JORIL")
+        c.check(joril is not None and struct.unpack_from("<H", joril, 0x26)[0] >= 185,
+                "Joril has %d hit points" % (struct.unpack_from("<H", joril, 0x26)[0] if joril else 0))
+        for script in court:
+            c.check(b'"localscie_jor_hold"' in c.script(script) and b'"localscie_jor_rage"' in c.script(script),
+                    "%s casts Hold Person and uses the Berserker rage once" % script)
+        text = c.script(slot(area, 0x94))
+        gorg = next((p for p in placed.values() if p["cre"] == "GORG"), None)
+        gorg_scripts = [s for s in gorg["scripts"].values() if s] if gorg else []
+        c.check(any(b'"myareacie_jor_gorg"' in c.script(s) and b'"myareamap_group_hostile1"' in c.script(s)
+                    for s in gorg_scripts), "Gorg turns his pack hostile (%s)" % ", ".join(gorg_scripts))
+        wolves = [n.replace(" ", "").lower() for n, p in placed.items() if p["cre"] == "WINWOLFP"]
+        c.check(wolves and all(b'"' + w.encode() + b'"' in text for w in wolves),
+                "the area sends Gorg's %d wolves to him" % len(wolves))
+        blocks = re.findall(rb"cr\n(.*?)cr\n", text, re.S)
+        badge = [b for b in blocks if b'"globaljoril_badge"' in b.split(b"rs\n")[0]]
+        paying = [b for b in badge if b'"level_10_average"' in b.lower()]
+        c.check(len(badge) == 2 and len(paying) == 1 and b'"globalgot_joril_badge"' in paying[0].split(b"rs\n")[0],
+                "Joril's badge pays only when he did not hand it over (%d blocks, %d paying)" % (len(badge), len(paying)))
+
+    # 340: Maiden Ilmadia's forge (only when installed: her script carries it)
+    area = res.get("AR8011", "ARE")
+    placed = are_actors(area)
+    ilm = placed.get("MAIDEN ILMADIA")
+    ilm_scripts = [s for s in ilm["scripts"].values() if s and not s.startswith("GNTEAM")] if ilm else []
+    if ilm_scripts and any(b'"localscie_ilm_aura"' in c.script(s) for s in ilm_scripts):
+        cre = cres.get("ILMADIA")
+        c.check(cre is not None and struct.unpack_from("<H", cre, 0x26)[0] >= 135,
+                "Maiden Ilmadia has %d hit points" % (struct.unpack_from("<H", cre, 0x26)[0] if cre else 0))
+        for spell in ("SPCL102", "SPCL103", "SPCL423"):
+            c.check(any(b'"' + spell.lower().encode() + b'"' in c.script(s) for s in ilm_scripts),
+                    "Ilmadia's script uses %s" % spell)
+        text = c.script(slot(area, 0x94))
+        giants = [n.replace(" ", "").lower() for n, p in placed.items() if p["cre"] in ("GIANTFIR", "GIANTFI2")]
+        c.check(giants and b'"myareacie_ilm_rally"' in text and all(b'"' + g.encode() + b'"' in text for g in giants),
+                "the area sends her %d fire giants to her side" % len(giants))
+        teams = sorted({s for p in placed.values() for s in p["scripts"].values() if s.startswith("GNTEAM")})
+        c.check("GNTEAM2M" not in teams, "no placement in the forge runs GNTEAM2M (%s)" % ", ".join(teams))
+        typo = [s for p in placed.values() for s in p["scripts"].values() if s and b'"maiden_ilmadia"' in c.script(s)]
+        c.check(not typo, "no script in the forge checks the missing name Maiden_Ilmadia (%s)" % (", ".join(sorted(set(typo))) or "none"))
+        drow = sorted({s for p in placed.values() if p["cre"] in ("DROWPM", "DW#DRPM2")
+                       for s in p["scripts"].values() if s and s != "EFDELDEF" and not s.startswith("GNTEAM")})
+        for script in drow:
+            c.check(b'"localscie_group"' in c.script(script), "the drow's %s blesses its allies once" % script)
+
     print("%d check(s) failed" % c.failed if c.failed else "all checks passed")
     return 1 if c.failed else 0
 

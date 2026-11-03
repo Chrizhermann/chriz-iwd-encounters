@@ -1,0 +1,15 @@
+// chriz-iwd-encounters 340: once Maiden Ilmadia has turned hostile, her fire giants
+// and drow turn with her and the giants gather at her side (on top of the forge's
+// area script); their own scripts take over when they see the party. Ordered from
+// the area script: in the lab far neutral creatures did not run their own scripts.
+// CIE_ILM_RALLY (area): 1 sent.
+
+IF
+  Global("CIE_ILM_RALLY","MYAREA",0)
+  Allegiance("%cie_ilm_name%",ENEMY)
+  !Dead("%cie_ilm_name%")
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_ILM_RALLY","MYAREA",1)%cie_ilm_giants%
+    Continue()
+END
