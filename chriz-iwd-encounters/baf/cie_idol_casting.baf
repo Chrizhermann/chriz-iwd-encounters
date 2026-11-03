@@ -1,0 +1,79 @@
+// chriz-iwd-encounters 350: the Idol's casting (on top of its script; its random
+// block is gone). One spell per round (CIE_IDOL_CAST), each on its own cooldown, at
+// the nearest or else the second-nearest enemy it sees, only where the spell can
+// work: Finger of Death not at undead or summoned creatures, Flesh to Stone not at
+// petrified ones, Sol's Searing Orb not at fire-immune ones. No Power Word: Kill.
+
+IF
+  See(NearestEnemyOf(Myself))
+  !GlobalTimerNotExpired("CIE_IDOL_CAST","LOCALS")
+  !GlobalTimerNotExpired("CIE_IDOL_DEATH","LOCALS")
+  !General(NearestEnemyOf(Myself),UNDEAD)
+  !Gender(NearestEnemyOf(Myself),SUMMONED)
+THEN
+  RESPONSE #100
+    SetGlobalTimer("CIE_IDOL_CAST","LOCALS",ONE_ROUND)
+    SetGlobalTimer("CIE_IDOL_DEATH","LOCALS",FOUR_ROUNDS)
+    ForceSpell(NearestEnemyOf(Myself),WIZARD_FINGER_OF_DEATH)
+END
+
+IF
+  See(SecondNearestEnemyOf(Myself))
+  !GlobalTimerNotExpired("CIE_IDOL_CAST","LOCALS")
+  !GlobalTimerNotExpired("CIE_IDOL_DEATH","LOCALS")
+  !General(SecondNearestEnemyOf(Myself),UNDEAD)
+  !Gender(SecondNearestEnemyOf(Myself),SUMMONED)
+THEN
+  RESPONSE #100
+    SetGlobalTimer("CIE_IDOL_CAST","LOCALS",ONE_ROUND)
+    SetGlobalTimer("CIE_IDOL_DEATH","LOCALS",FOUR_ROUNDS)
+    ForceSpell(SecondNearestEnemyOf(Myself),WIZARD_FINGER_OF_DEATH)
+END
+
+IF
+  See(NearestEnemyOf(Myself))
+  !GlobalTimerNotExpired("CIE_IDOL_CAST","LOCALS")
+  !GlobalTimerNotExpired("CIE_IDOL_STONE","LOCALS")
+  !StateCheck(NearestEnemyOf(Myself),STATE_STONE_DEATH)
+THEN
+  RESPONSE #100
+    SetGlobalTimer("CIE_IDOL_CAST","LOCALS",ONE_ROUND)
+    SetGlobalTimer("CIE_IDOL_STONE","LOCALS",FOUR_ROUNDS)
+    ForceSpell(NearestEnemyOf(Myself),WIZARD_FLESH_TO_STONE)
+END
+
+IF
+  See(SecondNearestEnemyOf(Myself))
+  !GlobalTimerNotExpired("CIE_IDOL_CAST","LOCALS")
+  !GlobalTimerNotExpired("CIE_IDOL_STONE","LOCALS")
+  !StateCheck(SecondNearestEnemyOf(Myself),STATE_STONE_DEATH)
+THEN
+  RESPONSE #100
+    SetGlobalTimer("CIE_IDOL_CAST","LOCALS",ONE_ROUND)
+    SetGlobalTimer("CIE_IDOL_STONE","LOCALS",FOUR_ROUNDS)
+    ForceSpell(SecondNearestEnemyOf(Myself),WIZARD_FLESH_TO_STONE)
+END
+
+IF
+  See(NearestEnemyOf(Myself))
+  !GlobalTimerNotExpired("CIE_IDOL_CAST","LOCALS")
+  !GlobalTimerNotExpired("CIE_IDOL_ORB","LOCALS")
+  !CheckStatGT(NearestEnemyOf(Myself),99,RESISTFIRE)
+THEN
+  RESPONSE #100
+    SetGlobalTimer("CIE_IDOL_CAST","LOCALS",ONE_ROUND)
+    SetGlobalTimer("CIE_IDOL_ORB","LOCALS",TWO_ROUNDS)
+    ForceSpell(NearestEnemyOf(Myself),CLERIC_SOL_SEARING_ORB)
+END
+
+IF
+  See(SecondNearestEnemyOf(Myself))
+  !GlobalTimerNotExpired("CIE_IDOL_CAST","LOCALS")
+  !GlobalTimerNotExpired("CIE_IDOL_ORB","LOCALS")
+  !CheckStatGT(SecondNearestEnemyOf(Myself),99,RESISTFIRE)
+THEN
+  RESPONSE #100
+    SetGlobalTimer("CIE_IDOL_CAST","LOCALS",ONE_ROUND)
+    SetGlobalTimer("CIE_IDOL_ORB","LOCALS",TWO_ROUNDS)
+    ForceSpell(SecondNearestEnemyOf(Myself),CLERIC_SOL_SEARING_ORB)
+END

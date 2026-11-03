@@ -42,6 +42,19 @@
   one without it). Meeting the elementals and salamanders of an SCS team no longer
   turns the forge hostile before her dialogue, and SCS's giants check her death under
   her real name. Works with and without SCS.
+- 350: the Idol. One spell per round instead of a random lethal spell every three
+  seconds, each on its own cooldown and only at targets it can affect, no Power Word:
+  Kill; Flame Strike only where its caster-level ability works. 225 hit points, it
+  stays on its plinth. When it is attacked, the greater mummies and zombie lords
+  around it come to it. The zombie lords' aura runs again, and each badge door counts
+  once, so the counter can no longer lock the way to Poquelin. Works with and without
+  SCS.
+- 360: Poquelin in the Ascension Cave. 420 hit points (he escapes at half, so his
+  waves now matter); below three quarters he jumps away, calls Fire Storm around
+  himself, and the next wave comes at once. Nothing kills or removes him outright any
+  more (that skipped his escape and the move to Easthaven), and his escape cutscenes
+  find him by his placement's name. The finale's Poquelin is unchanged. Works with and
+  without SCS.
 
 ## v0.1.0 (2026-10-28)
 

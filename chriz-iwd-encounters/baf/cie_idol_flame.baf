@@ -1,0 +1,15 @@
+// chriz-iwd-encounters 350: the Idol's Flame Strike, below its other spells (on top
+// of its script), only where its ability for the Idol's caster level has effects.
+// Not at fire-immune enemies; three rounds between casts.
+
+IF
+  See(NearestEnemyOf(Myself))
+  !GlobalTimerNotExpired("CIE_IDOL_CAST","LOCALS")
+  !GlobalTimerNotExpired("CIE_IDOL_FLAME","LOCALS")
+  !CheckStatGT(NearestEnemyOf(Myself),99,RESISTFIRE)
+THEN
+  RESPONSE #100
+    SetGlobalTimer("CIE_IDOL_CAST","LOCALS",ONE_ROUND)
+    SetGlobalTimer("CIE_IDOL_FLAME","LOCALS",THREE_ROUNDS)
+    ForceSpell(NearestEnemyOf(Myself),CLERIC_FLAME_STRIKE)
+END

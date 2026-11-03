@@ -684,6 +684,72 @@ def main():
         for script in drow:
             c.check(b'"localscie_group"' in c.script(script), "the drow's %s blesses its allies once" % script)
 
+    # 350: the Idol (only when installed: its script carries the cast timer)
+    area = res.get("AR8012", "ARE")
+    placed = are_actors(area)
+    idol = placed.get("THE IDOL")
+    idol_script = next((s for s in idol["scripts"].values() if s), "") if idol else ""
+    if idol_script and b'"localscie_idol_cast"' in c.script(idol_script):
+        text_i = c.script(idol_script)
+        spells = ids_numbers(res.get("SPELL", "IDS"))
+        pwk = spells.get("WIZARD_POWER_WORD_KILL")
+        c.check(pwk is not None and not [n for _, n in forced_spells(text_i) if n == pwk]
+                and b"ac\n113ob\n" in text_i, "the Idol casts without Power Word: Kill")
+        cre = cres.get("IDOL")
+        c.check(cre is not None and struct.unpack_from("<H", cre, 0x26)[0] >= 225 and any(e[0] == 126 for e in cre_effects(cre)),
+                "the Idol has %d hit points and does not move" % (struct.unpack_from("<H", cre, 0x26)[0] if cre else 0))
+        c.check(b'"myareacie_idol_rally"' in text_i, "the Idol calls its undead when attacked")
+        text = c.script(slot(area, 0x94))
+        undead = [n.replace(" ", "").lower() for n, p in placed.items() if p["cre"] in ("MUMMYG", "ZOMBIEL")]
+        c.check(undead and all(b'"' + u.encode() + b'"' in text for u in undead),
+                "the area sends its %d greater mummies and zombie lords to it" % len(undead))
+        lords = [n for n, p in placed.items() if p["cre"] == "ZOMBIEL"]
+        c.check(lords and all(placed[n]["scripts"]["race"] == "" for n in lords),
+                "the zombie lords' own race script (their aura) runs (%d)" % len(lords))
+        doff, = struct.unpack_from("<I", area, 0xA8)
+        dn, = struct.unpack_from("<I", area, 0xA4)
+        badge = [slot(area, doff + 0xC8 * i + 0x80) for i in range(dn) if resref(area, doff + 0xC8 * i + 0x78)]
+        c.check(len(badge) == 6 and len(set(badge)) == 6 and all(s.startswith("CIEBDG") for s in badge)
+                and all(b'"globalcie_idol_door_' in c.script(s) for s in badge),
+                "the six badge doors count once each (%s)" % ", ".join(badge))
+        hidden = [slot(area, doff + 0xC8 * i + 0x80) for i in range(dn)
+                  if not resref(area, doff + 0xC8 * i + 0x78) and slot(area, doff + 0xC8 * i + 0x80)]
+        c.check(hidden and all(b'"globalall_keys"' in c.script(s) for s in hidden),
+                "the hidden door checks ALL_KEYS (%s)" % ", ".join(hidden))
+
+    # 360: Poquelin in the Ascension Cave (only when installed: it brings CIEPOQ)
+    area = res.get("AR8013", "ARE")
+    if area and res.get("CIEPOQ", "CRE") is not None:
+        off, = struct.unpack_from("<I", area, 0x54)
+        count, = struct.unpack_from("<H", area, 0x58)
+        poq = None
+        for i in range(count):
+            a = off + 0x110 * i
+            if resref(area, a + 0x80) == "CIEPOQ":
+                poq = (area[a:a + 32].split(b"\0")[0].decode("latin-1").replace(" ", ""),
+                       [slot(area, a + o) for o in ARE_SLOTS])
+        c.check(poq is not None, "Poquelin's placement in the cave uses CIEPOQ")
+        cre = res.get("CIEPOQ", "CRE")
+        blocked = sorted({e[2] for e in cre_effects(cre) if e[0] == 101})
+        c.check(struct.unpack_from("<H", cre, 0x26)[0] >= 420 and all(op in blocked for op in (13, 55, 134, 209, 211, 238)),
+                "CIEPOQ has %d hit points and protections %s" % (struct.unpack_from("<H", cre, 0x26)[0], blocked))
+        original = res.get("POQUELIN", "CRE")
+        c.check(original is not None and not [e for e in cre_effects(original) if e[0] == 101 and e[2] == 238],
+                "the finale's Poquelin (POQUELIN.CRE) is unchanged")
+        if poq:
+            name, scripts = poq
+            main = next((s for s in scripts if s), "")
+            text_p = c.script(main)
+            c.check(b'"localscie_poq_jump"' in text_p and b'"myareacie_poq_wave"' in text_p,
+                    "%s jumps once below three quarters and calls the next wave" % main)
+            text = c.script(slot(area, 0x94))
+            c.check(b'"myareacie_poq_wave"' in text and b'"spawn_timer"' in text, "the area ends the pause before the next wave")
+            scenes = sorted({s.decode().upper() for s in re.findall(rb'"([a-z0-9_#]{1,8})"', text_p) if res.get(s.decode(), "BCS")
+                             and s.decode().upper().startswith(main[:5]) and s.decode().upper() != main})
+            for scene in scenes:
+                c.check(b'"poquelin"' not in c.script(scene) and b'"' + name.lower().encode() + b'"' in c.script(scene),
+                        "the escape cutscene %s names him %s" % (scene, name))
+
     print("%d check(s) failed" % c.failed if c.failed else "all checks passed")
     return 1 if c.failed else 0
 

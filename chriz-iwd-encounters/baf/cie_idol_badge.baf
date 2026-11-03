@@ -1,0 +1,14 @@
+// chriz-iwd-encounters 350: badge door %cie_n% of the six in Poquelin's temple counts
+// once towards ALL_KEYS, whether it is unlocked or opened first (the base game's
+// script counted both, and opening it again counted again).
+
+IF
+  Global("CIE_IDOL_DOOR_%cie_n%","GLOBAL",0)
+  OR(2)
+    Opened([PC])
+    Unlocked([PC])
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_IDOL_DOOR_%cie_n%","GLOBAL",1)
+    IncrementGlobal("ALL_KEYS","GLOBAL",1)
+END

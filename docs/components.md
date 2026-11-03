@@ -546,3 +546,87 @@ real party.
   meeting them turned Ilmadia and the giants hostile before her dialogue; they move to
   the first free team script (`GNTEAM3M` in this install). SCS's giant script checks
   `Dead("Maiden_Ilmadia")`, a name that does not exist; it now names her.
+
+## 350: the Idol
+
+Works with and without SCS. Designed with Christopher on 2026-11-03 ("fairer rather than
+harder") and 2026-11-04 (only the undead around it come; no healing from the brothers).
+Poquelin's temple (`AR8012`, Lower Dorn's Deep): the Idol (`IDOL`, `LDIDOL`, invisible
+over its statue, no weapon) holds the brothers of Ilmater in thrall; around it stand six
+greater mummies (`MUMMYG`) and five zombie lords (`ZOMBIEL`), in the corners 24
+boneguards. Its death frees the brothers and kills every undead.
+
+- **Casting:** the base game force-casts at the nearest enemy every three seconds, at
+  random: Finger of Death 12.5 %, Power Word: Kill 12.5 % (no saving throw), Sol's
+  Searing Orb, Flesh to Stone and Flame Strike 25 % each, with no regard for what the
+  target is. That block goes. On top of its script: one spell per round
+  (`CIE_IDOL_CAST`), each on its own cooldown — Finger of Death and Flesh to Stone
+  four rounds, Sol's Searing Orb two — at the nearest or else the second-nearest enemy
+  it sees, only where the spell can work: Finger of Death not at undead or summoned
+  creatures, Flesh to Stone not at petrified ones, the fire spells not at fire-immune
+  ones. Flame Strike (three rounds) only when its ability for the Idol's caster level
+  has effects: with SCS's caster-level abilities (component 2000) plus Tweaks
+  Anthology's save penalties, those of levels 2 and up have none, so it is left out.
+- **Hit points and place:** 225 (base game 150); movement rate 0 (opcode 126), so it
+  never leaves its plinth.
+- **The rally:** when the Idol is attacked or hurt, its script sets `CIE_IDOL_RALLY`;
+  the area script sends the placed greater mummies and zombie lords to its place once.
+  The boneguards stay in their corners.
+- **Repairs:**
+  - The zombie lords' aura: their creature's race script `ZLAURA` casts it, but their
+    placements put `LDIDLKIL` ("die with the Idol") in the race slot, which wins; that
+    script moves to the placements' free class slot.
+  - The way to Poquelin: the six badge doors' script (`LDBDGDOR`) adds 1 to
+    `ALL_KEYS` when a door is unlocked and again when it is opened (and on every
+    opening), and the hidden door (`LDBDGOPN`) opens only at exactly 6, so two counts
+    in one pass could step past 6 for good. Each badge door gets its own copy
+    (`CIEBDG1`–`6`) that counts it once (`CIE_IDOL_DOOR_n`); the hidden door opens at
+    6 or more.
+- **Not changed:** the boneguards and their respawns, the mummies' own casting (their
+  Flame Strike has the same empty abilities), the brothers.
+
+Lab-tested on 2026-11-04 in IWD:EE 2.7.3.0 with SCS 35.21 and EEex 1.3.1 on Hard, from a
+save with one level-1 character: in front of the Idol it cast Finger of Death, Flesh to
+Stone, Sol's Searing Orb, Finger of Death, Flesh to Stone at 6.4, 6.4, 11.7 and 6.5
+seconds apart (the gap is the cooldowns), nothing else, from its plinth, with 225 hit
+points. With the character far away, 10 damage to it set the rally within a second,
+and all eleven greater mummies and zombie lords walked from their places to it. Not
+tested in the game: the aura and the badge doors (the install checks cover them),
+without SCS, and with a real party.
+
+## 360: Poquelin in the Ascension Cave
+
+Works with and without SCS. Designed with Christopher on 2026-11-03 and 2026-11-04
+("Prozent, das finde ich gut"; Fire Storm after the jump: "fände ich auch nicht
+schlecht"). The cave (`AR8013`, end of Lower Dorn's Deep): Poquelin (`POQUELIN`,
+placement `ReveredBroPoquelin`, script `LDPOQUE1`; Belhifet in disguise) talks, turns
+hostile, force-casts Heavenly Inferno and jumps to `[817.551]`; two bronze sentries and
+five waves of five creatures follow, 20 seconds apart (`AR8013.BCS`). Below half his hit
+points he escapes: the movie `RETURN` plays and the party is moved to Easthaven.
+
+- **Hit points:** 420 (base game 250): the escape comes after 210 damage instead of
+  125, so his waves and spells come into play. On a copy of his creature (`CIEPOQ`) for
+  this cave only: the finale in Easthaven places the same creature file, unchanged.
+- **The jump:** once between three quarters and half his hit points, a Dimension Door
+  to the other of his two places (where he stands and where his opener jumps to), then
+  Fire Storm around himself (he is immune to fire). His script sets `CIE_POQ_WAVE`; the
+  area script ends the pause before the next wave (`SPAWN_TIMER` to 0), only between
+  waves and while waves are left. The sequence cannot be interrupted: otherwise his
+  own script takes over once he has jumped (the first lab run saw his Heavenly Inferno
+  instead of the Fire Storm).
+- **Repairs:**
+  - His minimum hit point (`MIN2HP`) stops damage, not instant death: dying outright
+    skipped the escape and the move to Easthaven. `CIEPOQ` is protected from opcodes
+    13 (instant death), 55 (slay), 134 (petrification), 209 (Power Word: Kill), 211
+    (imprisonment) and 238 (disintegration).
+  - The escape cutscenes (`LDPOQUEB`, `LDPOQUEC`) centred the view on and deactivated
+    `"POQUELIN"`, his creature's script name; his placement names him
+    `ReveredBroPoquelin` (EE Fixpack shortened the actor name). They now use it.
+
+Lab-tested on 2026-11-04 in IWD:EE 2.7.3.0 with SCS 35.21 and EEex 1.3.1 on Hard, from a
+save with one level-1 character: 420 hit points. Damage to 290 (69 %) right after the
+first wave's spawn window: 0.6 seconds later he cast Dimension Door, landed at his other
+place, cast Fire Storm (SCS's fire cloud appeared next to him), and the second wave came
+2.3 seconds after the damage instead of about 15 seconds later. Damage to 190 (45 %)
+started his escape. Not tested in the game: without SCS, with a real party, the
+protections (the install checks cover them).

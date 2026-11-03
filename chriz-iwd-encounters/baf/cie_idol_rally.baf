@@ -1,0 +1,12 @@
+// chriz-iwd-encounters 350: the Idol was attacked (CIE_IDOL_RALLY 1, set by its
+// script): the greater mummies and zombie lords around it come to it (on top of the
+// area script); their own scripts take over when they see the party. The boneguards
+// in the corners stay where they are. CIE_IDOL_RALLY (area): 2 sent.
+
+IF
+  Global("CIE_IDOL_RALLY","MYAREA",1)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_IDOL_RALLY","MYAREA",2)%cie_idol_rally%
+    Continue()
+END

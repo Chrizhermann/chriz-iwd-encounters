@@ -1,0 +1,13 @@
+// chriz-iwd-encounters 350: the Idol calls the undead around it once it is attacked
+// or hurt (on top of its script; the area script answers CIE_IDOL_RALLY 1).
+
+IF
+  Global("CIE_IDOL_RALLY","MYAREA",0)
+  OR(2)
+    AttackedBy([GOODCUTOFF],DEFAULT)
+    HPPercentLT(Myself,100)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_IDOL_RALLY","MYAREA",1)
+    Continue()
+END
