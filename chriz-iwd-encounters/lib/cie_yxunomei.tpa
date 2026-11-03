@@ -1,0 +1,344 @@
+// Component 310: Yxunomei and her temple in Dragon's Eye (AR4005), designed with
+// Christopher on 2026-11-03 and 2026-11-04. Works with and without SCS.
+//   - The three yuan-ti mages the area calls in come when the fight with her really
+//     starts (she reveals herself or a guard is attacked), not when her archers first
+//     see the party, and they come for the party. The base game keeps them for Hard
+//     and Insane (and every difficulty once Heart of Winter is finished); that stays.
+//   - Her two champions, if they still live, leave the torture chamber for her side
+//     when she reveals herself and fight with her guards.
+//   - Hard and Insane: one round later two yuan-ti elites (Insane: three) come into
+//     her room.
+//   - The traps of the pentagram in front of her go off only for the party, not for
+//     her own guards.
+//   - SCS 35.21's balor telekinesis, which SCS does not install on IWD:EE, no longer
+//     costs her a round of spells.
+// docs/components.md describes each change in engine-neutral terms.
+
+DEFINE_ACTION_FUNCTION cie_yxunomei BEGIN
+  OUTER_SPRINT cie_yxu_area_script ~~
+  COPY_EXISTING ~ar4005.are~ ~override~
+    READ_ASCII 0x94 cie_yxu_area_script (8) NULL
+  BUT_ONLY
+  ACTION_IF (~%cie_yxu_area_script%~ STRING_EQUAL ~~) OR (~%cie_yxu_area_script%~ STRING_EQUAL_CASE ~NONE~)
+      OR (!FILE_EXISTS_IN_GAME ~%cie_yxu_area_script%.bcs~) BEGIN
+    FAIL ~chriz-iwd-encounters: ar4005.are has no area script.~
+  END
+  // the Yxunomei Girl Form's placement: where Yxunomei appears
+  OUTER_SET cie_yxu_girl_x = 0
+  OUTER_SET cie_yxu_girl_y = 0
+  COPY_EXISTING ~ar4005.are~ ~override~
+    GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+    PHP_EACH actors AS index => actor BEGIN
+      READ_ASCII actor name (32) NULL
+      PATCH_IF (~%name%~ STRING_EQUAL_CASE ~Yxunomei Girl Form~) BEGIN
+        READ_SHORT (actor + 0x20) cie_yxu_girl_x
+        READ_SHORT (actor + 0x22) cie_yxu_girl_y
+      END
+    END
+  BUT_ONLY
+
+  // "she has appeared": her own script sets AREA_VARBit2 (MYAREA) on its first pass
+  // (base game and SCS). The area script cannot ask for her by name: the
+  // transformation summons her (opcode 67), and in the lab Exists("Yxunomei") stayed
+  // false while she stood there. Without that block: when the girl casts the
+  // transformation (YXUN_CAST_SPECIAL).
+  ACTION_CLEAR_ARRAY cie_yxu_scripts
+  ACTION_IF FILE_EXISTS_IN_GAME ~tanarri.cre~ BEGIN
+    COPY_EXISTING ~tanarri.cre~ ~override~
+      FOR (offset = 0x248; offset < 0x270; offset += 8) BEGIN
+        LPF cie_read_script_slot INT_VAR offset RET script END
+        PATCH_IF (~%script%~ STRING_COMPARE ~~) BEGIN
+          SPRINT $cie_yxu_scripts(~%script%~) ~1~
+        END
+      END
+    BUT_ONLY
+  END
+  OUTER_SPRINT cie_yxu_appeared ~Global("YXUN_CAST_SPECIAL","MYAREA",1)~
+  ACTION_PHP_EACH cie_yxu_scripts AS script => unused BEGIN
+    ACTION_IF FILE_EXISTS_IN_GAME ~%script%.bcs~ BEGIN
+      COPY_EXISTING ~%script%.bcs~ ~override~
+        PATCH_IF (INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~"MYAREAAREA_VARBit2"~) >= 0) BEGIN
+          SPRINT cie_yxu_appeared ~Global("AREA_VARBit2","MYAREA",1)~
+        END
+      BUT_ONLY
+    END
+  END
+
+  LAF cie_yxunomei_mages END
+  LAF cie_yxunomei_champions END
+  LAF cie_yxunomei_elites END
+  LAF cie_yxunomei_traps END
+  LAF cie_yxunomei_telekinesis END
+END
+
+// The mages: the area's spawn block waits for YXUN_ATTACK (the fight with her)
+// instead of MAP_GROUP_HOSTILE5 (her archers' team, which sees the party long before
+// she talks), and every mage it creates gets CIEYXPUR, which walks it to the party.
+DEFINE_ACTION_FUNCTION cie_yxunomei_mages BEGIN
+  OUTER_SET cie_yxu_moved = 0
+  OUTER_SPRINT cie_yxu_block ~~
+  COPY_EXISTING ~%cie_yxu_area_script%.bcs~ ~override~
+    DECOMPILE_AND_PATCH BEGIN
+      REPLACE_EVALUATE CASE_INSENSITIVE
+          ~!Global("MAP_GROUP_HOSTILE5","MYAREA",0)\([%TAB% %LNL%%MNL%%WNL%]+!Global("#spawn_group_0","MYAREA",1)\)~ BEGIN
+        SET cie_yxu_moved += 1
+      END ~!Global("YXUN_ATTACK","MYAREA",0)%MATCH1%~
+      SET start = INDEX_BUFFER (CASE_INSENSITIVE EVALUATE_REGEXP
+          ~!Global("YXUN_ATTACK","MYAREA",0)[%TAB% %LNL%%MNL%%WNL%]+!Global("#spawn_group_0","MYAREA",1)~)
+      PATCH_IF (start >= 0) BEGIN
+        SET end = INDEX_BUFFER (CASE_SENSITIVE EVALUATE_REGEXP ~^END~ start)
+        PATCH_IF (end > start) BEGIN
+          READ_ASCII start cie_yxu_block (end - start)
+        END
+      END
+    END
+  BUT_ONLY
+  ACTION_IF (cie_yxu_moved = 0) BEGIN
+    WARN ~chriz-iwd-encounters: %cie_yxu_area_script%.bcs has no spawn block for Yxunomei's mages on MAP_GROUP_HOSTILE5; the mages come as before.~
+  END ELSE BEGIN
+    ACTION_CLEAR_ARRAY cie_yxu_mages
+    OUTER_PATCH ~%cie_yxu_block%~ BEGIN
+      REPLACE_EVALUATE CASE_INSENSITIVE ~CreateCreature("\([^"]+\)"~ BEGIN
+        SPRINT mage ~%MATCH1%~
+        TO_UPPER mage
+        SPRINT $cie_yxu_mages(~%mage%~) ~1~
+      END ~%MATCH0%~
+    END
+    COMPILE ~chriz-iwd-encounters/baf/cieyxpur.baf~
+    OUTER_SET cie_yxu_pursue = 0
+    ACTION_PHP_EACH cie_yxu_mages AS mage => unused BEGIN
+      ACTION_IF FILE_EXISTS_IN_GAME ~%mage%.cre~ BEGIN
+        COPY_EXISTING ~%mage%.cre~ ~override~
+          LPF cie_read_script_slot INT_VAR offset = 0x248 RET script END
+          PATCH_IF (~%script%~ STRING_EQUAL ~~) BEGIN
+            WRITE_ASCII 0x248 ~CIEYXPUR~ (8)
+            SET cie_yxu_pursue += 1
+          END ELSE BEGIN
+            PATCH_WARN ~chriz-iwd-encounters: the mage %mage% already has an override script (%script%); it waits where it appears.~
+          END
+        BUT_ONLY
+      END
+    END
+    PRINT ~chriz-iwd-encounters: Yxunomei's mages come when the fight with her starts (%cie_yxu_moved% spawn block), and %cie_yxu_pursue% of their creature files walk them to the party (CIEYXPUR).~
+  END
+END
+
+// Her champions: every placement of a Yuan-ti Champion (YUCHAMP, CDYUCHAM) that the
+// placement names (actor flag bit 3) jumps next to her once she has appeared, unless it
+// is dead or charmed. It moves into the team of her guards (the GNTEAM script of
+// the placements that run D5YXNATK), so the High Torturer's team does not turn
+// hostile through it.
+DEFINE_ACTION_FUNCTION cie_yxunomei_champions BEGIN
+  // area actor script slots as script levels (SCRLEV.IDS), by offset
+  ACTION_DEFINE_ASSOCIATIVE_ARRAY cie_yxu_level BEGIN
+    80 => ~OVERRIDE~
+    88 => ~GENERAL~
+    96 => ~CLASS~
+    104 => ~RACE~
+    112 => ~DEFAULT~
+    120 => ~SPECIFICS~
+  END
+  OUTER_SPRINT cie_yxu_team ~~
+  COPY_EXISTING ~ar4005.are~ ~override~
+    GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+    PHP_EACH actors AS index => actor BEGIN
+      SET guard = 0
+      SPRINT team ~~
+      FOR (slot = 0x50; slot < 0x80; slot += 8) BEGIN
+        LPF cie_read_script_slot INT_VAR offset = (actor + slot) RET script END
+        PATCH_IF (~%script%~ STRING_EQUAL ~D5YXNATK~) BEGIN
+          SET guard = 1
+        END ELSE PATCH_IF ((~%script%~ STRING_CONTAINS_REGEXP ~^GNTEAM~) = 0) BEGIN
+          SPRINT team ~%script%~
+        END
+      END
+      PATCH_IF guard AND (~%cie_yxu_team%~ STRING_EQUAL ~~) AND (~%team%~ STRING_COMPARE ~~) BEGIN
+        SPRINT cie_yxu_team ~%team%~
+      END
+    END
+  BUT_ONLY
+
+  OUTER_SET cie_yxu_champions = 0
+  OUTER_SPRINT cie_yxu_unnamed ~~
+  ACTION_CLEAR_ARRAY cie_yxu_champion_name
+  ACTION_CLEAR_ARRAY cie_yxu_champion_team
+  COPY_EXISTING ~ar4005.are~ ~override~
+    GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+    PHP_EACH actors AS index => actor BEGIN
+      READ_ASCII (actor + 0x80) cre (8) NULL
+      TO_UPPER cre
+      PATCH_IF (~%cre%~ STRING_EQUAL ~YUCHAMP~) OR (~%cre%~ STRING_EQUAL ~CDYUCHAM~) BEGIN
+        READ_LONG (actor + 0x28) flags
+        READ_ASCII actor name (32) NULL
+        PATCH_IF (flags BAND 8) BEGIN
+          // scripts address area actors by their name without spaces
+          INNER_PATCH_SAVE name ~%name%~ BEGIN
+            REPLACE_TEXTUALLY ~ ~ ~~
+          END
+          SPRINT level ~~
+          FOR (slot = 0x50; slot < 0x80; slot += 8) BEGIN
+            LPF cie_read_script_slot INT_VAR offset = (actor + slot) RET script END
+            PATCH_IF ((~%script%~ STRING_CONTAINS_REGEXP ~^GNTEAM~) = 0) AND (~%level%~ STRING_EQUAL ~~) BEGIN
+              SPRINT level $cie_yxu_level(~%slot%~)
+            END
+          END
+          SET cie_yxu_champions += 1
+          SPRINT $cie_yxu_champion_name(~%cie_yxu_champions%~) ~%name%~
+          SPRINT $cie_yxu_champion_team(~%cie_yxu_champions%~) ~%level%~
+        END ELSE BEGIN
+          SPRINT cie_yxu_unnamed ~%cie_yxu_unnamed% %name%~
+        END
+      END
+    END
+  BUT_ONLY
+  ACTION_IF (~%cie_yxu_unnamed%~ STRING_COMPARE ~~) BEGIN
+    WARN ~chriz-iwd-encounters: these champions have no script name of their own and stay where they are:%cie_yxu_unnamed%.~
+  END
+  ACTION_IF (cie_yxu_girl_x = 0) AND (cie_yxu_champions > 0) BEGIN
+    WARN ~chriz-iwd-encounters: ar4005.are has no Yxunomei Girl Form; her champions stay where they are.~
+    OUTER_SET cie_yxu_champions = 0
+  END
+  OUTER_FOR (cie_n = 1; cie_n <= cie_yxu_champions; cie_n += 1) BEGIN
+    // beside where she appears, left and right of her (walkable on the base game's map)
+    OUTER_SET x = cie_yxu_girl_x + ((cie_n BAND 1) ? (0 - 70) : 70)
+    OUTER_SET y = cie_yxu_girl_y + 40
+    OUTER_SPRINT cie_point ~%x%.%y%~
+    OUTER_SPRINT cie_champion $cie_yxu_champion_name(~%cie_n%~)
+    OUTER_SPRINT level $cie_yxu_champion_team(~%cie_n%~)
+    OUTER_SPRINT cie_team_line ~~
+    ACTION_IF (~%level%~ STRING_COMPARE ~~) AND (~%cie_yxu_team%~ STRING_COMPARE ~~) BEGIN
+      OUTER_SPRINT cie_team_line ~
+    ActionOverride("%cie_champion%",ChangeAIScript("%cie_yxu_team%",%level%))~
+    END ELSE BEGIN
+      WARN ~chriz-iwd-encounters: %cie_champion% keeps its team script (its team slot: "%level%", her guards' team: "%cie_yxu_team%").~
+    END
+    EXTEND_TOP ~%cie_yxu_area_script%.bcs~ ~chriz-iwd-encounters/baf/cie_yxunomei_champion.baf~ EVALUATE_BUFFER
+  END
+  PRINT ~chriz-iwd-encounters: %cie_yxu_champions% champion(s) come to Yxunomei's side when she appears (her guards' team: %cie_yxu_team%).~
+END
+
+// Hard and Insane: yuan-ti elites (YUAEWSW) one round after she appears, at points
+// of her room (walkable on the base game's map) relative to where she appears.
+DEFINE_ACTION_FUNCTION cie_yxunomei_elites BEGIN
+  OUTER_SPRINT cie_elite ~YUAEWSW~
+  ACTION_IF (cie_yxu_girl_x = 0) BEGIN
+    WARN ~chriz-iwd-encounters: ar4005.are has no Yxunomei Girl Form; no yuan-ti elites come on Hard and Insane.~
+  END ELSE ACTION_IF (!FILE_EXISTS_IN_GAME ~%cie_elite%.cre~) BEGIN
+    WARN ~chriz-iwd-encounters: %cie_elite%.cre is missing; no yuan-ti elites come on Hard and Insane.~
+  END ELSE BEGIN
+    OUTER_SET x = cie_yxu_girl_x + 133
+    OUTER_SET y = cie_yxu_girl_y - 102
+    OUTER_SPRINT cie_e1 ~%x%.%y%~
+    OUTER_SET x = cie_yxu_girl_x + 223
+    OUTER_SET y = cie_yxu_girl_y + 108
+    OUTER_SPRINT cie_e2 ~%x%.%y%~
+    OUTER_SET x = cie_yxu_girl_x + 83
+    OUTER_SET y = cie_yxu_girl_y + 168
+    OUTER_SPRINT cie_e3 ~%x%.%y%~
+    EXTEND_TOP ~%cie_yxu_area_script%.bcs~ ~chriz-iwd-encounters/baf/cie_yxunomei_elites.baf~ EVALUATE_BUFFER
+    PRINT ~chriz-iwd-encounters: on Hard two and on Insane three yuan-ti elites come into Yxunomei's room ([%cie_e1%], [%cie_e2%], [%cie_e3%]).~
+  END
+END
+
+// The pentagram's traps (trap regions within 400 pixels of where she appears) get
+// copies of their scripts that go off for the party's side only ([GOODCUTOFF]).
+DEFINE_ACTION_FUNCTION cie_yxunomei_traps BEGIN
+  ACTION_CLEAR_ARRAY cie_yxu_trap_copy
+  OUTER_SET cie_yxu_copies = 0
+  COPY_EXISTING ~ar4005.are~ ~override~
+    PATCH_IF (cie_yxu_girl_x > 0) BEGIN
+      GET_OFFSET_ARRAY regions ARE_V10_REGIONS
+      PHP_EACH regions AS index => region BEGIN
+        LPF cie_yxunomei_trap_near INT_VAR region girl_x = cie_yxu_girl_x girl_y = cie_yxu_girl_y RET near script END
+        PATCH_IF near AND !(VARIABLE_IS_SET $cie_yxu_trap_copy(~%script%~)) BEGIN
+          SET cie_yxu_copies += 1
+          SPRINT $cie_yxu_trap_copy(~%script%~) ~CIEYXT%cie_yxu_copies%~
+        END
+      END
+    END
+  BUT_ONLY
+  // a copy only counts if its trigger could be narrowed
+  ACTION_PHP_EACH cie_yxu_trap_copy AS script => copy BEGIN
+    OUTER_SET entered = 0
+    ACTION_IF FILE_EXISTS_IN_GAME ~%script%.bcs~ BEGIN
+      COPY_EXISTING ~%script%.bcs~ ~override/%copy%.bcs~
+        DECOMPILE_AND_PATCH BEGIN
+          REPLACE_EVALUATE CASE_INSENSITIVE ~Entered(\[ANYONE\])~ BEGIN
+            SET entered += 1
+          END ~Entered([GOODCUTOFF])~
+        END
+    END
+    ACTION_IF (entered = 0) BEGIN
+      OUTER_SPRINT $cie_yxu_trap_copy(~%script%~) ~~
+      WARN ~chriz-iwd-encounters: the trap script %script% does not go off on Entered([ANYONE]); its traps in front of Yxunomei stay as they are.~
+    END
+  END
+  OUTER_SET cie_yxu_traps = 0
+  COPY_EXISTING ~ar4005.are~ ~override~
+    PATCH_IF (cie_yxu_girl_x > 0) BEGIN
+      GET_OFFSET_ARRAY regions ARE_V10_REGIONS
+      PHP_EACH regions AS index => region BEGIN
+        LPF cie_yxunomei_trap_near INT_VAR region girl_x = cie_yxu_girl_x girl_y = cie_yxu_girl_y RET near script END
+        PATCH_IF near BEGIN
+          SPRINT copy $cie_yxu_trap_copy(~%script%~)
+          PATCH_IF (~%copy%~ STRING_COMPARE ~~) BEGIN
+            WRITE_ASCIIE (region + 0x7c) ~%copy%~ (8)
+            SET cie_yxu_traps += 1
+          END
+        END
+      END
+    END
+  BUT_ONLY
+  PRINT ~chriz-iwd-encounters: %cie_yxu_traps% trap(s) of the pentagram in front of Yxunomei go off only for the party.~
+END
+
+// A trap region (ARE V1.0 region type 0) with a script whose box centre lies within
+// 400 pixels of where Yxunomei appears.
+DEFINE_PATCH_FUNCTION cie_yxunomei_trap_near
+  INT_VAR region = 0 girl_x = 0 girl_y = 0
+  RET near script
+BEGIN
+  READ_SHORT (region + 0x20) type
+  READ_SHORT (region + 0x22) x1
+  READ_SHORT (region + 0x24) y1
+  READ_SHORT (region + 0x26) x2
+  READ_SHORT (region + 0x28) y2
+  LPF cie_read_script_slot INT_VAR offset = (region + 0x7c) RET script END
+  SET dx = (x1 + x2) / 2 - girl_x
+  SET dy = (y1 + y2) / 2 - girl_y
+  SET near = (type = 0) AND (~%script%~ STRING_COMPARE ~~) AND (dx * dx + dy * dy <= 400 * 400)
+END
+
+// SCS 35.21 gives her fiend AI a block that casts DW#BATEL (a balor's telekinesis)
+// at fighters and monks on Hard and Insane. SCS installs that spell only outside
+// IWD:EE; without it, the block only sets her one-round spell timer. Without the
+// spell file the block goes.
+DEFINE_ACTION_FUNCTION cie_yxunomei_telekinesis BEGIN
+  ACTION_IF (FILE_EXISTS_IN_GAME ~tanarri.cre~) AND (!FILE_EXISTS_IN_GAME ~dw#batel.spl~) BEGIN
+    ACTION_CLEAR_ARRAY cie_yxu_scripts
+    COPY_EXISTING ~tanarri.cre~ ~override~
+      FOR (offset = 0x248; offset < 0x270; offset += 8) BEGIN
+        LPF cie_read_script_slot INT_VAR offset RET script END
+        PATCH_IF (~%script%~ STRING_COMPARE ~~) BEGIN
+          SPRINT $cie_yxu_scripts(~%script%~) ~1~
+        END
+      END
+    BUT_ONLY
+    OUTER_SET cie_yxu_batel = 0
+    ACTION_PHP_EACH cie_yxu_scripts AS script => unused BEGIN
+      ACTION_IF FILE_EXISTS_IN_GAME ~%script%.bcs~ BEGIN
+        COPY_EXISTING ~%script%.bcs~ ~override~
+          PATCH_IF (INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~"dw#batel"~) >= 0) BEGIN
+            DECOMPILE_AND_PATCH BEGIN
+              LPF cie_remove_baf_blocks STR_VAR text = ~"dw#batel"~ RET removed END
+              SET cie_yxu_batel += removed
+            END
+          END
+        BUT_ONLY
+      END
+    END
+    ACTION_IF (cie_yxu_batel > 0) BEGIN
+      PRINT ~chriz-iwd-encounters: Yxunomei no longer tries the telekinesis SCS does not install on IWD:EE (%cie_yxu_batel% block(s)).~
+    END
+  END
+END

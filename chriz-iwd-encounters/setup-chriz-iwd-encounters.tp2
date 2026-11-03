@@ -16,6 +16,8 @@ LANGUAGE ~English~ ~english~ ~chriz-iwd-encounters/languages/english/setup.tra~
 //     without a working spell AI on IWD:EE
 // 200 enemy priests prepare when they first see the party (Core Rules and up)
 // 300 Belhifet's final fight (works with and without SCS)
+// 310 Yxunomei and her temple in Dragon's Eye (works with and without SCS)
+// 320 the orog raid on Kuldahar (works with and without SCS)
 //
 // Boss fights follow from 300 on, one component each, so a later version can add
 // one at the end of an existing install.
@@ -43,3 +45,17 @@ REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
 REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~belhif.cre~) AND (FILE_EXISTS_IN_GAME ~ar1105.are~) @9003
 INCLUDE ~chriz-iwd-encounters/lib/cie_belhifet.tpa~
 LAF cie_belhifet END
+
+BEGIN @310 DESIGNATED 310
+LABEL ~chriz-iwd-encounters-yxunomei~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar4005.are~) AND (FILE_EXISTS_IN_GAME ~tanarri.cre~) @9004
+INCLUDE ~chriz-iwd-encounters/lib/cie_yxunomei.tpa~
+LAF cie_yxunomei END
+
+BEGIN @320 DESIGNATED 320
+LABEL ~chriz-iwd-encounters-kuldahar-raid~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE FILE_EXISTS_IN_GAME ~ar2100.are~ @9005
+INCLUDE ~chriz-iwd-encounters/lib/cie_kuldahar.tpa~
+LAF cie_kuldahar END

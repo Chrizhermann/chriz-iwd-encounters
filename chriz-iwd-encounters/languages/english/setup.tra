@@ -1,8 +1,12 @@
 @100 = ~Repair Sword Coast Stratagems caster AI that misses some IWD:EE casters~
 @200 = ~Enemy priests prepare when they first see the party (Core Rules and up)~
 @300 = ~Belhifet's final fight: no blanket spell immunity, more hit points by difficulty, his cornugons as a second wave~
+@310 = ~Yxunomei's temple: her mages come when the fight starts, her champions join her, yuan-ti elites on Hard and Insane~
+@320 = ~The orog raid on Kuldahar: the raid moves as one and hunts the party, its leaders charge after a war horn~
 
 @9000 = ~This mod is for Icewind Dale: Enhanced Edition.~
 @9001 = ~This component needs Sword Coast Stratagems' smarter mages or smarter priests.~
 @9002 = ~This component needs Sword Coast Stratagems' smarter priests.~
 @9003 = ~This component needs Belhifet (belhif.cre) and the final area (ar1105.are).~
+@9004 = ~This component needs Yxunomei's temple (ar4005.are) and Yxunomei (tanarri.cre).~
+@9005 = ~This component needs Kuldahar (ar2100.are).~

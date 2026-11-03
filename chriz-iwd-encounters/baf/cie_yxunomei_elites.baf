@@ -1,0 +1,47 @@
+// chriz-iwd-encounters 310, Hard and Insane: one round after Yxunomei has appeared,
+// two yuan-ti elites (Insane: three) come into her room with the Dimension Door
+// visual (on top of AR4005's script). Not if she is already dead.
+// CIE_YXU_ELITES (area): 1 waiting, 2 arrived. With Continue(), later blocks still
+// see the value as it was when the pass began.
+
+IF
+  %cie_yxu_appeared%
+  Global("CIE_YXU_ELITES","MYAREA",0)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_YXU_ELITES","MYAREA",1)
+    SetGlobalTimer("CIE_YXU_ELITE_TIMER","MYAREA",ONE_ROUND)
+    Continue()
+END
+
+IF
+  Global("CIE_YXU_ELITES","MYAREA",1)
+  GlobalTimerExpired("CIE_YXU_ELITE_TIMER","MYAREA")
+  !Dead("Yxunomei")
+  Difficulty(HARD)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_YXU_ELITES","MYAREA",2)
+    CreateVisualEffect("DDOORH",[%cie_e1%])
+    CreateCreature("%cie_elite%",[%cie_e1%],W)
+    CreateVisualEffect("DDOORH",[%cie_e2%])
+    CreateCreature("%cie_elite%",[%cie_e2%],W)
+    Continue()
+END
+
+IF
+  Global("CIE_YXU_ELITES","MYAREA",1)
+  GlobalTimerExpired("CIE_YXU_ELITE_TIMER","MYAREA")
+  !Dead("Yxunomei")
+  Difficulty(HARDEST)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_YXU_ELITES","MYAREA",2)
+    CreateVisualEffect("DDOORH",[%cie_e1%])
+    CreateCreature("%cie_elite%",[%cie_e1%],W)
+    CreateVisualEffect("DDOORH",[%cie_e2%])
+    CreateCreature("%cie_elite%",[%cie_e2%],W)
+    CreateVisualEffect("DDOORH",[%cie_e3%])
+    CreateCreature("%cie_elite%",[%cie_e3%],W)
+    Continue()
+END

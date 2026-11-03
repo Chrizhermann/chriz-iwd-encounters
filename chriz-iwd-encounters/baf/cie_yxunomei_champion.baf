@@ -1,0 +1,20 @@
+// chriz-iwd-encounters 310: one of Yxunomei's champions leaves the torture chamber
+// for her side once she has appeared (on top of AR4005's script): it moves into her
+// guards' team, turns hostile and jumps next to her with the Dimension Door visual.
+// Not when it is dead or under the party's charm, nor when she is already dead.
+// CIE_YXU_CHAMPION_<n> (area): 1 it has gone to her.
+
+IF
+  %cie_yxu_appeared%
+  !Dead("Yxunomei")
+  Global("CIE_YXU_CHAMPION_%cie_n%","MYAREA",0)
+  HPGT("%cie_champion%",0)
+  !StateCheck("%cie_champion%",STATE_CHARMED)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_YXU_CHAMPION_%cie_n%","MYAREA",1)%cie_team_line%
+    ActionOverride("%cie_champion%",Enemy())
+    ActionOverride("%cie_champion%",JumpToPoint([%cie_point%]))
+    ActionOverride("%cie_champion%",CreateVisualEffectObject("DDOORH",Myself))
+    Continue()
+END

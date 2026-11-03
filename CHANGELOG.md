@@ -15,6 +15,21 @@
   Poquelin's transformation, SCS 35.21's teleport pause repaired (as shipped he
   teleports every 6 seconds on average). The ending plays as in the base game.
   Works with and without SCS.
+- 310: Yxunomei and her temple. Her three yuan-ti mages come when the fight with her
+  starts (not when her archers first see the party) and walk to the party; as in the
+  base game they stay only on Hard and Insane. Her two champions, if they still
+  live, leave the torture chamber for her side when she appears. One round later
+  two yuan-ti elites come into her room on Hard, three on Insane. The pentagram's
+  traps in front of her go off only for the party. SCS 35.21's balor telekinesis,
+  which IWD:EE lacks, no longer costs her a round of spells. Works with and without
+  SCS.
+- 320: the orog raid on Kuldahar. Once one raider or defender wakes, every Avenger
+  wakes and the orogs come for the party. The three Marauders, the leaders, charge
+  three rounds later after a war horn, with 70 hit points, two attacks per round and
+  THAC0 10; the Avengers have 45 hit points. The orogs fight back against the town's
+  defenders, raiders who never woke leave after four days like the others, and the
+  town alarm no longer brings out a second, living Arundel. Works with and without
+  SCS.
 
 ## v0.1.0 (2026-10-28)
 

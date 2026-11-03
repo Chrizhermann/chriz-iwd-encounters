@@ -1,0 +1,23 @@
+// chriz-iwd-encounters 310: a yuan-ti mage that Yxunomei's temple calls in comes for
+// the party. It sits in the mage's override slot, so it runs before the mage's
+// other scripts (SCS's mage AI ends with a block that holds every idle mage).
+// The first pass only marks the mage, so on that pass the base game's difficulty
+// check (EFDELDEF: below Hard a mage that sees no party member leaves) still decides
+// whether the mage stays.
+
+IF
+  Global("CIE_YXU_PURSUE","LOCALS",0)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_YXU_PURSUE","LOCALS",1)
+    Continue()
+END
+
+IF
+  Global("CIE_YXU_PURSUE","LOCALS",1)
+  ActionListEmpty()
+  !Detect(NearestEnemyOf(Myself))
+THEN
+  RESPONSE #100
+    MoveToObject(Player1)
+END

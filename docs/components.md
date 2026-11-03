@@ -295,3 +295,174 @@ SCS, and with a real party.
   Fiend Fireball every 6–52 seconds, melee in between. Without SCS, or once SCS
   fixes it, nothing changes (the base game teleports him on its own timers, every
   9–26 seconds).
+
+## 310: Yxunomei and her temple
+
+Works with and without SCS. Designed with Christopher on 2026-11-03 and 2026-11-04,
+after a consultation with Gemini 4 Argon on the verified facts of the fight
+("nicht komplett penetrant, einfach nur das Ganze ein bisschen interessanter"). The
+fight takes place in `AR4005` (Dragon's Eye, chapter 2): the Yxunomei Girl Form
+(`YXUNGIRL`) talks to the party, every dialogue branch ends in `Enemy()`, and her
+transformation (`SPIN182`) creates Yxunomei (`TANARRI`, script name `Yxunomei`) at
+her spot. The area variable `YXUN_ATTACK` marks the real start of the fight: the
+girl sets it when she turns hostile, her guards (`D5YXNATK`) when one of them is
+attacked. Installed on a running game, the changes apply as long as the fight has not
+started; the mages' change also needs them not to have come yet.
+
+Lab-tested on 2026-11-04 in IWD:EE 2.7.3.0 with SCS 35.21 and EEex 1.3.1, from a save
+with one level-1 character (kept alive for the measurement) brought to her room, on
+Core Rules, Hard and Insane. Her archers' team saw the party at once
+(`MAP_GROUP_HOSTILE5` 1.2 seconds after arrival, when the base game would have
+brought the mages); the mages came 0.7 seconds after `YXUN_ATTACK`, at the end of
+her dialogue. Hard and Insane: all three walked 540–700 pixels to the party and
+then cast. Core Rules: they left on their first round, as in the base game. On every
+difficulty both champions jumped beside her 1.1–1.5 seconds after she appeared and
+fought; the High Torturer stayed neutral in the torture chamber. Hard: two elites,
+Insane: three, 6.4 seconds after she appeared; Core Rules: none. Not tested in the
+game: the traps and the telekinesis block (the install checks cover the scripts),
+without SCS, and with a real party.
+
+### Her mages
+
+- **Base game:** the area script creates three yuan-ti mages (`YUANMAG`; with SCS
+  `DWYUMAG5`–`7`) with the Dimension Door visual east of her door (door 12) once
+  `MAP_GROUP_HOSTILE5` is set. That is her guards' team variable; her archers' team
+  script sets it the moment they see the party, so the mages come long before she
+  talks, and the base game's difficulty script on them (`EFDELDEF`) removes them on
+  their first round below Hard unless they see a party member. They have no orders to
+  look for the party.
+- **Change:** the spawn waits for `YXUN_ATTACK`, and each mage's creature file gets
+  `CIEYXPUR` in its override slot (the first to run; SCS's mage AI ends with a block
+  that holds every idle mage): when the mage has nothing to do and detects no enemy,
+  it walks to Player1. The first round only marks the mage, so `EFDELDEF` still
+  decides in that round: below Hard (unless Heart of Winter is finished) the mages
+  still leave, as in the base game.
+
+### Her champions
+
+- **Base game:** two Yuan-ti Champions (`YUCHAMP`, `CDYUCHAM`; placements
+  `Yuan-Ti Champion 1`, `2`) stand with the High Torturer in the torture chamber,
+  about 2000 pixels south of her, neutral until his team turns hostile.
+- **Change:** once she has appeared, each champion that lives and is not charmed by
+  the party moves into her guards' team (the team script of the placements that run
+  `D5YXNATK`, `GNTEAM5M`; so the High Torturer's team does not turn hostile through
+  it), turns hostile and jumps next to her (70 pixels left and right of where she
+  appears, 40 below; Dimension Door visual). Players who cleared the torture
+  chamber first face her without them. Area variables `CIE_YXU_CHAMPION_1`, `_2`.
+- **"She has appeared"** is her own script's first pass, which sets the area
+  variable `AREA_VARBit2` (base game and SCS); without that block, the girl's
+  transformation (`YXUN_CAST_SPECIAL`). Not her name: the transformation summons her
+  (opcode 67), and in the lab `Exists("Yxunomei")` stayed false while she stood
+  there (asked as the party leader and as a champion).
+
+### Elites on Hard and Insane
+
+- One round after she has appeared (see above), if she still lives: two Yuan-ti Elites
+  (`YUAEWSW`, halberd) on Hard, three on Insane, come into her room with the
+  Dimension Door visual, at points of her room relative to where she appears (girl
+  + 133/−102, + 223/+108, + 83/+168 pixels; walkable on the base game's map). Area
+  variable `CIE_YXU_ELITES` (1 waiting, 2 arrived), timer `CIE_YXU_ELITE_TIMER`.
+  Christopher, 2026-11-04: the optional step stays in.
+
+### The pentagram's traps
+
+- **Base game:** three trap regions in front of her (`Penta Confusion 1`, `2`,
+  `Penta Paralyze`; scripts `GNT2017`, `GNT2016`) go off on `Entered([ANYONE])`, so
+  her own guards trigger them when they advance on the party.
+- **Change:** the trap regions within 400 pixels of where she appears run copies of
+  their scripts (`CIEYXT1`, `CIEYXT2`) that go off on `Entered([GOODCUTOFF])`: the
+  party, its allies and summons. The traps in the halls are unchanged.
+
+### SCS's telekinesis
+
+- SCS 35.21's fiend AI for her (`D5YXUN`) has a Hard-and-Insane block that casts
+  `DW#BATEL`, the balor's telekinesis, at fighters and monks. SCS installs that
+  spell only outside IWD:EE (`stratagems/fiend/fiend.tpa`), so the block only sets
+  her one-round spell timer. While `DW#BATEL.SPL` does not exist, every block of her
+  scripts that names it is removed.
+
+### Not changed
+
+- Her own stats, spells and AI as SCS builds them (staying power on Hard and Insane),
+  her guards, the High Torturer and the High Baptist, the doors (door 12 locks with
+  `YXUN_ATTACK`), the hall traps, the plot (her death variable, the Heartstone Gem,
+  `YXUN_ATTACK`, the transformation chain).
+- The rest of the temple. The yuan-ti scripts' last blocks (`D5YUANG`, the priests'
+  `D5YUANP1`–`4` and SCS's copies) were meant to send idle yuan-ti to the party once
+  `YXUN_ATTACK` is set, but a "back to my post" block with the same conditions comes
+  first; in the lab the groups away from her rooms stayed where they stood. Her
+  guards and the group next to her room came anyway (her guards' own script, SCS's
+  calls for help). Repairing the order would send every surviving group of the
+  temple to her room; Christopher, 2026-11-04: masses of enemies are not fun. Left
+  as it is.
+
+## 320: the orog raid on Kuldahar
+
+Works with and without SCS. Designed with Christopher on 2026-11-03 ("die Orogs
+bekommen eine schlichte KI und kommen auf die Gruppe zu", the Marauders "als zweite
+Welle") and 2026-11-04 (no extra Marauders, "die Anführer … ein bisschen stärker":
+"supi"). The raid appears in Kuldahar (`AR2100`) on the party's first visit after
+Yxunomei's death: the area script's block on `SPRITE_IS_DEADYXUNOMEI` and
+`#spawn_group_1` creates 7 Neo-Orog Avengers (`KAOROG`), 3 Neo-Orog Marauders
+(`KAOROGE`) and 8 defenders (`KATOWN1`–`3`, neutral townspeople who attack orcs) in
+five places of the town. No SCS AI runs on them. The component reads the raid from
+that block: raiders are the creatures whose default script is `KUATKORO`, the leaders
+those of them with the most experience.
+
+Lab-tested on 2026-11-04 in IWD:EE 2.7.3.0 with SCS 35.21 and EEex 1.3.1 on Hard, from
+a save with one level-1 character brought to Kuldahar right after Yxunomei's death
+(`SPRITE_IS_DEADYXUNOMEI` 1), once at the east entrance and once in the middle of the
+town. The alert came 2.4–2.9 seconds after the raid appeared; all seven Avengers (45
+hit points) walked 190–1780 pixels to the party; the war horn sounded 18 seconds
+later; the three Marauders (70 hit points, 2 attacks, THAC0 10) waited for it unless
+the party or a defender reached them first, then charged. In the middle of the town
+the defenders near the party woke and attacked the Marauder beside them. Not tested
+in the game: the town alarm's Arundel, the four-day cleanup, without SCS, and with a
+real party.
+
+### The raid moves as one
+
+- **Base game:** every raider and defender stands still (`KUATKEFF`, a last block
+  `True()` → `NoAction()`) until a party member comes within range 35 or it is
+  attacked; then it switches to `KUATKREM` (cleanup only) and its default script
+  takes over. The orogs (`KUATKORO`) attack enemies they see and walk to an attacker;
+  they never look for the party, so each group waits for the party to come to it.
+- **Change:** the first raider or defender that wakes sets the area variable
+  `CIE_KUL_ALERT` (top of `KUATKREM`). The Avengers' creature files run `CIEKULAV`, a
+  copy of `KUATKEFF` that also wakes them with the alert. Awake orogs with nothing to
+  do that see no enemy walk to Player1 (end of `KUATKORO`).
+- The defenders keep `KUATKEFF` and its rule (they wake when the party comes close or
+  attacks them). In the lab a defender far from the party never ran its script: with
+  the alert set and every condition of a wake block true (checked as that defender
+  12 and 55 seconds after the alert), it stayed asleep, while the Avengers as far away
+  woke and walked.
+
+### The leaders as a second wave
+
+- The Marauders' creature files run `CIEKULMA`, a copy of `KUATKEFF` that wakes them
+  when `CIE_KUL_WAVE` is 2 instead of with the alert. Three rounds after the alert
+  (`CIE_KUL_WAVE_TIMER`), the area script plays the war horn (`S_HORN`, heard all
+  over the map) and sets it. A Marauder the party reaches or attacks first still
+  fights at once, as in the base game.
+- **Stronger:** Marauders 70 hit points (base game 42), 2 attacks per round (1),
+  THAC0 10 (12); Avengers 45 hit points (31). Values are only raised, never lowered.
+
+### Repairs
+
+- **The defenders:** they attack orcs on sight, but are neutral, so the orogs never
+  fought back. Awake orogs now attack whoever neutral attacks them. They still leave
+  the other townsfolk alone (those only flee).
+- **Raiders who never woke:** woken raiders leave four days after the raid's first
+  visit (`KUATKREM`: `OnCreation`, `2100_ATTACK` expired); the asleep script lacked
+  that block, so groups the party never met stayed until chapter 3. `KUATKEFF` and
+  both copies get it.
+- **A second Arundel:** the town alarm (`KULDAHAR_ALARM`, when the party attacks
+  townspeople) creates Arundel outside his house (`ARUNDEL1`). After Yxunomei's death
+  he is dying upstairs (`AR2112`), so that block now also needs
+  `SPRITE_IS_DEADYXUNOMEI` 0.
+
+### Not changed
+
+- The raid's places and size, the defenders' own AI and wake rule, the fleeing
+  townsfolk, the plot (Arundel's house, `KULDAHAR_FORCEREMOVE`, `2100_ATTACK`, the
+  town-hostility chain), the music.

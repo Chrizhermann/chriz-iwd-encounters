@@ -515,6 +515,124 @@ def main():
                 dispels.append(name)
         c.check(not dispels, "the transformation cutscene forces no dispel on the party (%s)" % (", ".join(dispels) or "ok"))
 
+    # 310: Yxunomei and her temple (only when installed: it brings CIEYXPUR)
+    area = res.get("AR4005", "ARE")
+    if area and res.get("CIEYXPUR", "BCS") is not None:
+        area_script = slot(area, 0x94)
+        text = c.script(area_script)
+        blocks = re.findall(rb"cr\n(.*?)cr\n", text, re.S)
+        spawns = [b for b in blocks if b'"myarea#spawn_group_0"' in b.split(b"rs\n")[0] and b"ac\n7ob\n" in b]
+        c.check(len(spawns) == 1, "%s has one spawn block for the mages (%d)" % (area_script, len(spawns)))
+        mages = []
+        for block in spawns:
+            condition = block.split(b"rs\n")[0]
+            c.check(b'"myareayxun_attack"' in condition and b'"myareamap_group_hostile5"' not in condition,
+                    "the mages come with YXUN_ATTACK, not with MAP_GROUP_HOSTILE5")
+            mages = sorted({s.decode().upper() for s in re.findall(rb'"([^"]{1,8})"', block.split(b"rs\n", 1)[1])
+                            if res.get(s.decode(), "CRE") is not None})
+        for mage in mages:
+            c.check(slot(res.get(mage, "CRE"), 0x248) == "CIEYXPUR", "the mage %s runs CIEYXPUR first" % mage)
+        c.check(b'"localscie_yxu_pursue"' in c.script("CIEYXPUR"), "CIEYXPUR walks the mages to the party")
+        # the champions jump to her and join her guards' team
+        off, = struct.unpack_from("<I", area, 0x54)
+        count, = struct.unpack_from("<H", area, 0x58)
+        girl, champions, guard_team = None, [], ""
+        for i in range(count):
+            a = off + 0x110 * i
+            name = area[a:a + 32].split(b"\0")[0].decode("latin-1")
+            flags, = struct.unpack_from("<I", area, a + 0x28)
+            scripts = [slot(area, a + o) for o in ARE_SLOTS]
+            if name.upper() == "YXUNOMEI GIRL FORM":
+                girl = struct.unpack_from("<HH", area, a + 0x20)
+            if resref(area, a + 0x80) in ("YUCHAMP", "CDYUCHAM") and flags & 8:
+                champions.append(name.replace(" ", ""))
+            if "D5YXNATK" in scripts and not guard_team:
+                guard_team = next((s for s in scripts if s.startswith("GNTEAM")), "")
+        # "she has appeared" is her script's AREA_VARBit2 (the area script cannot find
+        # her by name: Exists("Yxunomei") stays false for the summoned Yxunomei)
+        own = [s for s in (slot(cres["TANARRI"], o) for o in CRE_SLOTS if o) if s] if "TANARRI" in cres else []
+        if any(b'"myareaarea_varbit2"' in c.script(s) for s in own):
+            c.check(text.count(b'"myareaarea_varbit2"') == 3,
+                    "the champions and elites wait for her script's AREA_VARBit2 (%d)" % text.count(b'"myareaarea_varbit2"'))
+        c.check(len(champions) == 2, "two champions are placed by name (%s)" % ", ".join(champions))
+        for name in champions:
+            c.check(text.count(b'"' + name.lower().encode() + b'"') >= 5,
+                    "%s goes to her side (%d references)" % (name, text.count(b'"' + name.lower().encode() + b'"')))
+        c.check(bool(guard_team) and b'"' + guard_team.lower().encode() + b'"' in text,
+                "the champions join her guards' team %s" % guard_team)
+        # Hard two, Insane three elites
+        c.check(text.count(b'"yuaewsw"') == 5 and text.count(b'"myareacie_yxu_elites"') == 6,
+                "two elites on Hard and three on Insane (%d creations)" % text.count(b'"yuaewsw"'))
+        # the pentagram's traps go off for the party's side only
+        entered = next((n for s, n in ids_numbers(res.get("TRIGGER", "IDS")).items() if s.startswith("ENTERED(")), None)
+        roff, = struct.unpack_from("<I", area, 0x5C)
+        rcount, = struct.unpack_from("<H", area, 0x5A)
+        near = []
+        for i in range(rcount):
+            r = roff + 0xC4 * i
+            rtype, x1, y1, x2, y2 = struct.unpack_from("<5H", area, r + 0x20)
+            if girl and rtype == 0 and ((x1 + x2) // 2 - girl[0]) ** 2 + ((y1 + y2) // 2 - girl[1]) ** 2 <= 400 ** 2:
+                near.append(slot(area, r + 0x7C))
+        c.check(len(near) == 3 and all(s.startswith("CIEYXT") for s in near),
+                "the 3 pentagram traps run copies (%s)" % ", ".join(near))
+        for script in sorted(set(near)):
+            eas = [int(ea) for t, ea in re.findall(rb"tr\n(\d+) [^\n]*ob\n(-?\d+) ", c.script(script)) if int(t) == entered]
+            c.check(eas and all(ea == 30 for ea in eas), "%s goes off on Entered([GOODCUTOFF]) only (%s)" % (script, eas))
+        # no balor telekinesis (SCS installs it only outside IWD:EE)
+        if res.get("DW#BATEL", "SPL") is None:
+            tanarri = cres.get("TANARRI")
+            own = [s for s in (slot(tanarri, o) for o in CRE_SLOTS if o) if s] if tanarri else []
+            c.check(own and not [s for s in own if b'"dw#batel"' in c.script(s)],
+                    "Yxunomei's scripts do not cast the missing DW#BATEL (%s)" % ", ".join(own))
+
+    # 320: the orog raid on Kuldahar (only when installed: it brings CIEKULMA)
+    area = res.get("AR2100", "ARE")
+    if area and res.get("CIEKULMA", "BCS") is not None:
+        text = c.script(slot(area, 0x94))
+        blocks = re.findall(rb"cr\n(.*?)cr\n", text, re.S)
+        raid = [b for b in blocks if b'"myarea#spawn_group_1"' in b.split(b"rs\n")[0]]
+        spawned = sorted({s.decode().upper() for b in raid for s in re.findall(rb'"([^"]{1,8})"', b.split(b"rs\n", 1)[1])
+                          if res.get(s.decode(), "CRE") is not None})
+        orogs = {n: cres[n] for n in spawned if n in cres and slot(cres[n], 0x268) == "KUATKORO"}
+        top = max(struct.unpack_from("<I", d, 0x14)[0] for d in orogs.values()) if orogs else 0
+        leaders = sorted(n for n, d in orogs.items() if struct.unpack_from("<I", d, 0x14)[0] == top)
+        c.check(len(orogs) >= 2 and 0 < len(leaders) < len(orogs),
+                "the raid has orogs and leaders (%s; leaders %s)" % (", ".join(sorted(orogs)), ", ".join(leaders)))
+        for n, d in sorted(orogs.items()):
+            hp, = struct.unpack_from("<H", d, 0x26)
+            if n in leaders:
+                c.check(hp >= 70 and d[0x53] >= 2 and d[0x52] <= 10 and slot(d, 0x260) == "CIEKULMA",
+                        "the leader %s: %d hit points, %d attacks, THAC0 %d, waits for the horn (%s)"
+                        % (n, hp, d[0x53], d[0x52], slot(d, 0x260)))
+            else:
+                c.check(hp >= 45 and slot(d, 0x260) == "CIEKULAV",
+                        "the orog %s: %d hit points, wakes with the raid (%s)" % (n, hp, slot(d, 0x260)))
+        c.check(b'"myareacie_kul_alert"' in c.script("CIEKULAV") and b'"myareacie_kul_wave"' not in c.script("CIEKULAV")
+                and b'"2100_attack"' in c.script("CIEKULAV"),
+                "CIEKULAV wakes with the raid and leaves after four days")
+        c.check(b'"myareacie_kul_wave"' in c.script("CIEKULMA") and b'"myareacie_kul_alert"' not in c.script("CIEKULMA")
+                and b'"2100_attack"' in c.script("CIEKULMA"),
+                "CIEKULMA wakes with the horn only and leaves after four days")
+        defenders = sorted({slot(cres[n], 0x260) for n in spawned if n in cres and n not in orogs} - {""})
+        for script in defenders:
+            text_d = c.script(script)
+            c.check(b'"myareacie_kul_alert"' not in text_d and b'"myareacie_kul_wave"' not in text_d
+                    and text_d.count(b'"2100_attack"') >= 1,
+                    "the defenders' %s keeps its wake rule and sends the unwoken away after four days" % script)
+        c.check(b'"myareacie_kul_alert"' in c.script("KUATKREM"), "KUATKREM raises the raid's alert")
+        attacked = next((n for s, n in ids_numbers(res.get("TRIGGER", "IDS")).items() if s.startswith("ATTACKEDBY(")), None)
+        orog_blocks = re.findall(rb"cr\n(.*?)cr\n", c.script("KUATKORO"), re.S)
+        back = [b for b in orog_blocks if any(int(t) == attacked and int(ea) == 128 for t, ea in
+                                               re.findall(rb"tr\n(\d+) [^\n]*ob\n(-?\d+) ", b.split(b"rs\n")[0]))]
+        c.check(len(back) == 1, "KUATKORO fights back against the defenders (%d block)" % len(back))
+        c.check(bool(orog_blocks) and b"ac\n22ob\n" in orog_blocks[-1].split(b"rs\n", 1)[1],
+                "KUATKORO ends with the walk to the party")
+        c.check(text.count(b'"myareacie_kul_wave"') == 4 and b'"s_horn"' in text,
+                "the area sounds the war horn for the leaders")
+        arundel = [b for b in blocks if b'"globalkuldahar_alarm"' in b.split(b"rs\n")[0] and b"ac\n7ob\n" in b]
+        c.check(len(arundel) == 1 and b'"globalsprite_is_deadyxunomei"' in arundel[0].split(b"rs\n")[0],
+                "the town alarm's Arundel only comes while Yxunomei lives")
+
     print("%d check(s) failed" % c.failed if c.failed else "all checks passed")
     return 1 if c.failed else 0
 

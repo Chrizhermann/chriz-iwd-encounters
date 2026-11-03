@@ -1,0 +1,12 @@
+// chriz-iwd-encounters 320: a raider or defender that never woke leaves four days
+// after the raid's first visit, as the woken ones already do (KUATKREM); the base
+// game left them until chapter 3. On top of the raid's asleep scripts.
+
+IF
+  OnCreation()
+  Global("SPRITE_IS_DEADYXUNOMEI","GLOBAL",2)
+  !GlobalTimerNotExpired("2100_ATTACK","GLOBAL")
+THEN
+  RESPONSE #100
+    DestroySelf()
+END
