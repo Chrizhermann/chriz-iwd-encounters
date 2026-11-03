@@ -73,6 +73,22 @@
   she no longer stays immortal and the party learns of the soul. The barrow's spawn file
   runs again the ten difficulty gates SCS replaced with its team scripts. Works with and
   without SCS.
+- 390: Icasaracht's lair. Icasaracht has 650 hit points (400), her soul gem 250 (150).
+  The fallback for an Icasaracht who dies without her last-hit-point cutscene no longer
+  creates a second gem and fills the gem's ring slot as the normal path does. SCS's
+  second underpriestess gets the random items of the first; both lose their five
+  attacks per round (a typo). Works with and without SCS.
+- 400: Lord Maluradek. A party member he banishes to room 1 or 2 now wakes that room's
+  four animated plates (only the plates themselves raised the alarm, and they appeared
+  only once it was raised); the plates fight. 350 hit points (250). Below half his hit
+  points all three rooms wake and he fights in melee between his spells. The first
+  beholder holds still during the dance again, and he wears his immunity gloves (they sat in a
+  quick slot, where they did nothing). Works with and without SCS.
+- 410: the Luremaster. He opens the fight with his Improved Invisibility and, while he has
+  spells, hops away by Dimension Door when an enemy reaches him (SCS had taken his hop
+  script off). His Dispel Magic entry checks the spell he memorises, so his three Dispel
+  Magic come. A fallen spectral hero brings its replacement again (up to six). Works with
+  and without SCS.
 
 ## v0.1.0 (2026-10-28)
 

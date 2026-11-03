@@ -1,0 +1,16 @@
+// chriz-iwd-encounters 400: on top of Lord Maluradek's script. Once below half his hit
+// points, all three banishment rooms raise their alarm: the animated plates that are left
+// come for the party, and he fights in melee between his spells.
+
+IF
+  Allegiance(Myself,ENEMY)
+  HPPercentLT(Myself,50)
+  Global("CIE_MAL_ALARM","LOCALS",0)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_MAL_ALARM","LOCALS",1)
+    ReallyForceSpellRES("cttelvis",Myself)
+    SetGlobal("TELEPORT_1","MYAREA",1)
+    SetGlobal("TELEPORT_2","MYAREA",1)
+    SetGlobal("TELEPORT_3","MYAREA",1)
+END

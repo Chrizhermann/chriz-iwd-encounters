@@ -1,0 +1,206 @@
+// Component 400: Lord Maluradek's floor (AR9712, Trials of the Luremaster), designed with
+// Christopher on 2026-11-03 and 2026-11-04. Works with and without SCS.
+//   - His banishments work: a party member he sends to room 1 or 2 now raises that room's
+//     alarm (TELEPORT_1, TELEPORT_2), as room 3 already did, so its four animated plates
+//     appear; only the plates themselves set it before, and they appear only once it is
+//     set. The plates fight (they had no combat script).
+//   - 350 hit points (base game 250).
+//   - Below half his hit points at the latest, all three rooms raise their alarm: the
+//     plates come, and he fights in melee between his spells.
+//   - Repairs: the first beholder holds still during the dance again (SCS's beholder
+//     script ran before the dance hold); his immunity gloves (CIIGEN) sat in a quick slot,
+//     where they do nothing, and are worn now.
+// docs/components.md describes each change in engine-neutral terms.
+
+DEFINE_ACTION_FUNCTION cie_maluradek BEGIN
+  // his placement's scripts; the one that banishes (INNATE_CRYPT_THING_TELEPORT)
+  OUTER_SPRINT cie_mal_script ~~
+  ACTION_CLEAR_ARRAY cie_mal_scripts
+  COPY_EXISTING ~ar9712.are~ ~override~
+    GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+    PHP_EACH actors AS index => actor BEGIN
+      READ_ASCII (actor + 0x80) cre (8) NULL
+      TO_UPPER cre
+      PATCH_IF (~%cre%~ STRING_EQUAL ~LORDM~) BEGIN
+        FOR (slot = 0x50; slot < 0x80; slot += 8) BEGIN
+          LPF cie_read_script_slot INT_VAR offset = (actor + slot) RET script END
+          PATCH_IF (~%script%~ STRING_COMPARE ~~) AND (FILE_EXISTS_IN_GAME ~%script%.bcs~) BEGIN
+            SPRINT $cie_mal_scripts(~%script%~) ~1~
+          END
+        END
+      END
+    END
+  BUT_ONLY
+  ACTION_PHP_EACH cie_mal_scripts AS script => unused BEGIN
+    COPY_EXISTING ~%script%.bcs~ ~override~
+      DECOMPILE_AND_PATCH BEGIN
+        PATCH_IF (INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~INNATE_CRYPT_THING_TELEPORT~) >= 0)
+            AND (~%cie_mal_script%~ STRING_EQUAL ~~) BEGIN
+          SPRINT cie_mal_script ~%script%~
+        END
+      END
+    BUT_ONLY
+  END
+
+  ACTION_IF (~%cie_mal_script%~ STRING_EQUAL ~~) BEGIN
+    WARN ~chriz-iwd-encounters: Lord Maluradek (LORDM) in ar9712.are has no banishing script; his rooms stay as they are.~
+  END ELSE BEGIN
+    // a banishment to a room sets that room's alarm where it does not yet
+    OUTER_SET cie_mal_rooms = 0
+    COPY_EXISTING ~%cie_mal_script%.bcs~ ~override~
+      DECOMPILE_AND_PATCH BEGIN
+        SET from = 0
+        WHILE (from >= 0) BEGIN
+          LPF cie_find_baf_block INT_VAR from STR_VAR text = ~INNATE_CRYPT_THING_TELEPORT~ RET start end END
+          PATCH_IF (start < 0) BEGIN
+            SET from = 0 - 1
+          END ELSE BEGIN
+            READ_ASCII start block (end - start)
+            SPRINT room ~~
+            SET sets = 0
+            INNER_PATCH ~%block%~ BEGIN
+              REPLACE_EVALUATE CASE_INSENSITIVE ~Global("\(TELEPORT_[0-9]\)","MYAREA",0)~ BEGIN
+                SPRINT room ~%MATCH1%~
+              END ~%MATCH0%~
+            END
+            PATCH_IF (~%room%~ STRING_COMPARE ~~) BEGIN
+              INNER_PATCH ~%block%~ BEGIN
+                SET sets = INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~SetGlobal("%room%","MYAREA",1)~)
+              END
+            END
+            PATCH_IF (~%room%~ STRING_COMPARE ~~) AND (sets < 0) BEGIN
+              INNER_PATCH_SAVE block ~%block%~ BEGIN
+                REPLACE_TEXTUALLY ~^END~ ~    SetGlobal("%room%","MYAREA",1)%LNL%END~
+              END
+              LPF cie_replace_text INT_VAR start length = (end - start) STR_VAR text = EVAL ~%block%~ END
+              SET cie_mal_rooms += 1
+            END
+            SET from = start + STRING_LENGTH ~%block%~
+          END
+        END
+      END
+    BUT_ONLY
+    EXTEND_TOP ~%cie_mal_script%.bcs~ ~chriz-iwd-encounters/baf/cie_maluradek_alarm.baf~
+    PRINT ~chriz-iwd-encounters: %cie_mal_rooms% of Lord Maluradek's banishment rooms now raise their alarm; below half all three do.~
+  END
+
+  // 350 hit points; his immunity item CIIGEN (gloves) from a quick slot, where an item
+  // does nothing (lab: he could be paralysed), into his empty gloves slot
+  ACTION_IF FILE_EXISTS_IN_GAME ~lordm.cre~ BEGIN
+    OUTER_SET cie_mal_gloves = 0
+    COPY_EXISTING ~lordm.cre~ ~override~
+      LPF cie_raise_creature INT_VAR hp = 350 RET old_hp old_apr old_thac0 END
+      READ_LONG 0x2b8 slots
+      READ_LONG 0x2bc items
+      READ_LONG 0x2c0 count
+      SET item = 0 - 1
+      FOR (i = 0; i < count; ++i) BEGIN
+        READ_ASCII (items + 0x14 * i) name (8) NULL
+        PATCH_IF (~%name%~ STRING_EQUAL_CASE ~CIIGEN~) BEGIN
+          SET item = i
+        END
+      END
+      PATCH_IF (item >= 0) BEGIN
+        READ_SSHORT (slots + 3 * 2) gloves
+        FOR (quick = 18; quick <= 20; ++quick) BEGIN
+          READ_SSHORT (slots + quick * 2) there
+          PATCH_IF (there = item) AND (gloves < 0) BEGIN
+            WRITE_SHORT (slots + 3 * 2) item
+            WRITE_SHORT (slots + quick * 2) (0 - 1)
+            SET gloves = item
+            SET cie_mal_gloves = 1
+          END
+        END
+      END
+    BUT_ONLY
+    PRINT ~chriz-iwd-encounters: Lord Maluradek has %old_hp% -> 350 hit points; his CIIGEN in the gloves slot: %cie_mal_gloves%.~
+  END
+
+  LAF cie_maluradek_plates END
+  LAF cie_maluradek_beholder END
+END
+
+// The animated plates get a melee script in a free general or default slot: SCS's
+// (DWMESSGE) when SCS is there, else the base game's EFATKMEL.
+DEFINE_ACTION_FUNCTION cie_maluradek_plates BEGIN
+  OUTER_SPRINT cie_mal_melee ~~
+  ACTION_IF FILE_EXISTS_IN_GAME ~dwmessge.bcs~ BEGIN
+    OUTER_SPRINT cie_mal_melee ~DWMESSGE~
+  END ELSE ACTION_IF FILE_EXISTS_IN_GAME ~efatkmel.bcs~ BEGIN
+    OUTER_SPRINT cie_mal_melee ~EFATKMEL~
+  END
+  ACTION_IF (~%cie_mal_melee%~ STRING_EQUAL ~~) BEGIN
+    WARN ~chriz-iwd-encounters: no melee script (DWMESSGE, EFATKMEL); the animated plates stay without one.~
+  END ELSE BEGIN
+    ACTION_FOR_EACH plate IN ~keanimph~ ~keanimp2~ BEGIN
+      ACTION_IF FILE_EXISTS_IN_GAME ~%plate%.cre~ BEGIN
+        OUTER_SET placed = 0
+        COPY_EXISTING ~%plate%.cre~ ~override~
+          SET fought = 0
+          FOR (slot = 0x248; slot < 0x270; slot += 8) BEGIN
+            LPF cie_read_script_slot INT_VAR offset = slot RET script END
+            PATCH_IF (~%script%~ STRING_EQUAL_CASE ~%cie_mal_melee%~) OR (~%script%~ STRING_EQUAL_CASE ~EFATKMEL~)
+                OR (~%script%~ STRING_EQUAL_CASE ~DWMESSGE~) BEGIN
+              SET fought = 1
+            END
+          END
+          PATCH_IF (fought = 0) BEGIN
+            FOR (slot = 0x260; slot < 0x270 AND placed = 0; slot += 8) BEGIN
+              LPF cie_read_script_slot INT_VAR offset = slot RET script END
+              PATCH_IF (~%script%~ STRING_EQUAL ~~) BEGIN
+                WRITE_ASCIIE slot ~%cie_mal_melee%~ (8)
+                SET placed = 1
+              END
+            END
+          END ELSE BEGIN
+            SET placed = 2
+          END
+        BUT_ONLY
+        ACTION_IF (placed = 0) BEGIN
+          WARN ~chriz-iwd-encounters: %plate%.cre has no free general or default slot; it stays without a melee script.~
+        END
+      END
+    END
+    PRINT ~chriz-iwd-encounters: the animated plates fight with %cie_mal_melee%.~
+  END
+END
+
+// The first beholder: its dance script (KEBEHLDD, which holds it still until the dance
+// ends) runs before SCS's beholder script (KEBEHLD1) again; SCS put KEBEHLD1 in a slot
+// that runs first. The two slots swap their scripts.
+DEFINE_ACTION_FUNCTION cie_maluradek_beholder BEGIN
+  // area actor script slots by offset, as the engine runs them
+  ACTION_DEFINE_ASSOCIATIVE_ARRAY cie_mal_order BEGIN
+    80 => 0
+    120 => 1
+    96 => 2
+    104 => 3
+    88 => 4
+    112 => 5
+  END
+  OUTER_SET cie_mal_swapped = 0
+  COPY_EXISTING ~ar9712.are~ ~override~
+    GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+    PHP_EACH actors AS index => actor BEGIN
+      SET dance = 0 - 1
+      SET ai = 0 - 1
+      FOR (slot = 0x50; slot < 0x80; slot += 8) BEGIN
+        LPF cie_read_script_slot INT_VAR offset = (actor + slot) RET script END
+        PATCH_IF (~%script%~ STRING_EQUAL ~KEBEHLDD~) BEGIN
+          SET dance = slot
+        END
+        PATCH_IF (~%script%~ STRING_EQUAL ~KEBEHLD1~) BEGIN
+          SET ai = slot
+        END
+      END
+      PATCH_IF (dance >= 0) AND (ai >= 0) BEGIN
+        PATCH_IF ($cie_mal_order(~%ai%~) < $cie_mal_order(~%dance%~)) BEGIN
+          WRITE_ASCII (actor + ai) ~KEBEHLDD~ (8)
+          WRITE_ASCII (actor + dance) ~KEBEHLD1~ (8)
+          SET cie_mal_swapped += 1
+        END
+      END
+    END
+  BUT_ONLY
+  PRINT ~chriz-iwd-encounters: %cie_mal_swapped% beholder(s) hold still during the dance again.~
+END

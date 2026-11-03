@@ -748,3 +748,110 @@ seconds later. Not seen: her running away (the character, stunned by her wails, 
 attacked her). Also seen: hostile or not, she still starts her talk once the party comes
 close to her, so the base game kept her immortal only for a party that fought her from
 afar. Not tested in the game: without SCS, with a real party.
+
+## 390: Icasaracht and her soul gem
+
+Works with and without SCS. Designed with Christopher on 2026-11-03 and 2026-11-04 (the
+package without the optional summons; no extra wave when the gem wakes). Icasaracht's lair (`AR9604`, the end of Heart of Winter): after
+her talk the white dragon fights with her sahuagin court (king, high priestess, two
+underpriestesses, four guards). At her last hit point (`MINHP1`) her death cutscene wakes
+her soul gem (`DLSGEM`, script name `GEM`), which summons Vodyanoi; its death ends Heart
+of Winter.
+
+- **Hit points:** Icasaracht 650 (base game 400; SCS's dragon hit point boost exists but
+  nothing applies it), the soul gem 250 (150).
+- **Not restored: the court's healing.** In the base game the whole court healed
+  Icasaracht, the gem, the king, the guards and each other with Cure spells; SCS's
+  priest lists have none. The decided capped return (the high priestess's four Cure
+  spells, only on Icasaracht and the gem) does not work in IWD:EE: in the lab her Cure
+  Critical and Cure Serious Wounds landed on Icasaracht without raising her hit points
+  (also when applied directly), the Cure spells do not work on golems or undead (the
+  gem is a golem), and the gem stays invisible, so she cannot target it.- **Repairs:**
+  - Should Icasaracht die without her last-hit-point cutscene, the area script's
+    fallback created a second gem next to the first (created on the first visit) and its
+    cutscene ran `EquipItemEx("RING91",0)` on the gem. With the gem there, the fallback
+    now runs its cutscene without a second gem, and the cutscene fills the gem's ring
+    slot as the normal path does (`FillSlot(SLOT_RING_RIGHT)`).
+  - The second underpriestess (SCS's copy `DWSARU0`) lacked the random items SCS gives
+    the first (`DW#RND04`, `DW#RND24`); it gets the ones it lacks. Both had five attacks
+    per round (a typo in the base game's creature); now one.
+- **Checked in the lab, not changed:**
+  - At her last hit point, `Kill(Myself)` kills her although SCS makes her immune to
+    opcode 13 (she died 1.2 seconds after the gem woke).
+  - Wing Buffet's opcode 13 row (death, no save) kills nobody: its effects on a level-1
+    character without any protection (and 500 extra hit points) did their damage and
+    stun, no death.
+  - When the gem wakes it summons six Vodyanoi within four seconds on Hard (SCS's gem
+    script).
+
+## 400: Lord Maluradek
+
+Works with and without SCS. Designed with Christopher on 2026-11-03 and 2026-11-04 (the
+package, "Klingt gut"; the optional spectral guards dropped, they only add enemies). The
+upper floor of the Luremaster's keep (`AR9712`): Lord Maluradek (`LORDM`, a lich,
+fighter/mage/cleric; script `KELRDMAL`) talks, turns hostile and fights by banishing the
+nearest enemy to one of three rooms (`SPIN140`, save vs spell -5) or force-casting a
+spell each round. He fights in melee only once all three rooms have raised their alarm
+(`TELEPORT_1`–`3`). The area script spawns four animated plates (`KEANIMPH`, `KEANIMP2`)
+for rooms 1 and 2 once their alarm is set.
+
+- **His banishments work:** room 3 set its own alarm, but rooms 1 and 2 waited for their
+  plates, which only the alarm brings, so the rooms stayed empty, he banished people to
+  them again and again and never fought in melee. A banishment to room 1 or 2 now sets
+  that room's alarm (in his script, as room 3 does), so its plates appear.
+- **The plates fight:** they had a script that only plays their arrival and raises the
+  alarm; they get SCS's melee script (`DWMESSGE`, else the base game's `EFATKMEL`) in a
+  free slot.
+- **Hit points:** 350 (base game 250).
+- **Below half his hit points,** at the latest, all three rooms raise their alarm: the
+  plates still missing appear and come for the party, and he fights in melee between his
+  spells.
+- **Repairs:**
+  - SCS put its beholder script (`KEBEHLD1`) in a slot that runs before the first
+    beholder's dance script (`KEBEHLDD`), so the beholder could act during the dance; the
+    two swap places again.
+  - His immunity gloves (`CIIGEN`: charm, hold, paralysis, sleep, horror) sat in a quick
+    slot, where an item does nothing (lab: paralysis held him); he wears them now.
+- **Not changed:** his spells and banishment chances, the spectral guards and courtiers,
+  the beholders' own scripts. Seen in the lab: three of the four room-1 plates stayed
+  invisible while they fought (their own arrival script, from SCS, did not end the
+  invisibility they are created with).
+
+Lab-tested on 2026-11-04 in IWD:EE 2.7.3.0 with SCS 35.21 and EEex 1.3.1 on Hard, from a
+save with one level-1 character: after his talk he banished the character to room 1;
+`TELEPORT_1` was set and its four plates appeared within a second, walked about 700 px
+and attacked. A banishment to room 3 set `TELEPORT_3` as in the base game. Hurt to 177
+of 377 hit points, he raised all alarms: room 2's four plates appeared at once and came
+for the character. With `CIIGEN` in the quick slot a paralysis held him; with the gloves
+worn it did not. A second run banished the character to room 2, which set `TELEPORT_2`.
+Not tested in the game: the dance and the beholders, without SCS, with a real party.
+
+## 410: the Luremaster
+
+Works with and without SCS. Designed with Christopher on 2026-11-03 and 2026-11-04 (the
+package, "Können wir so machen"; the optional guard call dropped). The main hall of the
+keep (`AR9711`): at the last meeting the Luremaster (`TRGBARD`, a level-20 bard; scripts
+`DULURTLK`, `DULURMST`) fights with spectral heroes beside him. SCS's Smarter Mages took
+his hop script (`DULURWRP`, a Dimension Door after every spell) off and left his class
+slot pointing at a missing `NULL.BCS`; since then he stands at his throne.
+
+- **He opens with Improved Invisibility** (memorised) once the fight starts.
+- **He hops away when cornered:** while he has spells and is not beaten, an enemy next to
+  him makes him Dimension Door to one of the eight points of his old circuit, every 12
+  or 18 seconds at most (`CIELURHP`, in the slot that pointed at `NULL.BCS`).
+- **Repairs:** his spell script's Dispel Magic entry checked `WIZARD_REMOVE_MAGIC` (2302,
+  Remove Magic in IWD:EE), which he does not memorise, so his three Dispel Magic
+  (`SPWI323`, 2323) never came; the entry checks and casts 2323 now.
+  A fallen spectral hero now brings its replacement: the area script spawns one of six
+  (`TRSPH4`–`9`) while `AR9711_HERO` is above 0, and nothing raised it (the engine only
+  counts `SPRITE_IS_DEADAR9711_HERO`, the heroes' shared death variable); a block on top of
+  the area script turns each new death into one replacement.
+- **Not changed:** his spells, his end at 10 hit points.
+
+Lab-tested on 2026-11-04 in IWD:EE 2.7.3.0 with SCS 35.21 and EEex 1.3.1 on Hard, from a
+save with one level-1 character (`Master_Quest` set to 5): the fight started after his
+talk, he was invisible 1.1 seconds later, and with the character next to him he cast
+Dimension Door and landed at one of his points ([604.826]). Before the hero fix, killing
+`TRSPH1` raised only `SPRITE_IS_DEADAR9711_HERO` and no replacement came; with it,
+`TRSPH4` appeared 1.5 seconds after `TRSPH1` died and `TRSPH5` after `TRSPH2`. Not tested
+in the game: his Dispel Magic (the install checks cover it), without SCS, with a real party.

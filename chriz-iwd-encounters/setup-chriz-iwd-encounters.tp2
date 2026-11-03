@@ -105,3 +105,24 @@ REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
 REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar9400.are~) AND (FILE_EXISTS_IN_GAME ~mebding.cre~) @9011
 INCLUDE ~chriz-iwd-encounters/lib/cie_mebdinga.tpa~
 LAF cie_mebdinga END
+
+BEGIN @390 DESIGNATED 390
+LABEL ~chriz-iwd-encounters-icasaracht~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar9604.are~) AND (FILE_EXISTS_IN_GAME ~icasa.cre~) @9012
+INCLUDE ~chriz-iwd-encounters/lib/cie_icasaracht.tpa~
+LAF cie_icasaracht END
+
+BEGIN @400 DESIGNATED 400
+LABEL ~chriz-iwd-encounters-maluradek~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar9712.are~) AND (FILE_EXISTS_IN_GAME ~lordm.cre~) @9013
+INCLUDE ~chriz-iwd-encounters/lib/cie_maluradek.tpa~
+LAF cie_maluradek END
+
+BEGIN @410 DESIGNATED 410
+LABEL ~chriz-iwd-encounters-luremaster~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar9711.are~) AND (FILE_EXISTS_IN_GAME ~trgbard.cre~) @9014
+INCLUDE ~chriz-iwd-encounters/lib/cie_luremaster.tpa~
+LAF cie_luremaster END

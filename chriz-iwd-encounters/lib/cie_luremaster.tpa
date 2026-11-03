@@ -1,0 +1,177 @@
+// Component 410: the Luremaster (AR9711, the end of Trials of the Luremaster), designed
+// with Christopher on 2026-11-03 and 2026-11-04. Works with and without SCS.
+//   - He opens the fight with his Improved Invisibility.
+//   - While he has spells and is not beaten, an enemy next to him makes him hop away by
+//     Dimension Door to one of the eight points of his old hop circuit, every 12 or 18
+//     seconds at most (SCS took his hop script off; the class slot points at a missing
+//     NULL.BCS, which now holds this script).
+//   - Repairs: his Dispel Magic entry checks the spell he has memorised (it checked
+//     Remove Magic, which he does not have, so his three Dispel Magic never came); a
+//     fallen spectral hero brings its replacement (the counter the area script waits for
+//     was never raised).
+// docs/components.md describes each change in engine-neutral terms.
+
+DEFINE_ACTION_FUNCTION cie_luremaster BEGIN
+  // the hop points: his old circuit (DULURWRP), where the base game hopped him
+  OUTER_SET cie_lur_points = 0
+  ACTION_IF FILE_EXISTS_IN_GAME ~dulurwrp.bcs~ BEGIN
+    COPY_EXISTING ~dulurwrp.bcs~ ~override~
+      DECOMPILE_AND_PATCH BEGIN
+        REPLACE_EVALUATE CASE_INSENSITIVE ~ForceSpellPoint(\[\([0-9]+\)\.\([0-9]+\)\],WIZARD_DIMENSION_DOOR)~ BEGIN
+          PATCH_IF (!VARIABLE_IS_SET $cie_lur_seen(~%MATCH1%~ ~%MATCH2%~)) BEGIN
+            SET $cie_lur_seen(~%MATCH1%~ ~%MATCH2%~) = 1
+            SET $cie_lur_px(~%cie_lur_points%~) = MATCH1
+            SET $cie_lur_py(~%cie_lur_points%~) = MATCH2
+            SET cie_lur_points += 1
+          END
+        END ~%MATCH0%~
+      END
+    BUT_ONLY
+  END
+
+  // his placement: the fight form (TRGBARD), its scripts
+  OUTER_SET cie_lur_found = 0
+  ACTION_CLEAR_ARRAY cie_lur_scripts
+  COPY_EXISTING ~ar9711.are~ ~override~
+    GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+    PHP_EACH actors AS index => actor BEGIN
+      READ_ASCII (actor + 0x80) cre (8) NULL
+      TO_UPPER cre
+      PATCH_IF (~%cre%~ STRING_EQUAL ~TRGBARD~) AND (cie_lur_found = 0) BEGIN
+        SET cie_lur_found = 1
+        FOR (slot = 0x50; slot < 0x80; slot += 8) BEGIN
+          LPF cie_read_script_slot INT_VAR offset = (actor + slot) RET script END
+          PATCH_IF (~%script%~ STRING_COMPARE ~~) AND (FILE_EXISTS_IN_GAME ~%script%.bcs~) BEGIN
+            SPRINT $cie_lur_scripts(~%script%~) ~1~
+          END
+        END
+      END
+    END
+  BUT_ONLY
+  ACTION_IF (cie_lur_found = 0) BEGIN
+    FAIL ~chriz-iwd-encounters: ar9711.are has no Luremaster (TRGBARD).~
+  END
+
+  LAF cie_luremaster_hop END
+  LAF cie_luremaster_dispel END
+  LAF cie_luremaster_heroes END
+END
+
+// The hop script CIELURHP, in his class slot when that points at a missing script (SCS
+// leaves NULL there), else in his first free slot.
+DEFINE_ACTION_FUNCTION cie_luremaster_hop BEGIN
+  ACTION_IF (cie_lur_points = 0) BEGIN
+    WARN ~chriz-iwd-encounters: the Luremaster's hop points (dulurwrp.bcs) are missing; he does not hop.~
+  END ELSE BEGIN
+    OUTER_SPRINT cie_lur_hops ~~
+    OUTER_FOR (k = 0; k < cie_lur_points; ++k) BEGIN
+      OUTER_SET x = $cie_lur_px(~%k%~)
+      OUTER_SET y = $cie_lur_py(~%k%~)
+      OUTER_SET timer = 12 + 6 * (k MODULO 2)
+      OUTER_SPRINT cie_lur_hops ~%cie_lur_hops%  RESPONSE #100%LNL%    SetGlobalTimer("CIE_LUR_HOP","LOCALS",%timer%)%LNL%    ForceSpellPoint([%x%.%y%],WIZARD_DIMENSION_DOOR)%LNL%~
+    END
+    COPY ~chriz-iwd-encounters/baf/cie_luremaster.baf~ ~override/CIELURHP.bcs~
+      EVALUATE_BUFFER
+      COMPILE_BAF_TO_BCS
+    OUTER_SET cie_lur_slotted = 0
+    COPY_EXISTING ~ar9711.are~ ~override~
+      GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+      PHP_EACH actors AS index => actor BEGIN
+        READ_ASCII (actor + 0x80) cre (8) NULL
+        TO_UPPER cre
+        PATCH_IF (~%cre%~ STRING_EQUAL ~TRGBARD~) AND (cie_lur_slotted = 0) BEGIN
+          // the class slot first when its script is missing, then the free slots in run order
+          LPF cie_read_script_slot INT_VAR offset = (actor + 0x60) RET script END
+          PATCH_IF (~%script%~ STRING_COMPARE ~~) AND (!FILE_EXISTS_IN_GAME ~%script%.bcs~) BEGIN
+            WRITE_ASCII (actor + 0x60) ~CIELURHP~ (8)
+            SET cie_lur_slotted = 1
+          END
+          PATCH_FOR_EACH slot IN 0x50 0x78 0x60 0x68 0x58 0x70 BEGIN
+            LPF cie_read_script_slot INT_VAR offset = (actor + slot) RET script END
+            PATCH_IF (cie_lur_slotted = 0) AND (~%script%~ STRING_EQUAL ~~) BEGIN
+              WRITE_ASCII (actor + slot) ~CIELURHP~ (8)
+              SET cie_lur_slotted = 1
+            END
+          END
+        END
+      END
+    BUT_ONLY
+    ACTION_IF (cie_lur_slotted = 0) BEGIN
+      WARN ~chriz-iwd-encounters: the Luremaster's placement has no free script slot; he does not hop.~
+    END ELSE BEGIN
+      PRINT ~chriz-iwd-encounters: the Luremaster opens with Improved Invisibility and hops over %cie_lur_points% points when an enemy is next to him (CIELURHP).~
+    END
+  END
+END
+
+// His spell script checks Remove Magic for his Dispel Magic entry. In IWD:EE's SPELL.IDS
+// 2302 is Remove Magic (SPWI302, also listed as WIZARD_DISPEL_MAGIC) and his Dispel Magic
+// is SPWI323 (2323). Where he memorises SPWI323 and not SPWI302, the entry uses 2323.
+DEFINE_ACTION_FUNCTION cie_luremaster_dispel BEGIN
+  OUTER_SET cie_lur_has323 = 0
+  OUTER_SET cie_lur_has302 = 0
+  COPY_EXISTING ~trgbard.cre~ ~override~
+    READ_LONG 0x2b0 spells
+    READ_LONG 0x2b4 count
+    FOR (i = 0; i < count; ++i) BEGIN
+      READ_ASCII (spells + 12 * i) spell (8) NULL
+      PATCH_IF (~%spell%~ STRING_EQUAL_CASE ~SPWI323~) BEGIN
+        SET cie_lur_has323 = 1
+      END
+      PATCH_IF (~%spell%~ STRING_EQUAL_CASE ~SPWI302~) BEGIN
+        SET cie_lur_has302 = 1
+      END
+    END
+  BUT_ONLY
+  OUTER_SET cie_lur_dispels = 0
+  ACTION_IF cie_lur_has323 AND !cie_lur_has302 BEGIN
+    OUTER_SPRINT cie_lur_dispel ~~
+    OUTER_PATCH ~~ BEGIN
+      LOOKUP_IDS_SYMBOL_OF_INT cie_lur_dispel ~spell~ 2323
+    END
+    ACTION_IF (~%cie_lur_dispel%~ STRING_COMPARE ~2323~) BEGIN
+      ACTION_PHP_EACH cie_lur_scripts AS script => unused BEGIN
+        COPY_EXISTING ~%script%.bcs~ ~override~
+          DECOMPILE_AND_PATCH BEGIN
+            REPLACE_EVALUATE ~WIZARD_\(REMOVE\|DISPEL\)_MAGIC\([^_A-Z0-9]\)~ BEGIN
+              SET cie_lur_dispels += 1
+            END ~%cie_lur_dispel%%MATCH2%~
+          END
+        BUT_ONLY
+      END
+    END
+  END
+  PRINT ~chriz-iwd-encounters: the Luremaster's Dispel Magic entry uses the spell he memorises (%cie_lur_dispels% place(s)).~
+END
+
+// The heroes' replacements: the area script spawns one while its counter (the heroes'
+// shared death variable, AR9711_HERO) is above 0, and nothing raised it; the engine only
+// raises SPRITE_IS_DEAD<that name>. A block on top of the area script turns each new
+// death into one replacement (the area script still stops at six).
+DEFINE_ACTION_FUNCTION cie_luremaster_heroes BEGIN
+  OUTER_SPRINT cie_lur_hero ~~
+  ACTION_IF FILE_EXISTS_IN_GAME ~trsph1.cre~ BEGIN
+    COPY_EXISTING ~trsph1.cre~ ~override~
+      READ_ASCII 0x280 cie_lur_hero (32) NULL
+    BUT_ONLY
+  END
+  OUTER_SPRINT cie_lur_area_script ~~
+  COPY_EXISTING ~ar9711.are~ ~override~
+    READ_ASCII 0x94 cie_lur_area_script (8) NULL
+  BUT_ONLY
+  OUTER_SET cie_lur_spends = 0 - 1
+  ACTION_IF (~%cie_lur_hero%~ STRING_COMPARE ~~) AND (~%cie_lur_area_script%~ STRING_COMPARE ~~)
+      AND (FILE_EXISTS_IN_GAME ~%cie_lur_area_script%.bcs~) BEGIN
+    COPY_EXISTING ~%cie_lur_area_script%.bcs~ ~override~
+      DECOMPILE_AND_PATCH BEGIN
+        SET cie_lur_spends = INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~IncrementGlobal("%cie_lur_hero%","GLOBAL",-1)~)
+      END
+    BUT_ONLY
+  END
+  ACTION_IF (cie_lur_spends < 0) BEGIN
+    WARN ~chriz-iwd-encounters: the hall's area script spends no hero counter (%cie_lur_hero%); the heroes' replacements stay as they are.~
+  END ELSE BEGIN
+    EXTEND_TOP ~%cie_lur_area_script%.bcs~ ~chriz-iwd-encounters/baf/cie_luremaster_heroes.baf~ EVALUATE_BUFFER
+    PRINT ~chriz-iwd-encounters: each spectral hero that dies brings one replacement (%cie_lur_hero%).~
+  END
+END

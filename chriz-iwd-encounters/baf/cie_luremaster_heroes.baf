@@ -1,0 +1,14 @@
+// chriz-iwd-encounters 410: on top of the hall's area script. Each spectral hero that dies
+// (they share the death variable %cie_lur_hero%, whose death counter the engine raises)
+// adds one to %cie_lur_hero%, which the area script's replacement blocks spend: the
+// base game waited for a value nothing ever set, so no replacement came.
+
+IF
+  Global("SPRITE_IS_DEADLUREMASTER","GLOBAL",0)
+  GlobalsGT("SPRITE_IS_DEAD%cie_lur_hero%","CIE_LUR_HEROES")
+THEN
+  RESPONSE #100
+    IncrementGlobal("CIE_LUR_HEROES","GLOBAL",1)
+    IncrementGlobal("%cie_lur_hero%","GLOBAL",1)
+    Continue()
+END

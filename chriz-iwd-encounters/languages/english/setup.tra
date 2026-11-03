@@ -9,6 +9,9 @@
 @360 = ~Poquelin in the Ascension Cave: more hit points, a jump with Fire Storm and the next wave at three quarters, no outright death~
 @370 = ~Cryshal-Tirith: Pomab's images look like him and hide him again after every hit, his sentries guard him~
 @380 = ~Mebdinga's barrow: her wails come on time, an honour guard of wights and drowned dead, a Lament below half on Hard and Insane~
+@390 = ~Icasaracht's lair: more hit points for her and her soul gem, no second gem, the second underpriestess repaired~
+@400 = ~Lord Maluradek: his banishment rooms fill with animated plates that fight, more hit points, all rooms awake below half~
+@410 = ~The Luremaster: he opens with Improved Invisibility, hops away when an enemy reaches him, his Dispel Magic works~
 
 @9000 = ~This mod is for Icewind Dale: Enhanced Edition.~
 @9001 = ~This component needs Sword Coast Stratagems' smarter mages or smarter priests.~
@@ -22,3 +25,6 @@
 @9009 = ~This component needs Poquelin (poquelin.cre) and the Ascension Cave (ar8013.are).~
 @9010 = ~This component needs Cryshal-Tirith (ar1103.are) and Pomab (eepomab.cre).~
 @9011 = ~This component needs Mebdinga (mebding.cre) and her barrow (ar9400.are).~
+@9012 = ~This component needs Icasaracht (icasa.cre) and her lair (ar9604.are).~
+@9013 = ~This component needs Lord Maluradek (lordm.cre) and his floor (ar9712.are).~
+@9014 = ~This component needs the Luremaster (trgbard.cre) and his hall (ar9711.are).~

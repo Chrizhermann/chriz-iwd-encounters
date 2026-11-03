@@ -1,0 +1,25 @@
+// chriz-iwd-encounters 410: CIELURHP, the Luremaster's own script (in the slot SCS left
+// pointing at a missing NULL.BCS). Once the fight starts he opens with his Improved
+// Invisibility; while he has spells and is not beaten, an enemy next to him makes him
+// hop away by Dimension Door to one of his hall points, every 12 or 18 seconds at most.
+
+IF
+  Allegiance(Myself,ENEMY)
+  !Global("MAP_GROUP_HOSTILE9","MYAREA",0)
+  Global("CIE_LUR_OPEN","LOCALS",0)
+  HaveSpell(WIZARD_IMPROVED_INVISIBILITY)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_LUR_OPEN","LOCALS",1)
+    Spell(Myself,WIZARD_IMPROVED_INVISIBILITY)
+END
+
+IF
+  Allegiance(Myself,ENEMY)
+  !HPLT(Myself,10)
+  HaveAnySpells()
+  !GlobalTimerNotExpired("CIE_LUR_HOP","LOCALS")
+  See(NearestEnemyOf(Myself))
+  Range(NearestEnemyOf(Myself),4)
+THEN
+%cie_lur_hops%END

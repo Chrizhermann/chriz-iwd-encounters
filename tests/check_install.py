@@ -830,6 +830,78 @@ def main():
                 missing.append("%s=%s" % (section, script or "-"))
         c.check(not missing, "the barrow's spawn file runs all its difficulty gates (%s)" % (", ".join(missing) or "ok"))
 
+    # 390: Icasaracht (only when installed: the fallback no longer creates a second gem)
+    area = res.get("AR9604", "ARE")
+    text = c.script(slot(area, 0x94)) if area else b""
+    blocks = re.findall(rb"cr\n(.*?)cr\n", text, re.S)
+    fallback = [b for b in blocks if b'"ildrgded"' in b]
+    if len(fallback) == 2:
+        for name, hp in (("ICASA", 650), ("DLSGEM", 250)):
+            cre = cres.get(name)
+            c.check(cre is not None and struct.unpack_from("<H", cre, 0x26)[0] >= hp,
+                    "%s has %d hit points" % (name, struct.unpack_from("<H", cre, 0x26)[0] if cre else 0))
+        c.check(any(b'"dlsgem"' not in b for b in fallback), "with the gem there, the fallback creates no second gem")
+        c.check(b'"ring91"' not in c.script("ILDRGDED"), "the fallback cutscene fills the gem's ring slot")
+        first, second = cres.get("SARUNPR"), cres.get("DWSARU0")
+        if first and second:
+            rnd = {i for i in cre_items(first) if i.startswith("DW#RND")}
+            c.check(rnd <= set(cre_items(second)), "DWSARU0 carries SARUNPR's random items (%s)" % ", ".join(sorted(rnd)))
+            c.check(first[0x53] != 5 and second[0x53] != 5, "the underpriestesses no longer have five attacks per round")
+    # 400: Lord Maluradek (only when installed: his banishing script carries the alarm)
+    area = res.get("AR9712", "ARE")
+    placed = are_actors(area)
+    lord = next((p for p in placed.values() if p["cre"] == "LORDM"), None)
+    lord_scripts = [s for s in lord["scripts"].values() if s] if lord else []
+    banish = next((s for s in lord_scripts if b'"localscie_mal_alarm"' in c.script(s)), "")
+    if banish:
+        t = c.script(banish)
+        blocks = re.findall(rb"cr\n(.*?)cr\n", t, re.S)
+        for room in (b"1", b"2", b"3"):
+            flag = b'"myareateleport_' + room + b'"'
+            c.check(len([b for b in blocks if flag in b.split(b"rs\n", 1)[-1]]) >= 2,
+                    "a banishment to room %s and the alarm below half set TELEPORT_%s" % (room.decode(), room.decode()))
+        cre = cres.get("LORDM")
+        c.check(cre is not None and struct.unpack_from("<H", cre, 0x26)[0] >= 350,
+                "Lord Maluradek has %d hit points" % (struct.unpack_from("<H", cre, 0x26)[0] if cre else 0))
+        items = cre_items(cre) if cre else []
+        so, = struct.unpack_from("<I", cre, 0x2B8) if cre else (0,)
+        gloves = struct.unpack_from("<h", cre, so + 6)[0] if cre else -1
+        c.check("CIIGEN" not in items or (0 <= gloves < len(items) and items[gloves] == "CIIGEN"),
+                "Lord Maluradek wears his immunity gloves (CIIGEN)")
+        for plate in ("KEANIMPH", "KEANIMP2"):
+            d = cres.get(plate)
+            scripts = [slot(d, o) for o in CRE_SLOTS if o] if d else []
+            c.check(bool({"DWMESSGE", "EFATKMEL"} & set(scripts)), "%s fights (%s)" % (plate, ", ".join(s for s in scripts if s)))
+        holders = [p for p in placed.values() if "KEBEHLDD" in p["scripts"].values() and "KEBEHLD1" in p["scripts"].values()]
+        order = ["override", "specifics", "class", "race", "general", "default"]
+        c.check(all(order.index(next(k for k, v in p["scripts"].items() if v == "KEBEHLDD"))
+                    < order.index(next(k for k, v in p["scripts"].items() if v == "KEBEHLD1")) for p in holders),
+                "the dancing beholder's hold runs before its fight script (%d)" % len(holders))
+
+    # 410: the Luremaster (only when installed: his placement runs CIELURHP)
+    area = res.get("AR9711", "ARE")
+    lure_scripts = []
+    if area:
+        # by creature, not by name: the riddle form (GBARD) carries the same name
+        off, = struct.unpack_from("<I", area, 0x54)
+        count, = struct.unpack_from("<H", area, 0x58)
+        for i in range(count):
+            a = off + 0x110 * i
+            if resref(area, a + 0x80) == "TRGBARD" and not lure_scripts:
+                lure_scripts = [s for s in (slot(area, a + o) for o in ARE_SLOTS) if s]
+    if "CIELURHP" in lure_scripts:
+        missing = [s for s in lure_scripts if res.get(s, "BCS") is None]
+        c.check(not missing, "every script slot of the Luremaster points at a script (%s)" % (", ".join(missing) or "ok"))
+        t = c.script("CIELURHP")
+        c.check(b'"cie_lur_hop" "locals"' in t and t.count(b"ac\n") >= 9,
+                "he opens with Improved Invisibility and hops away from an enemy next to him")
+        spells = next((s for s in lure_scripts if re.search(rb"tr\n\d+ 2323 ", c.script(s))), "")
+        c.check(bool(spells) and not re.search(rb"tr\n\d+ 2302 ", c.script(spells)),
+                "his Dispel Magic entry checks the Dispel Magic he memorises (%s)" % (spells or "-"))
+        text = c.script(slot(area, 0x94))
+        c.check(b'"cie_lur_heroes"' in text and b'"sprite_is_deadar9711_hero"' in text,
+                "each fallen spectral hero brings its replacement")
+
     print("%d check(s) failed" % c.failed if c.failed else "all checks passed")
     return 1 if c.failed else 0
 

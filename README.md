@@ -17,6 +17,9 @@ SCS.
 | 360 | Poquelin in the Ascension Cave: 420 hit points; below three quarters he jumps away, calls Fire Storm and the next wave comes at once; no instant death or removal skips his escape; the escape cutscenes find him. Works with and without SCS. |
 | 370 | Cryshal-Tirith: Pomab's images carry his name, and after every hit on him they all jump and hide again what a revealing spell showed; they keep their distance; his sentries go for whoever attacked him and for enemies close to him, with 240 hit points; every hit on him counts, and downed sentries always stand up again. Works with and without SCS. |
 | 380 | Mebdinga's barrow: her wails come on time and she no longer runs every time she is hit; the nearest barrow wight and drowned dead come to her as an honour guard (two of each on Hard and Insane), hasted by War Cry; a telegraphed Undying Lament below half her hit points on Hard and Insane; hostile before the talk she is mortal; the barrow's difficulty gates work again. Works with and without SCS. |
+| 390 | Icasaracht's lair: 650 hit points for her, 250 for her soul gem; no second gem if she dies without her last cutscene; SCS's second underpriestess repaired. Works with and without SCS. |
+| 400 | Lord Maluradek: his banishment rooms wake their animated plates, which now fight; 350 hit points; all rooms wake below half his hit points; the dancing beholder holds still again and he wears his immunity gloves. Works with and without SCS. |
+| 410 | The Luremaster: he opens with Improved Invisibility, hops away by Dimension Door when an enemy reaches him, and his Dispel Magic works; fallen spectral heroes are replaced again. Works with and without SCS. |
 
 Details per change, written so they can move to the Chriz script engine later:
 [docs/components.md](docs/components.md).
@@ -24,7 +27,7 @@ Details per change, written so they can move to the Chriz script engine later:
 ## Install
 
 Needs IWD:EE (built and tested on 2.7.3.0) and SCS's smarter priests (component 200)
-or smarter mages/priests (component 100); components 300 to 380 also work without SCS.
+or smarter mages/priests (component 100); components 300 to 410 also work without SCS.
 Extract the release zip from the GitHub
 releases into the game folder (it holds `chriz-iwd-encounters/`) and run
 `setup-chriz-iwd-encounters` with WeiDU after SCS.
