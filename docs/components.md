@@ -72,22 +72,26 @@ and are in the same area.
   word, timers included, and checks its pair: both partners alive and able to talk (the
   check the speaker already had), one in the other's area. The area check is also what
   sees through an empty slot: "not dead" holds for nobody there, "in my area" does not.
-- **What stays:** with every pair able to talk, each response has exactly the chance per
-  script pass it had. The block's `RandomNum(N,x)` and the response weights become one
-  chance per part: of N·W shares (W the sum of the weights) the first part takes its weight
-  w, the next its own out of what is left, and so on; for the pack's blocks 1/20, 1/19, 1/18,
-  1/17 per speaker. A part that cannot run is skipped: its pair is not picked, the other
-  partners get almost the same chance (at most 5.6 % apart: 5.0 against 5.3 per cent), the
-  timers keep waiting, and the next script pass tries again.
+- **What stays:** every response keeps exactly the chance per script pass it had. The engine
+  rolls one number per pass and every `RandomNum` of the pass reads it: `RandomNum(N,x)` holds
+  when the number modulo N, plus 1, is x (lab, 400 samples, IWD:EE 2.7.3.0; `RandomNumLT` and
+  `RandomNumGT` compare that same roll). The pack's `RandomNum(5,1)` to `RandomNum(5,5)` pick
+  one speaker per pass, and each part keeps them. It picks its response from the same number
+  by another modulus, the sum of the weights in lowest terms: `RandomNum(4,1)` to
+  `RandomNum(4,4)` for four equal weights. 4 and 5 share no factor, so each speaker and
+  partner keep their 1 in 20. A pair that cannot talk loses its pass: nothing happens, every
+  other pair keeps its 1 in 20, the timers keep waiting and the next pass rolls again.
 - **Nothing can loop:** nothing is remembered between passes. With no pair able to talk, no
   block fires at all and the rest of the script runs as usual.
 - **The rest of the script** stays byte for byte: the patch works on the compiled script. A
   decompile and compile would move timers all over it (the collection's GTIMES.IDS has one
   name for 900 and 901, 1800 and 1801, 7200 and 7201, and it compiles to the larger number).
-- Variations: other weights, responses without a pair (they keep their chance, unchecked), a
-  block without a `RandomNum`, more actions, other timers. A `RandomNum` inside an `OR` stays
-  in every part, which shifts the chances a little. A block whose pairs are already
-  checked stays as it is, so a second run or a fixed pack changes nothing. `Interact` at
+- Variations: other weights (shares of rolls with `RandomNumGT` and `RandomNumLT`), responses
+  without a pair (they keep their chance, unchecked), a block without a `RandomNum`, more
+  actions, other timers. When the sum of the weights shares a factor with a range the block
+  rolls in, the block's own roll would decide the response; the prime 1009 then replaces the
+  sum and the shares are rounded, by less than 0.1 percentage points. A block whose pairs are
+  already checked stays as it is, so a second run or a fixed pack changes nothing. `Interact` at
   anything but a party slot stays and is counted in the WeiDU log. Without such a block the
   component writes nothing.
 - Checked over the whole game on 2026-11-05: `baldur.bcs` is the only script that sends

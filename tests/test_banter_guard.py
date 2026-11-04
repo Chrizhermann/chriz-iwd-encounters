@@ -4,11 +4,12 @@ Usage: python -I tests/test_banter_guard.py <weidu.exe>
 
 The scripts are written here as readable lines and compiled by a small encoder for the
 few triggers and actions they use. A small model of the script engine then reads the
-patched script and works out, as exact fractions, what one pass does: the first block
-whose triggers hold runs, RandomNum rolls again in every block, a response is picked by
-weight.
+patched script and works out, as exact fractions, what one pass does: one number per
+pass, which every RandomNum of the pass reads (measured in the game, 2026-11-05); the
+first block whose triggers hold runs; a response is picked by weight.
 """
 import itertools
+import math
 import re
 import shutil
 import subprocess
@@ -31,7 +32,7 @@ OTHER_BLOCK = ('IF\n  Global("SOMETHING_ELSE","GLOBAL",0)\nTHEN\n  RESPONSE #100
 # --- a small compiler and decompiler: the raw format the engine reads ---
 
 NEXT_TRIGGER_OBJECT, STATE_CHECK, IN_MY_AREA = 0x40E0, 0x4037, 0x40CB
-RANDOM_NUM, RANDOM_NUM_LT, OR_TRIGGER, OTHER_TRIGGER = 0x4047, 0x4049, 0x4089, 0x4000
+RANDOM_NUM, RANDOM_NUM_GT, RANDOM_NUM_LT, OR_TRIGGER, OTHER_TRIGGER = 0x4047, 0x4048, 0x4049, 0x4089, 0x4000
 NOT_VALID = -2146426897
 SLOTS = {"Player%d" % n: 20 + n for n in range(1, 7)}
 SLOTS.update({"Player%dFill" % n: 69 + n for n in range(1, 7)})
@@ -128,6 +129,8 @@ def decompile_script(raw):
                 text = "%sInMyArea(%s)" % (sign, name_of(target))
             elif code == RANDOM_NUM:
                 text = "%sRandomNum(%d,%d)" % (sign, a, b)
+            elif code == RANDOM_NUM_GT:
+                text = "%sRandomNumGT(%d,%d)" % (sign, a, b)
             elif code == RANDOM_NUM_LT:
                 text = "%sRandomNumLT(%d,%d)" % (sign, a, b)
             elif code == OR_TRIGGER:
@@ -204,14 +207,12 @@ class World:
         self.dead, self.empty, self.elsewhere, self.busy = set(dead), set(empty), set(elsewhere), set(busy)
         self.combat, self.timers = combat, timers
 
-    def holds(self, trigger):
-        """True, False, or a Fraction for a random trigger."""
-        m = re.fullmatch(r"RandomNum\((\d+),(\d+)\)", trigger)
+    def holds(self, trigger, number):
+        m = re.fullmatch(r"RandomNum(GT|LT)?\((\d+),(\d+)\)", trigger)
         if m:
-            return Fraction(1, int(m.group(1))) if 1 <= int(m.group(2)) <= int(m.group(1)) else Fraction(0)
-        m = re.fullmatch(r"RandomNumLT\((\d+),(\d+)\)", trigger)
-        if m:
-            return Fraction(min(int(m.group(2)) - 1, int(m.group(1))), int(m.group(1)))
+            roll = number % int(m.group(2)) + 1
+            value = int(m.group(3))
+            return {None: roll == value, "GT": roll > value, "LT": roll < value}[m.group(1)]
         m = re.fullmatch(r"!StateCheck\((\w+),CD_STATE_NOTVALID\)", trigger)
         if m:  # the engine: StateCheck is false for an empty slot, so its negation holds
             return m.group(1) not in self.dead
@@ -232,34 +233,37 @@ class World:
         raise AssertionError("the model does not know " + trigger)
 
 
-def one_pass(blocks, world):
-    """The outcomes of one pass of the script: {actions: chance}. Key () is a pass where nothing ran."""
-    outcomes = {}
-    reach = Fraction(1)
-    for triggers, responses in blocks:
-        chance = Fraction(1)
-        lines = iter(triggers)
-        for trigger in lines:
-            m = re.fullmatch(r"OR\((\d+)\)", trigger)
-            if m:
-                miss = Fraction(1)
-                for t in itertools.islice(lines, int(m.group(1))):
-                    held = world.holds(t)
-                    miss *= 1 - (held if isinstance(held, Fraction) else Fraction(int(held)))
-                chance *= 1 - miss
-                continue
-            held = world.holds(trigger)
-            chance *= held if isinstance(held, Fraction) else Fraction(int(held))
-        total = sum(w for w, _ in responses)
-        if chance:
-            for weight, actions in responses:
-                if weight:
-                    key = tuple(actions)
-                    outcomes[key] = outcomes.get(key, 0) + reach * chance * Fraction(weight, total)
-        reach *= 1 - chance
-    outcomes[()] = reach
-    return outcomes
+def block_holds(triggers, world, number):
+    lines = iter(triggers)
+    for trigger in lines:
+        m = re.fullmatch(r"OR\((\d+)\)", trigger)
+        if m:
+            if not any([world.holds(t, number) for t in itertools.islice(lines, int(m.group(1)))]):
+                return False
+        elif not world.holds(trigger, number):
+            return False
+    return True
 
+
+def one_pass(blocks, world):
+    """The outcomes of one pass of the script: {actions: chance}. Key () is a pass where
+    nothing ran. Every number the pass can roll counts once: the ranges repeat after their
+    least common multiple."""
+    ranges = [int(m) for triggers, _ in blocks for t in triggers for m in re.findall(r"RandomNum(?:GT|LT)?\((\d+),", t)]
+    numbers = math.lcm(*ranges) if ranges else 1
+    outcomes = {}
+    for number in range(numbers):
+        for triggers, responses in blocks:
+            if block_holds(triggers, world, number):
+                total = sum(w for w, _ in responses)
+                for weight, actions in responses:
+                    if weight:
+                        key = tuple(actions)
+                        outcomes[key] = outcomes.get(key, 0) + Fraction(weight, total * numbers)
+                break
+        else:
+            outcomes[()] = outcomes.get((), 0) + Fraction(1, numbers)
+    return outcomes
 
 def talkers(outcomes):
     """Every Interact pair in the outcomes, with the chance of its response."""
@@ -322,17 +326,22 @@ class Guard(unittest.TestCase):
         living = ("Player2", "Player3", "Player5", "Player6")
         self.assertEqual(set(pairs), {(a, b) for a in living for b in living if a != b})
 
-    def test_a_dead_partner_barely_moves_the_other_chances(self):
-        _, _, parts, _, _ = self.patch(banter_script())
+    def test_a_dead_partner_leaves_every_other_pair_its_exact_chance(self):
+        text = banter_script()
+        _, _, parts, _, _ = self.patch(text)
         for dead in ("Player3", "Player4", "Player6"):
-            outcomes = one_pass(parts, World(dead=[dead]))
-            # the speaker's own responses: its Interact comes first
-            speaker = [chance for actions, chance in outcomes.items()
-                       if any(a.startswith("ActionOverride(") for a in actions)
-                       and next(a for a in actions if a.startswith("ActionOverride(")).startswith("ActionOverride(Player2,")]
-            self.assertEqual(len(speaker), 3)
-            self.assertLessEqual(max(speaker) / min(speaker), Fraction(19, 18))
+            before = one_pass(lines_to_blocks(text), World())
+            after = one_pass(parts, World(dead=[dead]))
+            for actions, chance in after.items():
+                if actions:
+                    self.assertEqual(chance, before[actions])
+            self.assertEqual(len([a for a in after if a]), 12)
 
+    def test_the_speaker_and_the_partner_come_from_different_rolls(self):
+        _, _, parts, _, _ = self.patch(banter_script())
+        pairs = talkers(one_pass(parts, World()))
+        self.assertEqual(len(pairs), 20)
+        self.assertEqual(len(set(pairs.values())), 1)
     def test_an_empty_slot_is_never_picked(self):
         _, _, parts, _, _ = self.patch(banter_script())
         pairs = talkers(one_pass(parts, World(empty=["Player6"])))
@@ -371,15 +380,25 @@ class Guard(unittest.TestCase):
         self.assertEqual(blocks, 1)
         self.assertEqual(one_pass(lines_to_blocks(text), World()), one_pass(parts, World()))
 
-    def test_a_random_gate_inside_an_or_stays(self):
+    def test_a_random_trigger_inside_an_or_stays_and_the_pairs_stay_reachable(self):
         text = speaker_block("Player2", ["Player3", "Player4"], gate=None,
                              extra_trigger='  OR(2)\n    RandomNum(5,1)\n    Global("X","GLOBAL",1)\n')
         _, _, parts, blocks, _ = self.patch(text)
         self.assertEqual(blocks, 1)
         self.assertEqual(sum(1 for t, _ in parts if "RandomNum(5,1)" in t), 2)
-        self.assertEqual(set(talkers(one_pass(parts, World()))), {("Player2", "Player3"), ("Player3", "Player2"),
-                                                                  ("Player2", "Player4"), ("Player4", "Player2")})
+        self.assertEqual(one_pass(lines_to_blocks(text), World()), one_pass(parts, World()))
 
+    def test_weights_that_share_a_factor_with_the_blocks_roll_stay_close(self):
+        players = ("Player2", "Player3", "Player4", "Player5", "Player6", "Player1")
+        text = "\n".join(speaker_block(s, [p for p in players if p != s], gate=(5, i + 1))
+                         for i, s in enumerate(players[:5]))
+        _, _, parts, _, _ = self.patch(text)
+        before = one_pass(lines_to_blocks(text), World())
+        after = one_pass(parts, World())
+        self.assertEqual(set(before), set(after))
+        for actions, chance in before.items():
+            self.assertLess(abs(chance - after[actions]), Fraction(1, 1000))
+        self.assertTrue(all(any("1009" in line for line in t) for t, _ in parts))
     def test_extra_actions_and_reordered_responses_stay_with_their_pair(self):
         text = ('IF\n  RandomNum(4,2)\n  !StateCheck(Player6,CD_STATE_NOTVALID)\nTHEN\n'
                 '  RESPONSE #1\n    DisplayStringHead(Player6,1)\n    ActionOverride(Player3,Interact(Player6))\n'

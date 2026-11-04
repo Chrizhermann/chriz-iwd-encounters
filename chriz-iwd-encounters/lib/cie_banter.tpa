@@ -8,9 +8,16 @@
 //
 // So a block like that becomes one block per response, each checking its own pair. A
 // pair that cannot talk just does not fire: nothing is remembered, no timer runs out
-// for it, and with no pair able to talk no block fires at all. The chances stay: block
-// after block, a response keeps its weight among what is left of the block's chance
-// (see docs/components.md).
+// for it, and with no pair able to talk no block fires at all.
+//
+// The chances stay. The engine rolls one number per script pass and every RandomNum of
+// that pass reads it: RandomNum(N,x) holds when the number modulo N, plus 1, is x
+// (measured 2026-11-05, 400 samples, RandomNumLT and RandomNumGT likewise). The pack's
+// RandomNum(5,1) to RandomNum(5,5) pick one speaker per pass. Each new block keeps all of
+// that and picks its response from the same number by another modulus, the sum of the
+// weights: RandomNum(4,1) to RandomNum(4,4) for four equal weights. 4 and 5 share no
+// factor, so each speaker and partner have exactly their old chance, 1 in 20. A second
+// roll is not to be had: the blocks of one pass see the same number.
 //
 // All of this works on the compiled text of the script, so everything else stays byte
 // for byte. A decompile and compile would move timers all over it: the collection's
@@ -22,8 +29,8 @@
 //   RS [RE weight [AC action <object>OB OB <object>OB OB <object>OB numbers AC]... RE]... RS CR
 // flags 1 negates a trigger. TriggerOverride compiles to NextTriggerObject and the trigger.
 // Numbers from TRIGGER.IDS and ACTION.IDS: 0x4037 StateCheck 16439, 0x4047 RandomNum
-// 16455, 0x4049 RandomNumLT 16457, 0x4089 OR 16521, 0x40CB InMyArea 16587, 0x40E0
-// NextTriggerObject 16608; Interact 168. CD_STATE_NOTVALID, 0x80101FEF, as signed.
+// 16455, 0x4048 RandomNumGT 16456, 0x4049 RandomNumLT 16457, 0x40CB InMyArea 16587,
+// 0x40E0 NextTriggerObject 16608; Interact 168. CD_STATE_NOTVALID, 0x80101FEF, as signed.
 
 // The record of a trigger line that a pair needs, unless the block has it or its mirror.
 DEFINE_PATCH_FUNCTION cie_banter_check
@@ -101,39 +108,44 @@ BEGIN
   END
 END
 
-// weight out of out_of as a trigger, "" when that is certain.
-DEFINE_PATCH_FUNCTION cie_banter_chance
-  INT_VAR weight = 1 out_of = 1
-  STR_VAR object = ~~
-  RET chance
+DEFINE_PATCH_FUNCTION cie_banter_gcd
+  INT_VAR a = 0 b = 0
+  RET gcd
 BEGIN
-  SET divisor = weight
-  SET rest = out_of
-  WHILE (rest > 0) BEGIN
-    SET next = divisor MODULO rest
-    SET divisor = rest
-    SET rest = next
+  WHILE (b > 0) BEGIN
+    SET rest = a MODULO b
+    SET a = b
+    SET b = rest
   END
-  SET weight = weight / divisor
-  SET out_of = out_of / divisor
-  SPRINT chance ~~
-  PATCH_IF (weight = 1) AND (out_of > 1) BEGIN
-    SPRINT chance ~TR%LNL%16455 %out_of% 0 1 0 "" "" OB%LNL%%object%OB%LNL%TR%LNL%~
+  SET gcd = a
+END
+
+// The triggers for rolls low+1 to high of out_of, "" when that is every roll.
+DEFINE_PATCH_FUNCTION cie_banter_pick
+  INT_VAR low = 0 high = 1 out_of = 1
+  RET pick
+BEGIN
+  SPRINT nothing ~0 0 0 0 0 0 0 0 0 0 0 0 ""~
+  SPRINT pick ~~
+  PATCH_IF (high = low + 1) AND (out_of > 1) BEGIN
+    SPRINT pick ~TR%LNL%16455 %out_of% 0 %high% 0 "" "" OB%LNL%%nothing%OB%LNL%TR%LNL%~
   END
-  PATCH_IF (weight > 1) AND (out_of > weight) BEGIN
-    SET below = weight + 1
-    SPRINT chance ~TR%LNL%16457 %out_of% 0 %below% 0 "" "" OB%LNL%%object%OB%LNL%TR%LNL%~
+  PATCH_IF (high != low + 1) AND (low > 0) BEGIN
+    SPRINT pick ~TR%LNL%16456 %out_of% 0 %low% 0 "" "" OB%LNL%%nothing%OB%LNL%TR%LNL%~
+  END
+  PATCH_IF (high != low + 1) AND (high < out_of) BEGIN
+    SET below = high + 1
+    SPRINT pick ~%pick%TR%LNL%16457 %out_of% 0 %below% 0 "" "" OB%LNL%%nothing%OB%LNL%TR%LNL%~
   END
 END
 
 // One block, from its CR line to its closing CR line. When a response's pair lacks its
 // checks, text is the block's replacement and changed is 1.
 //
-// The block's own RandomNum(N,x) goes into the chance of its parts: the block fires one
-// time in N, response i has weight w out of W, so the first part gets w/(N*W), the
-// next w/(N*W-w) and so on. That gives every response exactly its old chance. Inside an
-// OR the RandomNum cannot be taken out; it stays and each part rolls it again, which
-// shifts the chances a little and changes nothing else.
+// The responses share the rolls of the sum of their weights, in lowest terms. That sum
+// must share no factor with a range the block itself rolls in, or the block's own roll
+// would decide the response. Then the prime 1009 takes its place; the shares become
+// rounded, by less than 0.1 percentage points.
 DEFINE_PATCH_FUNCTION cie_banter_split_block
   STR_VAR block = ~~
   RET changed text foreign
@@ -141,6 +153,7 @@ BEGIN
   SET changed = 0
   SET foreign = 0
   SET total = 0
+  SET common = 0
   SET unchecked = 0
   SPRINT text ~~
   SPRINT triggers ~~
@@ -155,6 +168,7 @@ BEGIN
       LPF cie_banter_response STR_VAR response = EVAL ~%response%~ triggers = EVAL ~%triggers%~
         RET weight rest checks others END
       SET total += weight
+      LPF cie_banter_gcd INT_VAR a = common b = weight RET common = gcd END
       SET foreign += others
       PATCH_IF (weight > 0) AND NOT (~%checks%~ STRING_EQUAL ~~) BEGIN
         SET unchecked += 1
@@ -163,28 +177,15 @@ BEGIN
     END
     PATCH_IF (unchecked > 0) AND (total > 0) BEGIN
       SET changed = 1
-      SET gate = 1
-      SET gate_found = 0
-      SPRINT nothing ~0 0 0 0 0 0 0 0 0 0 0 0 ""~
-      SET in_or = 0
+      SET out_of = total / common
+      SET shares = out_of
       INNER_PATCH ~%triggers%~ BEGIN
-        SET in_or = (INDEX_BUFFER (CASE_SENSITIVE EVALUATE_REGEXP ~^16521 ~) >= 0)
-      END
-      PATCH_IF NOT in_or BEGIN
-        INNER_PATCH_SAVE triggers ~%triggers%~ BEGIN
-          REPLACE_EVALUATE CASE_SENSITIVE ~^TR%LNL%16455 \([0-9]+\) 0 [0-9]+ 0 "" "" OB%LNL%\([^%LNL%]*\)OB%LNL%TR%LNL%~ BEGIN
-            SPRINT line ~%MATCH0%~
-            PATCH_IF NOT gate_found BEGIN
-              SET gate = %MATCH1%
-              SET gate_found = 1
-              SPRINT nothing ~%MATCH2%~
-              SPRINT line ~@CIEGATE@~
-            END
-          END ~%line%~
-        END
-      END
-      PATCH_IF NOT gate_found BEGIN
-        SPRINT triggers ~%triggers%@CIEGATE@~
+        REPLACE_EVALUATE CASE_SENSITIVE ~^1645[567] \([0-9]+\) ~ BEGIN
+          LPF cie_banter_gcd INT_VAR a = %MATCH1% b = shares RET shared = gcd END
+          PATCH_IF (shared > 1) BEGIN
+            SET out_of = 1009
+          END
+        END ~%MATCH0%~
       END
       SET used = 0
       SET at = first
@@ -194,13 +195,11 @@ BEGIN
         LPF cie_banter_response STR_VAR response = EVAL ~%response%~ triggers = EVAL ~%triggers%~
           RET weight rest checks others END
         PATCH_IF (weight > 0) BEGIN
-          LPF cie_banter_chance INT_VAR weight out_of = (gate * total - used)
-            STR_VAR object = EVAL ~%nothing%~ RET chance END
+          SET low = used * out_of / total
           SET used += weight
-          INNER_PATCH_SAVE these ~%triggers%~ BEGIN
-            REPLACE_TEXTUALLY CASE_SENSITIVE EXACT_MATCH ~@CIEGATE@~ ~%chance%~
-          END
-          SPRINT text ~%text%CR%LNL%CO%LNL%%these%%checks%CO%LNL%RS%LNL%RE%LNL%100%rest%RS%LNL%CR%LNL%~
+          SET high = used * out_of / total
+          LPF cie_banter_pick INT_VAR low high out_of RET pick END
+          SPRINT text ~%text%CR%LNL%CO%LNL%%triggers%%pick%%checks%CO%LNL%RS%LNL%RE%LNL%100%rest%RS%LNL%CR%LNL%~
         END
         SET at = (INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~RE%LNL%~ (stop + 3)) = (stop + 3)) ? (stop + 3) : (0 - 1)
       END
