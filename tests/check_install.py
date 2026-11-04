@@ -26,7 +26,7 @@ ARE_SLOTS = (0x50, 0x78, 0x60, 0x68, 0x58, 0x70)
 CRE_SLOTS = (0x248, None, 0x250, 0x258, 0x260, 0x268)
 # 110: OBJECT.IDS Player1-6 and Player1Fill-6Fill, TRIGGER.IDS, STATE.IDS (as a signed 32-bit value)
 PARTY_SLOTS = set(range(21, 27)) | set(range(70, 76))
-STATECHECK, NEXTTRIGGEROBJECT, INMYAREA = 0x4037, 0x40E0, 0x40CB
+STATECHECK, NEXTTRIGGEROBJECT, INMYAREA, OR_TRIGGER = 0x4037, 0x40E0, 0x40CB, 0x4089
 CD_STATE_NOTVALID = 0x80101FEF - 0x100000000
 
 
@@ -304,12 +304,19 @@ class Checker:
 def banter_pairs(data):
     """Interact between party slots in a compiled script: (every pair, those without the
     checks of component 110). A pair needs its block to have one response and both
-    partners checked: alive and able to talk, and one in the other's area."""
+    partners checked outside any OR: alive and able to talk, and one in the other's area."""
     pairs, unchecked = [], []
     text = data.decode("latin-1").replace("\r\n", "\n")
     for block in text.split("CR\nCO\n")[1:]:
         condition, _, body = block.partition("CO\nRS\n")
-        triggers = re.findall(r'TR\n(\d+) (-?\d+) (\d+) [^\n]*OB\n([^\n]*)OB\nTR', condition)
+        triggers, left = [], 0
+        for found in re.findall(r'TR\n(\d+) (-?\d+) (\d+) [^\n]*OB\n([^\n]*)OB\nTR', condition):
+            if int(found[0]) == OR_TRIGGER:
+                left = int(found[1])
+            elif left:
+                left -= int(found[0]) != NEXTTRIGGEROBJECT
+            else:
+                triggers.append(found)
         responses = re.findall(r"RE\n(\d+)AC", body)
         for actor, target in re.findall(r"\n168OB\n([^\n]*)OB\nOB\n([^\n]*)OB\n", body):
             actor, target = int(actor.split()[7]), int(target.split()[7])
@@ -319,7 +326,7 @@ def banter_pairs(data):
             alive = {int(o.split()[7]) for t, value, negated, o in triggers
                      if int(t) == STATECHECK and int(value) == CD_STATE_NOTVALID and int(negated)}
             area = {(int(a[3].split()[7]), int(b[3].split()[7])) for a, b in zip(triggers, triggers[1:])
-                    if int(a[0]) == NEXTTRIGGEROBJECT and int(b[0]) == INMYAREA}
+                    if int(a[0]) == NEXTTRIGGEROBJECT and int(b[0]) == INMYAREA and not int(b[2])}
             if (len([r for r in responses if int(r)]) != 1 or not {actor, target} <= alive
                     or not {(actor, target), (target, actor)} & area):
                 unchecked.append((actor, target))

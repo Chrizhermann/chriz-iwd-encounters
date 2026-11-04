@@ -84,14 +84,16 @@ and are in the same area.
 - **Nothing can loop:** nothing is remembered between passes. With no pair able to talk, no
   block fires at all and the rest of the script runs as usual.
 - **The rest of the script** stays byte for byte: the patch works on the compiled script. A
-  decompile and compile would move timers all over it (the collection's GTIMES.IDS has one
-  name for 900 and 901, 1800 and 1801, 7200 and 7201, and it compiles to the larger number).
+  decompile and compile would move timers all over it (after SCS, GTIMES.IDS has one name for
+  900 and 901, 1800 and 1801, 7200 and 7201, and it compiles to the larger number).
 - Variations: other weights (shares of rolls with `RandomNumGT` and `RandomNumLT`), responses
   without a pair (they keep their chance, unchecked), a block without a `RandomNum`, more
-  actions, other timers. When the sum of the weights shares a factor with a range the block
-  rolls in, the block's own roll would decide the response; the prime 1009 then replaces the
-  sum and the shares are rounded, by less than 0.1 percentage points. A block whose pairs are
-  already checked stays as it is, so a second run or a fixed pack changes nothing. `Interact` at
+  actions, other timers. When the sum of the weights S shares a factor with a range in the
+  script, that range's roll would decide the response. With R for all the ranges together, the
+  pick then takes rolls of R·S: the number modulo R·S, divided by R, is free of every roll
+  modulo R, so the chances stay exact there too. A check inside an `OR` does not count. A
+  block whose pairs are already checked outside any `OR` stays as it is, so a second run or a
+  fixed pack changes nothing. `Interact` at
   anything but a party slot stays and is counted in the WeiDU log. Without such a block the
   component writes nothing.
 - Checked over the whole game on 2026-11-05: `baldur.bcs` is the only script that sends

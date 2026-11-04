@@ -8,6 +8,7 @@ patched script and works out, as exact fractions, what one pass does: one number
 pass, which every RandomNum of the pass reads (measured in the game, 2026-11-05); the
 first block whose triggers hold runs; a response is picked by weight.
 """
+import importlib.util
 import itertools
 import math
 import re
@@ -101,6 +102,13 @@ def compile_script(text):
     return out + "SC\n"
 
 
+TRIGGER_RECORD = r'TR\n\d+ -?\d+ \d+ -?\d+ -?\d+ "[^"\n]*" "[^"\n]*" OB\n[^\n]*OB\nTR\n'
+ACTION_RECORD = r'AC\n\d+OB\n[^\n]*OB\nOB\n[^\n]*OB\nOB\n[^\n]*OB\n[-\d ]*"[^"\n]*" "[^"\n]*" AC\n'
+RESPONSE_RECORD = r"RE\n\d+(?:%s)*RE\n" % ACTION_RECORD
+BLOCK_RECORD = r"CR\nCO\n(?:%s)*CO\nRS\n(?:%s)+RS\nCR\n" % (TRIGGER_RECORD, RESPONSE_RECORD)
+SCRIPT_RECORD = r"SC\n(?:%s)*SC\n" % BLOCK_RECORD
+
+
 def name_of(fields):
     parts = fields.split()
     if int(parts[7]) in IDS_SLOTS:
@@ -111,7 +119,7 @@ def name_of(fields):
 def decompile_script(raw):
     """Compiled script to (triggers, [(weight, actions)]), the model's input."""
     raw = raw.replace("\r\n", "\n")
-    assert raw.startswith("SC\n") and raw.endswith("SC\n"), raw[:20]
+    assert re.fullmatch(SCRIPT_RECORD, raw), "not a well-formed compiled script"
     blocks = []
     for block in re.findall(r"^CR\nCO\n(.*?)^RS\nCR\n", raw, re.M | re.S):
         condition, _, body = block.partition("CO\nRS\n")
@@ -388,17 +396,45 @@ class Guard(unittest.TestCase):
         self.assertEqual(sum(1 for t, _ in parts if "RandomNum(5,1)" in t), 2)
         self.assertEqual(one_pass(lines_to_blocks(text), World()), one_pass(parts, World()))
 
-    def test_weights_that_share_a_factor_with_the_blocks_roll_stay_close(self):
+    def test_weights_that_share_a_factor_with_the_blocks_roll_keep_their_chances(self):
         players = ("Player2", "Player3", "Player4", "Player5", "Player6", "Player1")
         text = "\n".join(speaker_block(s, [p for p in players if p != s], gate=(5, i + 1))
                          for i, s in enumerate(players[:5]))
         _, _, parts, _, _ = self.patch(text)
-        before = one_pass(lines_to_blocks(text), World())
-        after = one_pass(parts, World())
-        self.assertEqual(set(before), set(after))
-        for actions, chance in before.items():
-            self.assertLess(abs(chance - after[actions]), Fraction(1, 1000))
-        self.assertTrue(all(any("1009" in line for line in t) for t, _ in parts))
+        self.assertEqual(one_pass(lines_to_blocks(text), World()), one_pass(parts, World()))
+
+    def test_a_large_range_keeps_the_chances(self):
+        text = speaker_block("Player2", ["Player3", "Player4"], gate=(2018, 1))
+        _, _, parts, _, _ = self.patch(text)
+        self.assertEqual(one_pass(lines_to_blocks(text), World()), one_pass(parts, World()))
+
+    def test_weights_too_large_for_a_product_keep_their_chances(self):
+        text = speaker_block("Player2", ["Player3", "Player4"], gate=None, weights=[32767, 32766])
+        _, _, parts, _, _ = self.patch(text)
+        self.assertEqual(one_pass(lines_to_blocks(text), World()), one_pass(parts, World()))
+
+    def test_a_roll_in_another_block_does_not_decide_the_response(self):
+        text = ('IF\n  RandomNum(2,1)\nTHEN\n  RESPONSE #100\n' + pair_actions("Player2", "Player3") + 'END\n\n'
+                'IF\n  TriggerOverride(Player2,ActionListEmpty())\nTHEN\n  RESPONSE #1\n' + pair_actions("Player2", "Player4")
+                + '  RESPONSE #1\n' + pair_actions("Player2", "Player5") + 'END\n')
+        _, _, parts, _, _ = self.patch(text)
+        self.assertEqual(one_pass(lines_to_blocks(text), World()), one_pass(parts, World()))
+
+    def test_a_check_inside_an_or_does_not_count(self):
+        text = ('IF\n  OR(3)\n    !StateCheck(Player2,CD_STATE_NOTVALID)\n    !StateCheck(Player3,CD_STATE_NOTVALID)\n'
+                '    TriggerOverride(Player2,InMyArea(Player3))\nTHEN\n  RESPONSE #100\n' + pair_actions("Player2", "Player3") + 'END\n')
+        _, patched, parts, blocks, _ = self.patch(text)
+        self.assertEqual(blocks, 1)
+        self.assertFalse(talkers(one_pass(parts, World(dead=["Player3"]))))
+        again, blocks, _ = run_weidu(patched, self.work)
+        self.assertEqual(blocks, 0)
+        self.assertEqual(again, patched)
+
+    def test_a_random_trigger_inside_an_or_keeps_the_chances(self):
+        text = speaker_block("Player2", ["Player3", "Player4"], gate=None,
+                             extra_trigger='  OR(2)\n    RandomNum(4,1)\n    Global("X","GLOBAL",1)\n')
+        _, _, parts, _, _ = self.patch(text)
+        self.assertEqual(one_pass(lines_to_blocks(text), World()), one_pass(parts, World()))
     def test_extra_actions_and_reordered_responses_stay_with_their_pair(self):
         text = ('IF\n  RandomNum(4,2)\n  !StateCheck(Player6,CD_STATE_NOTVALID)\nTHEN\n'
                 '  RESPONSE #1\n    DisplayStringHead(Player6,1)\n    ActionOverride(Player3,Interact(Player6))\n'
@@ -444,6 +480,40 @@ class Guard(unittest.TestCase):
         patched, blocks, _ = run_weidu(compile_script(text).replace("\n", "\r\n"), self.work)
         self.assertEqual(blocks, 5)
         self.assertEqual(one_pass(lines_to_blocks(text), World()), one_pass(decompile_script(patched), World()))
+
+
+class InstallCheck(unittest.TestCase):
+    """check_install.py's reading of a compiled script."""
+
+    @classmethod
+    def setUpClass(cls):
+        spec = importlib.util.spec_from_file_location("check_install", REPO / "tests" / "check_install.py")
+        cls.check = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.check)
+
+    def unchecked(self, text):
+        return self.check.banter_pairs(compile_script(text).encode("latin-1"))[1]
+
+    def block(self, triggers):
+        return "IF\n%sTHEN\n  RESPONSE #100\n%sEND\n" % (triggers, pair_actions("Player2", "Player3"))
+
+    def test_both_partners_checked_passes(self):
+        self.assertFalse(self.unchecked(self.block(
+            "  !StateCheck(Player2,CD_STATE_NOTVALID)\n  !StateCheck(Player3,CD_STATE_NOTVALID)\n"
+            "  TriggerOverride(Player2,InMyArea(Player3))\n")))
+
+    def test_the_old_block_fails(self):
+        self.assertTrue(self.unchecked(speaker_block("Player2", ["Player3", "Player4"])))
+
+    def test_checks_inside_an_or_fail(self):
+        self.assertTrue(self.unchecked(self.block(
+            "  OR(2)\n    !StateCheck(Player2,CD_STATE_NOTVALID)\n    !StateCheck(Player3,CD_STATE_NOTVALID)\n"
+            "  TriggerOverride(Player2,InMyArea(Player3))\n")))
+
+    def test_a_negated_area_check_fails(self):
+        self.assertTrue(self.unchecked(self.block(
+            "  !StateCheck(Player2,CD_STATE_NOTVALID)\n  !StateCheck(Player3,CD_STATE_NOTVALID)\n"
+            "  TriggerOverride(Player2,!InMyArea(Player3))\n")))
 
 
 if __name__ == "__main__":
