@@ -55,6 +55,45 @@ cases from the installed files; when SCS has done the job, it changes nothing.
   default. An area actor uses its creature's script wherever its own slot is empty;
   a plain melee AI is only removed where that leaves the slot really empty.
 
+## 110: party banter only between living party members in one area
+
+Needs no other mod. Christopher, 2026-11-05: banter starts only when both partners live
+and are in the same area.
+
+- **Who:** every block of `baldur.bcs` with a response that sends `Interact` from one
+  party slot to another. On the IWD Crossmod Banter Pack v5 (its banter timer component)
+  that is five blocks, one per speaker in Player2-6, with four partners each.
+- **Cause:** `Interact` crashes the engine when its target has no area, and a dead party
+  member loses its area within seconds, in the party's own area too (IWD:EE 2.7.3.0, write
+  through a null pointer in the dialogue start, twice on 2026-11-05: partner dead in another
+  area, partner dead in the party's area). The pack's block checks the speaker only, and a
+  block's responses are picked at random and cannot carry conditions of their own.
+- **Change:** such a block becomes one block per response. Each runs its response word for
+  word, timers included, and checks its pair: both partners alive and able to talk (the
+  check the speaker already had), one in the other's area. The area check is also what
+  sees through an empty slot: "not dead" holds for nobody there, "in my area" does not.
+- **What stays:** with every pair able to talk, each response has exactly the chance per
+  script pass it had. The block's `RandomNum(N,x)` and the response weights become one
+  chance per part: of N·W shares (W the sum of the weights) the first part takes its weight
+  w, the next its own out of what is left, and so on; for the pack's blocks 1/20, 1/19, 1/18,
+  1/17 per speaker. A part that cannot run is skipped: its pair is not picked, the other
+  partners get almost the same chance (at most 5.6 % apart: 5.0 against 5.3 per cent), the
+  timers keep waiting, and the next script pass tries again.
+- **Nothing can loop:** nothing is remembered between passes. With no pair able to talk, no
+  block fires at all and the rest of the script runs as usual.
+- **The rest of the script** stays byte for byte: the patch works on the compiled script. A
+  decompile and compile would move timers all over it (the collection's GTIMES.IDS has one
+  name for 900 and 901, 1800 and 1801, 7200 and 7201, and it compiles to the larger number).
+- Variations: other weights, responses without a pair (they keep their chance, unchecked), a
+  block without a `RandomNum`, more actions, other timers. A `RandomNum` inside an `OR` stays
+  in every part, which shifts the chances a little. A block whose pairs are already
+  checked stays as it is, so a second run or a fixed pack changes nothing. `Interact` at
+  anything but a party slot stays and is counted in the WeiDU log. Without such a block the
+  component writes nothing.
+- Checked over the whole game on 2026-11-05: `baldur.bcs` is the only script that sends
+  `Interact` between party slots. Minerva's `C0MMIND` and `C0MMINS` send it at Karihi by name,
+  after checking that both are in the party and able to talk.
+
 ## 200: enemy priests prepare when they first see the party
 
 Needs SCS's smarter priests. Christopher, 2026-10-25: "Einfach nur so, dass sie

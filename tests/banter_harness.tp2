@@ -1,0 +1,14 @@
+// Runs component 110's patch on a compiled script, no game needed. See test_banter_guard.py.
+//   weidu banter_harness.tp2 --nogame --force-install-list 1
+//     --args <mod folder> --args <input.bcs> --args <output.bcs>
+BACKUP ~backup~
+AUTHOR ~chriz-iwd-encounters tests~
+
+BEGIN ~harness~ DESIGNATED 1
+INCLUDE ~%argv[0]%/lib/cie_shared.tpa~
+INCLUDE ~%argv[0]%/lib/cie_banter.tpa~
+OUTER_SET blocks = 0
+OUTER_SET foreign = 0
+COPY ~%argv[1]%~ ~%argv[2]%~
+  LPF cie_banter_guard_script RET blocks foreign END
+PRINT ~harness result: blocks=%blocks% foreign=%foreign%~
