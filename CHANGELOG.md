@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.2.1 (unreleased)
+
+- 110: party banter starts only between living party members in one area. Stops a crash
+  with the IWD Crossmod Banter Pack: its banter could pick a dead partner, and starting a
+  dialogue with one crashes the game. Each pair now checks both partners; the chances of
+  the banter, its weights and its timers stay. Needs no other mod and does nothing
+  without that banter; install it after the pack.
+
 ## v0.2.0 (2026-11-04)
 
 - 300: Belhifet's final fight. Immune to spell levels 1–3 instead of all levels,

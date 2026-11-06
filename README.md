@@ -7,6 +7,7 @@ SCS.
 | Component | What it does |
 |---|---|
 | 100 | Repairs SCS caster AI that misses some IWD:EE casters: two Shadowed Elven Clerics that end up without any AI, and a few shamans and a wizard whose melee script takes over from their spell AI (they walk up to the party and only hit it). |
+| 110 | Party banter starts only between living party members in one area. Stops a crash with the Crossmod Banter Pack, whose banter could pick a dead partner. Needs no other mod and does nothing without that banter; install it after the pack. |
 | 200 | Enemy priests prepare the moment they first see the party: a self-protection on Core Rules (from Hard, SCS precasts its own), a group blessing from Hard up. They use and spend their own memorised spells, like SCS's precasts. |
 | 300 | Belhifet's final fight: immune to spell levels 1–3 only, +2 weapons hit him, fire immune as in the base game, more hit points from Core Rules up, Improved Invisibility when he appears and Haste for 30 seconds out of every 42, his cornugons come as a second wave (a third on Insane), Poquelin's transformation no longer dispels the party. Works with and without SCS. |
 | 310 | Yxunomei and her temple: her three mages come when the fight with her starts and walk to the party (as in the base game only on Hard and Insane), her two champions leave the torture chamber for her side if they still live, two yuan-ti elites come into her room on Hard (three on Insane), the pentagram's traps go off only for the party, and SCS's telekinesis that IWD:EE lacks no longer costs her a round. Works with and without SCS. |
@@ -38,6 +39,10 @@ releases into the game folder (it holds `chriz-iwd-encounters/`) and run
 changed. It never writes to the game. It checks the components the game's `WeiDU.log`
 lists (without a log, the components whose changes it finds), so a listed component
 whose changes are missing fails.
+
+`tests/test_banter_guard.py` runs component 110's patch with real WeiDU on script text
+and works out every chance as an exact fraction; it needs no game
+(`python -I tests/test_banter_guard.py <weidu.exe>`).
 
 ## Credits
 

@@ -1,6 +1,6 @@
 BACKUP ~weidu_external/backup/chriz-iwd-encounters~
 AUTHOR ~Christopher Hermann (github.com/Chrizhermann/chriz-iwd-encounters)~
-VERSION ~v0.2.0~
+VERSION ~v0.2.1~
 
 ALWAYS
   INCLUDE ~chriz-iwd-encounters/lib/cie_shared.tpa~
@@ -14,6 +14,9 @@ LANGUAGE ~English~ ~english~ ~chriz-iwd-encounters/languages/english/setup.tra~
 //
 // 100 SCS caster-AI repairs: enemy casters SCS meant to convert but leaves
 //     without a working spell AI on IWD:EE
+// 110 party banter starts only between living party members in one area; stops a
+//     crash when the Crossmod Banter Pack picks a dead partner (needs no other mod,
+//     does nothing without that banter)
 // 200 enemy priests prepare when they first see the party (Core Rules and up)
 // 300 Belhifet's final fight (works with and without SCS)
 // 310 Yxunomei and her temple in Dragon's Eye (works with and without SCS)
@@ -35,6 +38,12 @@ REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
 REQUIRE_PREDICATE (MOD_IS_INSTALLED ~stratagems/setup-stratagems.tp2~ ~6030~ OR MOD_IS_INSTALLED ~stratagems/setup-stratagems.tp2~ ~6040~) @9001
 INCLUDE ~chriz-iwd-encounters/lib/cie_scs_repairs.tpa~
 LAF cie_scs_caster_repairs END
+
+BEGIN @110 DESIGNATED 110
+LABEL ~chriz-iwd-encounters-banter-guard~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+INCLUDE ~chriz-iwd-encounters/lib/cie_banter.tpa~
+LAF cie_banter_guard END
 
 BEGIN @200 DESIGNATED 200
 LABEL ~chriz-iwd-encounters-priest-prep~

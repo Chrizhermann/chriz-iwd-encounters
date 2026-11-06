@@ -1,0 +1,292 @@
+// 110: party banter starts only between living party members in one area.
+//
+// Interact crashes the engine when its target has no area, and a dead party member
+// loses its area within seconds, in the party's own area too (IWD:EE 2.7.3.0, seen
+// twice on 2026-11-05). The Crossmod Banter Pack starts banter from baldur.bcs with one
+// block per speaker, whose weighted responses each send Interact to one partner. The
+// block checks the speaker only, and a response cannot carry conditions of its own.
+//
+// So a block like that becomes one block per response, each checking its own pair. A
+// pair that cannot talk just does not fire: nothing is remembered, no timer runs out
+// for it, and with no pair able to talk no block fires at all.
+//
+// The chances stay. The engine rolls one number per script pass and every RandomNum of
+// that pass reads it: RandomNum(N,x) holds when the number modulo N, plus 1, is x
+// (measured 2026-11-05, 400 samples, RandomNumLT and RandomNumGT likewise). The pack's
+// RandomNum(5,1) to RandomNum(5,5) pick one speaker per pass. Each new block keeps all of
+// that and picks its response from the same number by another modulus, the sum of the
+// weights: RandomNum(4,1) to RandomNum(4,4) for four equal weights. 4 and 5 share no
+// factor, so each speaker and partner have exactly their old chance, 1 in 20. A second
+// roll is not to be had: the blocks of one pass see the same number. When the sum of the
+// weights shares a factor with the script's ranges, the pick takes the upper part of a
+// larger range instead, which is just as exact: see cie_banter_split_block.
+//
+// All of this works on the compiled text of the script, so everything else stays byte
+// for byte. A decompile and compile would move timers all over it: after SCS, GTIMES.IDS
+// has one name for 900 and 901, for 1800 and 1801, for 7200 and 7201, and the name
+// compiles to the last line, the larger number (seen 2026-11-05).
+//
+// A compiled block, with its lines (TR, RE and so on stand on lines of their own):
+//   CR CO [TR id int1 flags int2 int3 "" "" OB <object>OB TR]... CO
+//   RS [RE weight [AC action <object>OB OB <object>OB OB <object>OB numbers AC]... RE]... RS CR
+// flags 1 negates a trigger. TriggerOverride compiles to NextTriggerObject and the trigger.
+// Numbers from TRIGGER.IDS and ACTION.IDS: 0x4037 StateCheck 16439, 0x4047 RandomNum
+// 16455, 0x4048 RandomNumGT 16456, 0x4049 RandomNumLT 16457, 0x4089 OR 16521, 0x40CB
+// InMyArea 16587, 0x40E0 NextTriggerObject 16608, which an OR does not count; Interact
+// 168. CD_STATE_NOTVALID, 0x80101FEF, as signed.
+
+// The record of a trigger line that a pair needs, unless the block has it or its mirror.
+DEFINE_PATCH_FUNCTION cie_banter_check
+  STR_VAR line = ~~ mirror = ~~ known = ~~
+  RET add
+BEGIN
+  SPRINT add ~%line%~
+  INNER_PATCH ~%known%~ BEGIN
+    PATCH_IF (INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~%line%~) >= 0)
+        OR (INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~%mirror%~) >= 0) BEGIN
+      SPRINT add ~~
+    END
+  END
+END
+
+// Object fields of a plain party slot: OBJECT.IDS Player1-6, 21-26, or Player1Fill-6Fill,
+// 70-75. slot is 0 for anything else.
+DEFINE_PATCH_FUNCTION cie_banter_slot
+  STR_VAR object = ~~
+  RET slot
+BEGIN
+  SET slot = 0
+  INNER_PATCH ~%object%~ BEGIN
+    REPLACE_EVALUATE CASE_SENSITIVE ~^0 0 0 0 0 0 0 \([0-9]+\) 0 0 0 0 ""$~ BEGIN
+      PATCH_IF ((%MATCH1% >= 21) AND (%MATCH1% <= 26)) OR ((%MATCH1% >= 70) AND (%MATCH1% <= 75)) BEGIN
+        SET slot = %MATCH1%
+      END
+    END ~%MATCH0%~
+  END
+END
+
+// One response of a block: its RE lines and what lies between. Returns its weight, the
+// rest of its text after the weight, and the triggers its pairs still need on top of the
+// block's own. others counts Interact from or at anything but a party slot; those
+// stay as they are.
+DEFINE_PATCH_FUNCTION cie_banter_response
+  STR_VAR response = ~~ triggers = ~~
+  RET weight rest checks others
+BEGIN
+  SET weight = 0
+  SET others = 0
+  SPRINT rest ~~
+  SPRINT checks ~~
+  INNER_PATCH ~%response%~ BEGIN
+    REPLACE_EVALUATE CASE_SENSITIVE ~^RE%LNL%\([0-9]+\)~ BEGIN
+      SET weight = %MATCH1%
+      SET digits = STRING_LENGTH ~%MATCH1%~
+    END ~%MATCH0%~
+    READ_ASCII (3 + digits) rest (BUFFER_LENGTH - 3 - digits)
+    REPLACE_EVALUATE CASE_SENSITIVE ~^168OB%LNL%\([^%LNL%]*\)OB%LNL%OB%LNL%\([^%LNL%]*\)OB%LNL%~ BEGIN
+      SPRINT actor ~%MATCH1%~
+      SPRINT target ~%MATCH2%~
+      LPF cie_banter_slot STR_VAR object = EVAL ~%actor%~ RET actor_slot = slot END
+      LPF cie_banter_slot STR_VAR object = EVAL ~%target%~ RET target_slot = slot END
+      PATCH_IF (actor_slot > 0) AND (target_slot > 0) BEGIN
+        FOR (side = 0; side < 3; side += 1) BEGIN
+          SPRINT line ~TR%LNL%16439 -2146426897 1 0 0 "" "" OB%LNL%%actor%OB%LNL%TR%LNL%~
+          SPRINT mirror ~%line%~
+          PATCH_IF (side = 1) BEGIN
+            SPRINT line ~TR%LNL%16439 -2146426897 1 0 0 "" "" OB%LNL%%target%OB%LNL%TR%LNL%~
+            SPRINT mirror ~%line%~
+          END
+          PATCH_IF (side = 2) BEGIN
+            SPRINT line ~TR%LNL%16608 0 0 0 0 "" "" OB%LNL%%actor%OB%LNL%TR%LNL%TR%LNL%16587 0 0 0 0 "" "" OB%LNL%%target%OB%LNL%TR%LNL%~
+            SPRINT mirror ~TR%LNL%16608 0 0 0 0 "" "" OB%LNL%%target%OB%LNL%TR%LNL%TR%LNL%16587 0 0 0 0 "" "" OB%LNL%%actor%OB%LNL%TR%LNL%~
+          END
+          LPF cie_banter_check STR_VAR line = EVAL ~%line%~ mirror = EVAL ~%mirror%~
+            known = EVAL ~%triggers%%checks%~ RET add END
+          SPRINT checks ~%checks%%add%~
+        END
+      END ELSE BEGIN
+        SET others += 1
+      END
+    END ~%MATCH0%~
+  END
+END
+
+DEFINE_PATCH_FUNCTION cie_banter_gcd
+  INT_VAR a = 0 b = 0
+  RET gcd
+BEGIN
+  WHILE (b > 0) BEGIN
+    SET rest = a MODULO b
+    SET a = b
+    SET b = rest
+  END
+  SET gcd = a
+END
+
+// The least common multiple of rolls and every range in the patch buffer. limit > 0
+// leaves out a range that would take it above that.
+DEFINE_PATCH_FUNCTION cie_banter_ranges
+  INT_VAR rolls = 1 limit = 0
+  RET rolls
+BEGIN
+  REPLACE_EVALUATE CASE_SENSITIVE ~^1645[567] \([0-9]+\) ~ BEGIN
+    LPF cie_banter_gcd INT_VAR a = rolls b = %MATCH1% RET shared = gcd END
+    SET both = rolls / shared * %MATCH1%
+    PATCH_IF (limit = 0) OR (both <= limit) BEGIN
+      SET rolls = both
+    END
+  END ~%MATCH0%~
+END
+
+// The block's triggers without its OR groups: a check inside an OR proves nothing.
+DEFINE_PATCH_FUNCTION cie_banter_outside_or
+  STR_VAR triggers = ~~
+  RET outside
+BEGIN
+  SET left = 0
+  INNER_PATCH_SAVE outside ~%triggers%~ BEGIN
+    REPLACE_EVALUATE CASE_SENSITIVE ~^TR%LNL%\([0-9]+\) \(-?[0-9]+\) [^%LNL%]*%LNL%[^%LNL%]*%LNL%TR%LNL%~ BEGIN
+      SPRINT keep ~%MATCH0%~
+      PATCH_IF (%MATCH1% = 16521) BEGIN
+        SET left = %MATCH2%
+        SPRINT keep ~~
+      END ELSE BEGIN
+        PATCH_IF (left > 0) BEGIN
+          SPRINT keep ~~
+          PATCH_IF (%MATCH1% != 16608) BEGIN
+            SET left -= 1
+          END
+        END
+      END
+    END ~%keep%~
+  END
+END
+
+// The triggers for rolls low+1 to high of out_of, "" when that is every roll.
+DEFINE_PATCH_FUNCTION cie_banter_pick
+  INT_VAR low = 0 high = 1 out_of = 1
+  RET pick
+BEGIN
+  SPRINT nothing ~0 0 0 0 0 0 0 0 0 0 0 0 ""~
+  SPRINT pick ~~
+  PATCH_IF (high = low + 1) AND (out_of > 1) BEGIN
+    SPRINT pick ~TR%LNL%16455 %out_of% 0 %high% 0 "" "" OB%LNL%%nothing%OB%LNL%TR%LNL%~
+  END
+  PATCH_IF (high != low + 1) AND (low > 0) BEGIN
+    SPRINT pick ~TR%LNL%16456 %out_of% 0 %low% 0 "" "" OB%LNL%%nothing%OB%LNL%TR%LNL%~
+  END
+  PATCH_IF (high != low + 1) AND (high < out_of) BEGIN
+    SET below = high + 1
+    SPRINT pick ~%pick%TR%LNL%16457 %out_of% 0 %below% 0 "" "" OB%LNL%%nothing%OB%LNL%TR%LNL%~
+  END
+END
+
+// One block, from its CR line to its closing CR line. When a response's pair lacks its
+// checks, text is the block's replacement and changed is 1. ranges are those of the
+// whole script.
+//
+// The responses share the rolls of the sum of their weights, in lowest terms. That sum
+// must share no factor with a range in the script, or that range's roll would decide
+// the response. Then the pick uses a range R times larger, R being all those ranges
+// together: the number modulo R*sum, divided by R, is free of every roll modulo R. So the
+// response with shares low to high takes rolls R*low+1 to R*high of R*sum.
+DEFINE_PATCH_FUNCTION cie_banter_split_block
+  INT_VAR ranges = 1
+  STR_VAR block = ~~
+  RET changed text foreign
+BEGIN
+  SET changed = 0
+  SET foreign = 0
+  SET total = 0
+  SET common = 0
+  SET unchecked = 0
+  SPRINT text ~~
+  SPRINT triggers ~~
+  INNER_PATCH ~%block%~ BEGIN
+    SET triggers_end = INDEX_BUFFER (CASE_SENSITIVE EVALUATE_REGEXP ~^CO%LNL%RS%LNL%~)
+    READ_ASCII 6 triggers (triggers_end - 6)
+    LPF cie_banter_outside_or STR_VAR triggers = EVAL ~%triggers%~ RET outside END
+    SET first = triggers_end + 6
+    SET at = first
+    WHILE (at >= 0) BEGIN
+      SET stop = INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~RE%LNL%~ (at + 3))
+      READ_ASCII at response (stop + 3 - at)
+      LPF cie_banter_response STR_VAR response = EVAL ~%response%~ triggers = EVAL ~%outside%~
+        RET weight rest checks others END
+      SET total += weight
+      LPF cie_banter_gcd INT_VAR a = common b = weight RET common = gcd END
+      SET foreign += others
+      PATCH_IF (weight > 0) AND NOT (~%checks%~ STRING_EQUAL ~~) BEGIN
+        SET unchecked += 1
+      END
+      SET at = (INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~RE%LNL%~ (stop + 3)) = (stop + 3)) ? (stop + 3) : (0 - 1)
+    END
+    PATCH_IF (unchecked > 0) AND (total > 0) BEGIN
+      SET changed = 1
+      INNER_PATCH ~%triggers%~ BEGIN
+        LPF cie_banter_ranges INT_VAR rolls = ranges RET rolls END
+      END
+      SET shares = total / common
+      LPF cie_banter_gcd INT_VAR a = rolls b = shares RET shared = gcd END
+      SET step = (shared > 1) ? rolls : 1
+      SET out_of = step * shares
+      SET used = 0
+      SET at = first
+      WHILE (at >= 0) BEGIN
+        SET stop = INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~RE%LNL%~ (at + 3))
+        READ_ASCII at response (stop + 3 - at)
+        LPF cie_banter_response STR_VAR response = EVAL ~%response%~ triggers = EVAL ~%outside%~
+          RET weight rest checks others END
+        PATCH_IF (weight > 0) BEGIN
+          SET low = used / common * step
+          SET used += weight
+          SET high = used / common * step
+          LPF cie_banter_pick INT_VAR low high out_of RET pick END
+          SPRINT text ~%text%CR%LNL%CO%LNL%%triggers%%pick%%checks%CO%LNL%RS%LNL%RE%LNL%100%rest%RS%LNL%CR%LNL%~
+        END
+        SET at = (INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~RE%LNL%~ (stop + 3)) = (stop + 3)) ? (stop + 3) : (0 - 1)
+      END
+    END
+  END
+END
+// Guards every such block of a compiled script, the patch buffer. blocks counts the
+// blocks split up, foreign the Interact left as they are.
+DEFINE_PATCH_FUNCTION cie_banter_guard_script
+  RET blocks foreign
+BEGIN
+  SET blocks = 0
+  SET foreign = 0
+  SET at = INDEX_BUFFER (CASE_SENSITIVE EVALUATE_REGEXP ~^168OB~)
+  PATCH_IF (at >= 0) AND (INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~%WNL%~) >= 0) BEGIN
+    REPLACE_TEXTUALLY CASE_SENSITIVE EXACT_MATCH ~%WNL%~ ~%LNL%~
+    SET at = INDEX_BUFFER (CASE_SENSITIVE EVALUATE_REGEXP ~^168OB~)
+  END
+  // the limit keeps the pick's range small; the ranges a block itself uses always count
+  LPF cie_banter_ranges INT_VAR limit = 1000 RET ranges = rolls END
+  WHILE (at >= 0) BEGIN
+    SET start = RINDEX_BUFFER (CASE_SENSITIVE EVALUATE_REGEXP ~^CR%LNL%CO%LNL%~ at)
+    SET end = INDEX_BUFFER (CASE_SENSITIVE EVALUATE_REGEXP ~^RS%LNL%CR%LNL%~ at) + 6
+    READ_ASCII start block (end - start)
+    LPF cie_banter_split_block INT_VAR ranges STR_VAR block = EVAL ~%block%~ RET changed text others = foreign END
+    SET foreign += others
+    PATCH_IF changed BEGIN
+      LPF cie_replace_text INT_VAR start length = (end - start) STR_VAR text = EVAL ~%text%~ END
+      SET blocks += 1
+      SET end = start + STRING_LENGTH ~%text%~
+    END
+    SET at = INDEX_BUFFER (CASE_SENSITIVE EVALUATE_REGEXP ~^168OB~ end)
+  END
+END
+
+// baldur.bcs is the only script that sends Interact from one party slot to another:
+// checked over the whole game on 2026-11-05.
+DEFINE_ACTION_FUNCTION cie_banter_guard BEGIN
+  OUTER_SET blocks = 0
+  OUTER_SET foreign = 0
+  ACTION_IF (FILE_EXISTS_IN_GAME ~baldur.bcs~) BEGIN
+    COPY_EXISTING ~baldur.bcs~ ~override~
+      LPF cie_banter_guard_script RET blocks foreign END
+    BUT_ONLY
+  END
+  PRINT ~chriz-iwd-encounters: %blocks% banter block(s) of baldur.bcs now check each pair; %foreign% Interact aimed at anything but a party slot stayed as they are.~
+END

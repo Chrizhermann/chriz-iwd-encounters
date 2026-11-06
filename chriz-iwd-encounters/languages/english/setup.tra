@@ -1,4 +1,5 @@
 @100 = ~Repair Sword Coast Stratagems caster AI that misses some IWD:EE casters~
+@110 = ~Party banter starts only between living party members in one area (stops a crash with the Crossmod Banter Pack)~
 @200 = ~Enemy priests prepare when they first see the party (Core Rules and up)~
 @300 = ~Belhifet's final fight: no blanket spell immunity, more hit points by difficulty, his cornugons as a second wave~
 @310 = ~Yxunomei's temple: her mages come when the fight starts, her champions join her, yuan-ti elites on Hard and Insane~
