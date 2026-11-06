@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.2.1 (unreleased)
+## v0.2.1 (2026-11-07)
 
 - 110: party banter starts only between living party members in one area. Stops a crash
   with the IWD Crossmod Banter Pack: its banter could pick a dead partner, and starting a
