@@ -28,6 +28,13 @@ DEFINE_ACTION_FUNCTION cie_joril BEGIN
       READ_LONG (actor + 0x28) flags
       READ_ASCII actor name (32) NULL
       PATCH_IF (~%cre%~ STRING_EQUAL ~JORIL~) OR (~%cre%~ STRING_EQUAL ~GIANTFS~) OR (~%cre%~ STRING_EQUAL ~GIANTFG~) BEGIN
+        // The difficulty-gated guards are not required placements, but share
+        // the court's combat behaviour when present. Recover their empty
+        // default slot too, without replacing a gate or any occupied AI slot.
+        LPF cie_read_script_slot INT_VAR offset = (actor + 0x70) RET court_default = script END
+        PATCH_IF (~%court_default%~ STRING_EQUAL ~~) BEGIN
+          WRITE_ASCII (actor + 0x70) ~WTGIANT1~ (8)
+        END
         FOR (slot = 0x50; slot < 0x80; slot += 8) BEGIN
           LPF cie_read_script_slot INT_VAR offset = (actor + slot) RET script END
           PATCH_IF (~%script%~ STRING_COMPARE ~~) AND (~%script%~ STRING_COMPARE ~EFDELDEF~)

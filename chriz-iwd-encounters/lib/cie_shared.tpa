@@ -203,18 +203,12 @@ END
 // moved. The actor table is relocated only when a record has to be added.
 DEFINE_PATCH_FUNCTION cie_ensure_actor
   STR_VAR template = ~~
+  RET_ARRAY cie_actors_used
 BEGIN
   INNER_PATCH_FILE ~%template%~ BEGIN
     READ_ASCII 0 actor_name (32) NULL
     READ_ASCII 0x80 actor_cre (8) NULL
     READ_ASCII 0 actor_record (0x110)
-    SPRINT actor_fallback ~~
-    FOR (s = 0x50; s < 0x80; s += 8) BEGIN
-      LPF cie_read_script_slot INT_VAR offset = s RET candidate = script END
-      PATCH_IF (~%actor_fallback%~ STRING_EQUAL ~~) AND (~%candidate%~ STRING_COMPARE ~~) BEGIN
-        SPRINT actor_fallback ~%candidate%~
-      END
-    END
   END
   READ_LONG 0x54 actors_offset
   READ_SHORT 0x58 actors_count
@@ -258,16 +252,16 @@ BEGIN
   END
   SET $cie_actors_used(~%name%~) = 1
   WRITE_LONG (actor + 0x28) (flags BOR 8)
-  SPRINT first ~~
-  PATCH_FOR_EACH s IN 0x50 0x78 0x60 0x68 0x58 0x70 BEGIN
+  // Each missing slot recovers independently. A remaining difficulty gate or
+  // team script must not hide a missing combat script; occupied slots stay.
+  FOR (s = 0x50; s < 0x80; s += 8) BEGIN
     LPF cie_read_script_slot INT_VAR offset = (actor + s) RET candidate = script END
-    PATCH_IF (~%first%~ STRING_EQUAL ~~) AND (~%candidate%~ STRING_COMPARE ~~) BEGIN
-      SPRINT first ~%candidate%~
+    PATCH_IF (~%candidate%~ STRING_EQUAL ~~) BEGIN
+      INNER_PATCH ~%actor_record%~ BEGIN
+        LPF cie_read_script_slot INT_VAR offset = s RET fallback = script END
+      END
+      WRITE_ASCIIE (actor + s) ~%fallback%~ (8)
     END
-  END
-  PATCH_IF (~%first%~ STRING_EQUAL ~~) AND (~%actor_fallback%~ STRING_COMPARE ~~) BEGIN
-    INNER_PATCH_FILE ~%template%~ BEGIN READ_ASCII 0x50 fallback_slots (0x30) END
-    WRITE_ASCIIE (actor + 0x50) ~%fallback_slots%~ (0x30)
   END
 END
 
@@ -283,7 +277,8 @@ BEGIN
   END
   ACTION_BASH_FOR ~chriz-iwd-encounters/actors/%area%~ ~.*\.actor~ BEGIN
     COPY_EXISTING ~%area%.are~ ~override~
-      LPF cie_ensure_actor STR_VAR template = EVAL ~%BASH_FOR_FILESPEC%~ END
+      LPF cie_ensure_actor STR_VAR template = EVAL ~%BASH_FOR_FILESPEC%~
+        RET_ARRAY cie_actors_used END
     BUT_ONLY
   END
 END

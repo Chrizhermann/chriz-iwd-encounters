@@ -82,8 +82,8 @@ DEFINE_ACTION_FUNCTION cie_maluradek BEGIN
   LAF cie_placed_stats INT_VAR hp = 350 gloves = 1 STR_VAR area = ~ar9712~ creature = ~lordm~ END
 END
 
-// The animated plates get a melee script in a free general or default slot: SCS's
-// (DWMESSGE) when SCS is there, else the base game's EFATKMEL.
+// The animated plates keep their general AI ahead of the selected melee script:
+// SCS's DWMESSGE, else EFATKMEL, else the mod's fallback.
 DEFINE_ACTION_FUNCTION cie_maluradek_plates BEGIN
   OUTER_SPRINT cie_mal_melee ~CIEMEL~
   COPY ~chriz-iwd-encounters/baf/cie_melee.baf~ ~override/CIEMEL.bcs~ COMPILE_BAF_TO_BCS
@@ -100,7 +100,8 @@ DEFINE_ACTION_FUNCTION cie_maluradek_plates BEGIN
         LPF cie_read_script_slot INT_VAR offset = 0x260 RET previous = script END
         PATCH_IF (~%previous%~ STRING_COMPARE ~~) AND (~%previous%~ STRING_COMPARE ~%cie_mal_melee%~) BEGIN
           INNER_ACTION BEGIN
-            LAF cie_join_scripts STR_VAR first = ~CIEMEL~ second = EVAL ~%previous%~ target = EVAL ~CIEMPL%cie_plate%~ END
+            LAF cie_join_scripts STR_VAR first = EVAL ~%previous%~ second = EVAL ~%cie_mal_melee%~
+              target = EVAL ~CIEMPL%cie_plate%~ END
           END
           WRITE_ASCIIE 0x260 ~CIEMPL%cie_plate%~ (8)
         END ELSE BEGIN WRITE_ASCIIE 0x260 ~%cie_mal_melee%~ (8) END

@@ -31,6 +31,20 @@ def long(data, offset):
     return struct.unpack_from("<I", data, offset)[0]
 
 
+def actor_rows(data):
+    start = long(data, 0x54)
+    return [data[start + i * 0x110:start + (i + 1) * 0x110]
+            for i in range(word(data, 0x58))]
+
+
+def actor_name(row):
+    return row[:32].split(b"\0")[0].decode("ascii").upper()
+
+
+def script_blocks(data):
+    return tuple(re.findall(rb"CR\n(.*?)CR\n", data.replace(b"\r\n", b"\n"), re.S))
+
+
 class Overwrite(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -53,6 +67,16 @@ class Overwrite(unittest.TestCase):
             cls.mutate()
         if SCENARIO == "embedded":
             cls.embed()
+        cls.review_fixtures()
+        selected = "DWMESSGE" if (cls.ov / "dwmessge.bcs").exists() else "EFATKMEL"
+        cls.selected_melee = selected
+        melee = script_blocks((cls.ov / (selected.lower() + ".bcs")).read_bytes())
+        cls.plate_expected = {}
+        for name in ("KEANIMPH", "KEANIMP2"):
+            data = (cls.ov / (name.lower() + ".cre")).read_bytes()
+            previous = check.slot(data, 0x260)
+            prefix = script_blocks((cls.ov / (previous.lower() + ".bcs")).read_bytes()) if previous and previous != selected else ()
+            cls.plate_expected[name] = (prefix + melee, data[0x268:0x270])
         cls.validation_failed = False
         cls.results = []
         cls.install()
@@ -85,10 +109,14 @@ class Overwrite(unittest.TestCase):
         for folder in (ROOT / "chriz-iwd-encounters/actors").iterdir():
             p = cls.ov / (folder.name + ".are")
             d = bytearray(p.read_bytes())
-            struct.pack_into("<H", d, 0x58, 0)
+            # Keep partial tables for the two regression cases below. Other areas
+            # still exercise restoration of entirely missing actor tables.
+            if folder.name.lower() not in {"ar7004", "ar8011"}:
+                struct.pack_into("<H", d, 0x58, 0)
             d[0x94:0x9c] = bytes(8)
             d[0xe4:0xe4 + len(cls.sentinel)] = cls.sentinel
             p.write_bytes(d)
+
         for name, field, fmt in [("ar4005", 0x5a, "H"), ("ar8012", 0xa4, "I")]:
             p = cls.ov / (name + ".are"); d = bytearray(p.read_bytes())
             struct.pack_into("<" + fmt, d, field, 0); p.write_bytes(d)
@@ -120,6 +148,139 @@ class Overwrite(unittest.TestCase):
             p = cls.ov / (name + ".spl"); d = bytearray(p.read_bytes())
             struct.pack_into("<II", d, 8, 777, 888)
             p.write_bytes(d)
+
+    @classmethod
+    def compile_scripts(cls, scripts):
+        source = cls.game / "fixture-scripts"
+        source.mkdir()
+        for name, text in scripts.items():
+            (source / (name + ".baf")).write_text(text, encoding="ascii")
+        (cls.game / "fixture-scripts.tp2").write_text(
+            'BACKUP ~fixture-backup~\nAUTHOR ~fixture~\n'
+            'BEGIN ~fixture scripts~\nCOMPILE ~fixture-scripts~\n', encoding="ascii")
+        result = subprocess.run([WEIDU, "fixture-scripts.tp2", "--force-install-list", "0",
+            "--no-exit-pause", "--quick-log", "--use-lang", "en_us"],
+            cwd=cls.game, capture_output=True, text=True)
+        output = result.stdout + result.stderr
+        (cls.folder / "fixture-scripts.log").write_text(output, encoding="utf-8")
+        if result.returncode or re.search(r"\b(?:ERROR|WARNING)\b", output):
+            raise RuntimeError(output)
+
+    @classmethod
+    def review_fixtures(cls):
+        if SCENARIO not in {"edited", "embedded"}:
+            return
+        scripts = {
+            "TSTPLAT": '''IF
+  Global("TEST_PLATE_FIRST","LOCALS",0)
+THEN
+  RESPONSE #100
+    SetGlobal("TEST_PLATE_FIRST","LOCALS",1)
+    Continue()
+END
+IF
+  Global("TEST_PLATE_SECOND","LOCALS",0)
+THEN
+  RESPONSE #100
+    SetGlobal("TEST_PLATE_SECOND","LOCALS",1)
+    Continue()
+END
+''',
+            "TSTCOURT": '''IF
+  Global("TEST_COURT_AI","LOCALS",0)
+THEN
+  RESPONSE #100
+    SetGlobal("TEST_COURT_AI","LOCALS",1)
+    Continue()
+END
+''',
+            "TSTPOM": '''IF
+  HPLT(Myself,50)
+THEN
+  RESPONSE #100
+    ApplySpellRES("CDHP3000",Myself)
+END
+IF
+  HPLT(Myself,25)
+THEN
+  RESPONSE #100
+    ApplySpellRES("CDHP3000",Myself)
+    JumpToPoint([100.100])
+END
+IF
+  Global("TEST_POM_PRESERVED","LOCALS",0)
+THEN
+  RESPONSE #100
+    SetGlobal("TEST_POM_PRESERVED","LOCALS",1)
+    Continue()
+END
+''',
+        }
+        if SCENARIO == "embedded":
+            # A distinct selected SCS-style melee script, not the CIEMEL fallback.
+            scripts["DWMESSGE"] = '''IF
+  Global("DMWW_genai_difficulty","GLOBAL",0)
+  Global("TEST_SELECTED_MELEE","LOCALS",0)
+THEN
+  RESPONSE #100
+    SetGlobal("TEST_SELECTED_MELEE","LOCALS",1)
+    Continue()
+END
+IF
+  See(NearestEnemyOf(Myself))
+THEN
+  RESPONSE #100
+    AttackReevaluate(NearestEnemyOf(Myself),17)
+END
+'''
+        else:
+            (cls.ov / "dwmessge.bcs").unlink(missing_ok=True)
+        cls.compile_scripts(scripts)
+        for name in ("keanimph", "keanimp2"):
+            p = cls.ov / (name + ".cre"); data = bytearray(p.read_bytes())
+            data[0x260:0x268] = b"TSTPLAT\0"
+            p.write_bytes(data)
+        p = cls.ov / "eepomab.cre"; data = bytearray(p.read_bytes())
+        data[0x248:0x250] = b"TSTPOM\0\0"
+        p.write_bytes(data)
+
+        p = cls.ov / "zombiel.cre"
+        if SCENARIO == "edited":
+            p.unlink()
+        else:
+            cls.short_zombie = p.read_bytes()[:0x25c]
+            p.write_bytes(cls.short_zombie)
+
+        if SCENARIO != "edited":
+            return
+        p = cls.ov / "ar8011.are"; data = bytearray(p.read_bytes())
+        rows = [bytearray(r) for r in actor_rows(data)]
+        priests = [i for i, r in enumerate(rows) if check.resref(r, 0x80) == "DROWPM"]
+        assert len(priests) == 2
+        rows[priests[0]][:32] = b"TEST_RENAMED_PRIEST".ljust(32, b"\0")
+        struct.pack_into("<I", rows[priests[0]], 0x28, long(rows[priests[0]], 0x28) | 8)
+        cls.renamed_priest_position = bytes(rows[priests[0]][0x20:0x28])
+        del rows[priests[1]]
+        cls.unrelated_actor = next(bytes(r) for r in rows if check.resref(r, 0x80) == "SALAMAND")
+        struct.pack_into("<IH", data, 0x54, len(data), len(rows))
+        data += b"".join(rows)
+        p.write_bytes(data)
+
+        p = cls.ov / "ar7004.are"; data = bytearray(p.read_bytes())
+        cls.court_slots = {}
+        for i, row in enumerate(actor_rows(data)):
+            if check.resref(row, 0x80) not in {"JORIL", "GIANTFS", "GIANTFG"}:
+                continue
+            at = long(data, 0x54) + i * 0x110
+            data[at + 0x50:at + 0x80] = bytes(0x30)
+            # One occupied unrelated slot plus either a gate or a team. Neither
+            # must prevent restoration of the missing WTGIANT1 default slot.
+            general = "TSTCOURT" if i % 3 == 2 else ""
+            data[at + 0x58:at + 0x60] = general.encode("ascii").ljust(8, b"\0")
+            gate = b"EFDELDEF" if i % 2 else b"GNTEAM1M"
+            data[at + 0x78:at + 0x80] = gate
+            cls.court_slots[i] = (actor_name(row), general, gate.decode("ascii"))
+        p.write_bytes(data)
 
     @classmethod
     def embed(cls):
@@ -240,7 +401,10 @@ class Overwrite(unittest.TestCase):
             for p in folder.glob("*.actor"):
                 name=p.read_bytes()[:32].split(b"\0")[0].decode().upper()
                 # Existing named placements may legitimately have renamed identities.
-                if SCENARIO=="edited": self.assertIn(name,actors)
+                if SCENARIO=="edited":
+                    if folder.name.lower() == "ar8011" and p.name == "027.actor":
+                        name = "TEST_RENAMED_PRIEST"
+                    self.assertIn(name,actors)
             if SCENARIO=="edited": self.assertEqual(d[0xe4:0xe4+len(self.sentinel)],self.sentinel)
         for area,off,cnt,size in [("AR4005",0x5c,0x5a,0xc4),("AR8012",0xa8,0xa4,0xc8)]:
             d=self.res.get(area,"ARE"); o=long(d,off); n=word(d,cnt) if cnt==0x5a else long(d,cnt)
@@ -280,13 +444,85 @@ class Overwrite(unittest.TestCase):
         self.assertIn(b'"tower"',text)
         self.assertIn(b'"credits"',text)
 
-    def test_08_second_install(self):
+    def test_08_partial_and_renamed_actors(self):
+        rows = actor_rows(self.res.get("AR8011", "ARE"))
+        priests = [r for r in rows if check.resref(r, 0x80) == "DROWPM"]
+        self.assertEqual(len(priests), 2)
+        self.assertEqual(len({actor_name(r) for r in priests}), 2)
+        self.assertEqual(len({r[0x20:0x28] for r in priests}), 2)
+        if SCENARIO == "edited":
+            renamed = next(r for r in priests if actor_name(r) == "TEST_RENAMED_PRIEST")
+            self.assertEqual(renamed[0x20:0x28], self.renamed_priest_position)
+            self.assertIn(self.unrelated_actor, rows)
+            court = actor_rows(self.res.get("AR7004", "ARE"))
+            for index, (name, general, gate) in self.court_slots.items():
+                with self.subTest(actor=name, index=index):
+                    self.assertEqual(check.slot(court[index], 0x58), general)
+                    self.assertEqual(check.slot(court[index], 0x78), gate)
+                    self.assertEqual(check.slot(court[index], 0x70), "WTGIANT1")
+            self.assertIn(b"test_court_ai", self.script("TSTCOURT"))
+            self.assertIn(b"cie_jor_hold", self.script("WTGIANT1"))
+            self.assertIn(b"cie_jor_rage", self.script("WTGIANT1"))
+
+    def test_09_absent_or_short_zombie(self):
+        data = self.res.get("ZOMBIEL", "CRE")
+        message = "chriz-iwd-encounters: zombiel.cre"
+        if SCENARIO == "edited":
+            self.assertIsNone(data)
+            self.assertEqual(self.results[-1][1].count(message), 1)
+        elif SCENARIO == "embedded":
+            self.assertEqual(data, self.short_zombie)
+            self.assertEqual(self.results[-1][1].count(message), 1)
+        else:
+            self.assertEqual(check.slot(data, 0x258), "ZLAURA")
+        self.assertTrue(self.script("ZLAURA"))
+        self.assertEqual(word(self.res.get("IDOL", "CRE"), 0x26), 225)
+        self.assertIn(b"all_keys", self.script("CIEBDG1"))
+
+    def test_10_no_pomab_self_heal(self):
+        data = self.res.get("EEPOMAB", "CRE")
+        for at in range(0x248, 0x270, 8):
+            self.assertNotIn(b"cdhp3000", self.script(check.slot(data, at)))
+        if SCENARIO in {"edited", "embedded"}:
+            self.assertIn(b"test_pom_preserved", self.script("TSTPOM"))
+
+    def test_11_selected_melee_keeps_script_order(self):
+        for name, (expected, default) in self.plate_expected.items():
+            data = self.res.get(name, "CRE")
+            script = check.slot(data, 0x260)
+            self.assertEqual(script_blocks(self.res.get(script, "BCS")), expected, (name, self.selected_melee))
+            self.assertEqual(data[0x268:0x270], default)
+
+    def actor_script_snapshot(self):
+        areas = {}
+        scripts = set()
+        for folder in (ROOT / "chriz-iwd-encounters/actors").iterdir():
+            rows = actor_rows(self.res.get(folder.name, "ARE"))
+            areas[folder.name] = rows
+            scripts.update(check.slot(row, at) for row in rows for at in range(0x50, 0x80, 8))
+        for name in ("KEANIMPH", "KEANIMP2", "EEPOMAB"):
+            data = self.res.get(name, "CRE")
+            scripts.update(check.slot(data, at) for at in range(0x248, 0x270, 8))
+        return areas, {s: script_blocks(self.res.get(s, "BCS") or b"") for s in scripts if s}
+
+    def test_12_second_install(self):
         before={n:self.res.get(n,"SPL") for n in ["CIEBELPR","CIEBELHA","CIEPOMRC","CIEPOMIL"]}
+        actors, scripts = self.actor_script_snapshot()
         self.install()
         self.test_01_no_warning_or_refusal()
         self.test_02_decided_creature_fields()
         self.test_06_hit_counters_and_gates()
+        self.test_08_partial_and_renamed_actors()
+        self.test_09_absent_or_short_zombie()
+        self.test_10_no_pomab_self_heal()
+        self.test_11_selected_melee_keeps_script_order()
         for name,data in before.items(): self.assertEqual(data,self.res.get(name,"SPL"),name)
+        after_actors, after_scripts = self.actor_script_snapshot()
+        for area, rows in actors.items():
+            self.assertEqual(after_actors[area], rows, area)
+        self.assertEqual(set(after_scripts), set(scripts))
+        for name, blocks in scripts.items():
+            self.assertEqual(after_scripts[name], blocks, name)
 
 
 if __name__=="__main__":

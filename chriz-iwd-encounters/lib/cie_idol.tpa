@@ -104,7 +104,17 @@ END
 // script runs before any previous class AI, so the creature's own race script
 // runs again.
 DEFINE_ACTION_FUNCTION cie_idol_aura BEGIN
-  COPY_EXISTING ~zombiel.cre~ ~override~ WRITE_ASCII 0x258 ~ZLAURA~ (8)
+  ACTION_IF FILE_EXISTS_IN_GAME ~zombiel.cre~ BEGIN
+    COPY_EXISTING ~zombiel.cre~ ~override~
+      PATCH_IF (BUFFER_LENGTH >= 0x260) BEGIN
+        WRITE_ASCII 0x258 ~ZLAURA~ (8)
+      END ELSE BEGIN
+        PATCH_PRINT ~chriz-iwd-encounters: zombiel.cre is too short to write its race script; the other Idol changes are installed.~
+      END
+    BUT_ONLY
+  END ELSE BEGIN
+    PRINT ~chriz-iwd-encounters: zombiel.cre is absent; the other Idol changes are installed.~
+  END
   LAF cie_write_script_blocks STR_VAR script = ~ZLAURA~ marker = ~ForceSpell~
     source = ~chriz-iwd-encounters/baf/cie_zlaura.baf~ END
   LAF cie_write_script_blocks STR_VAR script = ~LDIDLKIL~ marker = ~SPRITE_IS_DEADIDOL~

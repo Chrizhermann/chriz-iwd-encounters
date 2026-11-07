@@ -16,9 +16,11 @@ Only genuinely absent external targets and unreadable formats may be logged and
 left out. The game-type and essential encounter-resource requirements remain.
 
 Bundled placement records contain only the encounter placements that a component
-needs. Missing region and door polygons are appended with their vertices; existing
-polygons are preserved. Embedded creatures receive the same owned fields as their
-external counterparts. Components 100 and 200 identify SCS AI by its behaviour,
+needs. A surviving renamed actor fills only one required placement; each missing
+actor is added separately. Empty script slots are restored individually while
+occupied slots keep their AI. Missing region and door polygons are appended with
+their vertices; existing polygons are preserved. Embedded creatures receive the
+same owned fields as their external counterparts. Components 100 and 200 identify SCS AI by its behaviour,
 without requiring a particular SCS version or installation record.
 
 The overwrite changes have offline fixture coverage only. The dated game tests
@@ -562,7 +564,8 @@ Not tested in the game: the badge experience, without SCS, and with a real party
   confusion, fear, feeblemind, hold, imprisonment, level drain, maze, stun and sleep,
   and some extra hit points. Without SCS they have no kit and no rage. The bodyguards'
   Flame Blade stays unused: it would replace their giant weapon (2d10) with a 1d4+4
-  fire blade.
+  fire blade. An empty combat slot is restored even if a difficulty gate or team
+  script remains, including on the three optional guards when they are present.
 - **Gorg's pack:** when Gorg (`WTGORG`) is hostile, he sets his pack's group variable
   `MAP_GROUP_HOSTILE1` and `CIE_JOR_GORG`; the area script then turns the eight placed
   winter wolves of the pack (`WINWOLFP`, Winter Wolf 9–16) hostile and sends them to
@@ -642,6 +645,8 @@ boneguards. Its death frees the brothers and kills every undead.
   - The zombie lords' aura: their creature's race script `ZLAURA` casts it, but their
     placements put `LDIDLKIL` ("die with the Idol") in the race slot, which wins; that
     script runs in the placements' class slot, ahead of any unrelated class AI.
+    An absent or unreadable zombie-lord creature costs only that creature's repair,
+    with one installer log line; the other Idol changes still install.
   - The way to Poquelin: the six badge doors' script (`LDBDGDOR`) adds 1 to
     `ALL_KEYS` when a door is unlocked and again when it is opened (and on every
     opening), and the hidden door (`LDBDGOPN`) opens only at exactly 6, so two counts
@@ -732,7 +737,7 @@ True Sight) lift the images' illusion: they turn translucent and glow (`OHPOMREV
 - **Repairs:**
   - His own full heal could come before the area script had counted the hit, so a hit
     sometimes removed no image. His script no longer heals him; the shuffle does, after
-    the count.
+    the count. This removes his independent heal whether or not it also makes him jump.
   - His script read `FAKE_POMAB_DEAD`, a variable nothing sets, instead of the image
     counter.
   - A sentry healed while it played dead stayed down for good (its wake-up also checked
@@ -872,7 +877,9 @@ for rooms 1 and 2 once their alarm is set.
   that room's alarm (in his script, as room 3 does), so its plates appear.
 - **The plates fight:** they had a script that only plays their arrival and raises the
   alarm; they get SCS's melee script (`DWMESSGE`, else the base game's `EFATKMEL`) in a
-  general slot, preserving unrelated AI in a private script.
+  general slot. If that slot already has unrelated AI, it runs first, followed by the
+  selected melee AI in a private script. A bundled melee fallback is used only when
+  both external melee scripts are absent.
 - **Hit points:** 350 (base game 250).
 - **Below half his hit points,** at the latest, all three rooms raise their alarm: the
   plates still missing appear and come for the party, and he fights in melee between his

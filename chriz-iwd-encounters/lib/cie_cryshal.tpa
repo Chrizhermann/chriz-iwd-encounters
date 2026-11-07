@@ -162,28 +162,8 @@ DEFINE_ACTION_FUNCTION cie_cryshal_pomab BEGIN
     LAF cie_ensure_script STR_VAR script END
     COPY_EXISTING ~%script%.bcs~ ~override~
       DECOMPILE_AND_PATCH BEGIN
-        PATCH_IF (cie_cry_counts > 0) BEGIN
-          SET from = 0
-          WHILE (from >= 0) BEGIN
-            LPF cie_find_baf_block INT_VAR from STR_VAR text = ~"CDHP3000"~ RET start end END
-            PATCH_IF (start < 0) BEGIN
-              SET from = 0 - 1
-            END ELSE BEGIN
-              READ_ASCII start block (end - start)
-              SET jump = 0 - 1
-              INNER_PATCH ~%block%~ BEGIN
-                SET jump = INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~JumpToPoint(~)
-              END
-              PATCH_IF (jump >= 0) BEGIN
-                DELETE_BYTES start (end - start)
-                SET cie_cry_heals += 1
-                SET from = start
-              END ELSE BEGIN
-                SET from = end
-              END
-            END
-          END
-        END
+        LPF cie_remove_baf_blocks STR_VAR text = ~"CDHP3000"~ RET removed END
+        SET cie_cry_heals += removed
         REPLACE_TEXTUALLY CASE_INSENSITIVE ~"FAKE_POMAB_DEAD"~ ~"SPRITE_IS_DEADFAKE_POMAB"~
         LPF cie_find_baf_block STR_VAR text = ~MoveToPoint(~ RET start end END
         SET start = (start >= 0) ? start : 0
