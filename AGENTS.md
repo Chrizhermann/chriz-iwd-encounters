@@ -18,3 +18,10 @@ Easy IWD collection (`chriz-bg-collection`, recipe `recipes/iwd-current`).
 - Build release zips with `python -I tools/make_release.py <tag> <zip>`. The collection
   recipe pins each zip's length and SHA-256: never replace a published asset, release a
   new version instead.
+
+- Apply the bg-modding skill's `references/compatibility-policy.md` ("We overwrite").
+  Write the decided fields and
+  behaviour regardless of earlier values; create missing owned blocks and placements.
+  Only absent external targets or unreadable files may be logged and left out.
+  See `docs/components.md` for ownership. Check bundled inputs offline, never by
+  refusing a player's install. These rules do not authorize live-game changes.

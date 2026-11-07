@@ -15,25 +15,14 @@
 // docs/components.md describes each change in engine-neutral terms.
 
 DEFINE_ACTION_FUNCTION cie_kuldahar BEGIN
-  OUTER_SPRINT cie_kul_area_script ~~
-  COPY_EXISTING ~ar2100.are~ ~override~
-    READ_ASCII 0x94 cie_kul_area_script (8) NULL
-  BUT_ONLY
-  ACTION_IF (~%cie_kul_area_script%~ STRING_EQUAL ~~) OR (~%cie_kul_area_script%~ STRING_EQUAL_CASE ~NONE~)
-      OR (!FILE_EXISTS_IN_GAME ~%cie_kul_area_script%.bcs~) BEGIN
-    FAIL ~chriz-iwd-encounters: ar2100.are has no area script.~
-  END
+  LAF cie_area_script STR_VAR area = ~ar2100~ fallback = ~ar2100~ RET cie_kul_area_script = script END
   // the raid's creatures and their scripts, from the area script's spawn block
   // (the block that waits for Yxunomei's death)
   LAM cie_kuldahar_raid
-  ACTION_IF (cie_kul_found = 0) BEGIN
-    WARN ~chriz-iwd-encounters: found no orog raid in %cie_kul_area_script%.bcs; Kuldahar stays as it is.~
-  END ELSE BEGIN
     LAF cie_kuldahar_stats END
     LAF cie_kuldahar_wake END
     LAF cie_kuldahar_orogs END
     LAF cie_kuldahar_area END
-  END
 END
 
 // The raid: the creatures that the block on SPRITE_IS_DEADYXUNOMEI and
@@ -44,78 +33,24 @@ END
 // A macro: its results (cie_kul_found, the scripts, the raider lists) are for the
 // caller's next steps.
 DEFINE_ACTION_MACRO cie_kuldahar_raid BEGIN
-  OUTER_SET cie_kul_found = 0
-  ACTION_CLEAR_ARRAY cie_kul_spawned
-  OUTER_SPRINT block ~~
-  COPY_EXISTING ~%cie_kul_area_script%.bcs~ ~override~
-    DECOMPILE_AND_PATCH BEGIN
-      SET start = INDEX_BUFFER (CASE_INSENSITIVE EVALUATE_REGEXP
-          ~!Global("SPRITE_IS_DEADYXUNOMEI","GLOBAL",0)[%TAB% %LNL%%MNL%%WNL%]+!Global("#spawn_group_1","MYAREA",1)~)
-      PATCH_IF (start >= 0) BEGIN
-        SET end = INDEX_BUFFER (CASE_SENSITIVE EVALUATE_REGEXP ~^END~ start)
-        PATCH_IF (end > start) BEGIN
-          READ_ASCII start block (end - start)
-        END
-      END
-    END
-  BUT_ONLY
-  OUTER_PATCH ~%block%~ BEGIN
-    REPLACE_EVALUATE CASE_INSENSITIVE ~CreateCreature("\([^"]+\)"~ BEGIN
-      SPRINT cre ~%MATCH1%~
-      TO_UPPER cre
-      SPRINT $cie_kul_spawned(~%cre%~) ~1~
-    END ~%MATCH0%~
-  END
-  OUTER_SET cie_kul_top_xp = 0
-  OUTER_SPRINT cie_kul_sleep ~~
-  OUTER_SPRINT cie_kul_orog_ai ~~
-  ACTION_CLEAR_ARRAY cie_kul_raider
-  ACTION_PHP_EACH cie_kul_spawned AS cre => unused BEGIN
-    ACTION_IF FILE_EXISTS_IN_GAME ~%cre%.cre~ BEGIN
-      COPY_EXISTING ~%cre%.cre~ ~override~
-        LPF cie_read_script_slot INT_VAR offset = 0x260 RET general = script END
-        LPF cie_read_script_slot INT_VAR offset = 0x268 RET default = script END
-        READ_LONG 0x14 xp
-        PATCH_IF (~%default%~ STRING_EQUAL ~KUATKORO~) BEGIN
-          SPRINT $cie_kul_raider(~%cre%~) ~%xp%~
-          SET cie_kul_top_xp = (xp > cie_kul_top_xp) ? xp : cie_kul_top_xp
-          SPRINT cie_kul_orog_ai ~%default%~
-          PATCH_IF (~%cie_kul_sleep%~ STRING_EQUAL ~~) BEGIN
-            SPRINT cie_kul_sleep ~%general%~
-          END
-        END
-      BUT_ONLY
+  // These are the decided raid roles, independent of XP or existing script slots.
+  ACTION_DEFINE_ASSOCIATIVE_ARRAY cie_kul_raider BEGIN ~KAOROG~ => 1 ~KAOROGE~ => 1 END
+  ACTION_DEFINE_ASSOCIATIVE_ARRAY cie_kul_avenger BEGIN ~KAOROG~ => 1 END
+  ACTION_DEFINE_ASSOCIATIVE_ARRAY cie_kul_marauder BEGIN ~KAOROGE~ => 1 END
+  OUTER_SPRINT cie_kul_sleep ~KUATKEFF~
+  OUTER_SPRINT cie_kul_awake ~KUATKREM~
+  OUTER_SPRINT cie_kul_orog_ai ~KUATKORO~
+  ACTION_FOR_EACH script IN ~kuatkeff~ ~kuatkrem~ ~kuatkoro~ BEGIN
+    ACTION_IF !FILE_EXISTS_IN_GAME ~%script%.bcs~ BEGIN
+      COPY ~chriz-iwd-encounters/baf/cie_%script%.baf~ ~override/%script%.bcs~ COMPILE_BAF_TO_BCS
     END
   END
-  ACTION_CLEAR_ARRAY cie_kul_marauder
-  ACTION_CLEAR_ARRAY cie_kul_avenger
-  ACTION_PHP_EACH cie_kul_raider AS cre => xp BEGIN
-    ACTION_IF (xp = cie_kul_top_xp) BEGIN
-      OUTER_SPRINT $cie_kul_marauder(~%cre%~) ~1~
-    END ELSE BEGIN
-      OUTER_SPRINT $cie_kul_avenger(~%cre%~) ~1~
-    END
-  END
-  // the awake script: what the asleep script's wake block changes the general slot to
-  OUTER_SPRINT cie_kul_awake ~~
-  ACTION_IF (~%cie_kul_sleep%~ STRING_COMPARE ~~) AND FILE_EXISTS_IN_GAME ~%cie_kul_sleep%.bcs~ BEGIN
-    COPY_EXISTING ~%cie_kul_sleep%.bcs~ ~override~
-      DECOMPILE_AND_PATCH BEGIN
-        REPLACE_EVALUATE CASE_INSENSITIVE ~ChangeAIScript("\([^"]+\)",GENERAL)~ BEGIN
-          SPRINT cie_kul_awake ~%MATCH1%~
-          TO_UPPER cie_kul_awake
-        END ~%MATCH0%~
-      END
-    BUT_ONLY
-  END
-  ACTION_IF (~%cie_kul_orog_ai%~ STRING_COMPARE ~~) AND (~%cie_kul_sleep%~ STRING_COMPARE ~~)
-      AND (~%cie_kul_awake%~ STRING_COMPARE ~~) AND FILE_EXISTS_IN_GAME ~%cie_kul_awake%.bcs~ BEGIN
-    OUTER_SET cie_kul_found = 1
-  END
+  LAF cie_write_script_blocks STR_VAR script = EVAL ~%cie_kul_area_script%~
+    marker = ~"#spawn_group_1"~ source = ~chriz-iwd-encounters/baf/cie_kuldahar_spawn.baf~ END
 END
 
 // Avengers 45 hit points; Marauders 70, two attacks per round and THAC0 10.
-// Never lower than what the creature already has.
+// These fields belong to the raid.
 DEFINE_ACTION_FUNCTION cie_kuldahar_stats BEGIN
   ACTION_PHP_EACH cie_kul_avenger AS cre => unused BEGIN
     COPY_EXISTING ~%cre%.cre~ ~override~
@@ -160,10 +95,9 @@ DEFINE_ACTION_FUNCTION cie_kuldahar_wake BEGIN
     END
     COPY_EXISTING ~%cre%.cre~ ~override~
       LPF cie_read_script_slot INT_VAR offset = 0x260 RET script END
-      PATCH_IF (~%script%~ STRING_EQUAL ~%cie_kul_sleep%~) BEGIN
-        WRITE_ASCIIE 0x260 ~%copy%~ (8)
-        SET cie_kul_awakened += 1
-      END
+      WRITE_ASCIIE 0x260 ~%copy%~ (8)
+      WRITE_ASCII 0x268 ~KUATKORO~ (8)
+      SET cie_kul_awakened += 1
     BUT_ONLY
   END
   EXTEND_TOP ~%cie_kul_awake%.bcs~ ~chriz-iwd-encounters/baf/cie_kuldahar_alert.baf~
@@ -174,6 +108,12 @@ END
 // them on sight but are not their enemies), and walk to the party when they see
 // no enemy.
 DEFINE_ACTION_FUNCTION cie_kuldahar_orogs BEGIN
+  COPY_EXISTING ~%cie_kul_orog_ai%.bcs~ ~override~
+    DECOMPILE_AND_PATCH BEGIN
+      LPF cie_remove_baf_blocks STR_VAR text = ~AttackedBy([NEUTRAL],DEFAULT)~ RET removed END
+      LPF cie_remove_baf_blocks STR_VAR text = ~MoveToObject(Player1)~ RET removed END
+    END
+  BUT_ONLY
   EXTEND_BOTTOM ~%cie_kul_orog_ai%.bcs~ ~chriz-iwd-encounters/baf/cie_kuldahar_orog.baf~
   PRINT ~chriz-iwd-encounters: the orogs fight back against the defenders and come for the party (%cie_kul_orog_ai%).~
 END
@@ -182,19 +122,6 @@ END
 // 2 sounded). The town alarm's Arundel only comes while Yxunomei lives.
 DEFINE_ACTION_FUNCTION cie_kuldahar_area BEGIN
   EXTEND_TOP ~%cie_kul_area_script%.bcs~ ~chriz-iwd-encounters/baf/cie_kuldahar_area.baf~
-  OUTER_SET cie_kul_arundel = 0
-  COPY_EXISTING ~%cie_kul_area_script%.bcs~ ~override~
-    DECOMPILE_AND_PATCH BEGIN
-      REPLACE_EVALUATE CASE_INSENSITIVE
-          ~!Global("KULDAHAR_ALARM","GLOBAL",0)\([%TAB% %LNL%%MNL%%WNL%]+!Global("#spawn_group_0","MYAREA",1)\)~ BEGIN
-        SET cie_kul_arundel += 1
-      END ~%MATCH0%
-  Global("SPRITE_IS_DEADYXUNOMEI","GLOBAL",0)~
-    END
-  BUT_ONLY
-  ACTION_IF (cie_kul_arundel = 0) BEGIN
-    WARN ~chriz-iwd-encounters: found no town-alarm spawn in %cie_kul_area_script%.bcs; it stays as it is.~
-  END ELSE BEGIN
-    PRINT ~chriz-iwd-encounters: the town alarm's Arundel only comes while Yxunomei lives (%cie_kul_arundel% block).~
-  END
+  LAF cie_write_script_blocks STR_VAR script = EVAL ~%cie_kul_area_script%~
+    marker = ~"#spawn_group_0"~ source = ~chriz-iwd-encounters/baf/cie_kuldahar_town_alarm.baf~ END
 END

@@ -64,7 +64,7 @@ BEGIN
     SET start = RINDEX_BUFFER (CASE_SENSITIVE EVALUATE_REGEXP ~^IF~ at)
     SET end = INDEX_BUFFER (CASE_SENSITIVE EVALUATE_REGEXP ~^END~ at)
     PATCH_IF (start < 0) OR (end < 0) BEGIN
-      PATCH_WARN ~chriz-iwd-encounters: "%text%" stands outside a script block in %SOURCE_FILE%; left as it is.~
+      PATCH_PRINT ~chriz-iwd-encounters: cannot read a complete block in %SOURCE_FILE%.~
       SET at = 0 - 1
     END ELSE BEGIN
       DELETE_BYTES start (end + 3 - start)
@@ -129,7 +129,7 @@ BEGIN
 END
 
 // CRE V1.0: current and maximum hit points (0x24, 0x26), THAC0 (0x52), attacks
-// per round (0x53). Only raises.
+// per round (0x53). The caller owns each field it supplies.
 DEFINE_PATCH_FUNCTION cie_raise_creature
   INT_VAR hp = 0 apr = 0 thac0 = 0
   RET old_hp old_apr old_thac0
@@ -137,18 +137,329 @@ BEGIN
   READ_SHORT 0x26 old_hp
   READ_BYTE 0x53 old_apr
   READ_BYTE 0x52 old_thac0
-  PATCH_IF (hp > old_hp) BEGIN
+  PATCH_IF (hp > 0) BEGIN
     WRITE_SHORT 0x24 hp
     WRITE_SHORT 0x26 hp
   END
-  // attacks per round are stored as 0-5 whole attacks, 6-10 as 1/2, 3/2, 5/2, 7/2,
-  // 9/2: compared in half attacks
-  SET old_halves = (old_apr <= 5) ? (old_apr * 2) : ((old_apr - 6) * 2 + 1)
-  SET new_halves = (apr <= 5) ? (apr * 2) : ((apr - 6) * 2 + 1)
-  PATCH_IF (apr > 0) AND (old_apr <= 10) AND (new_halves > old_halves) BEGIN
+  PATCH_IF (apr > 0) BEGIN
     WRITE_BYTE 0x53 apr
   END
-  PATCH_IF (thac0 > 0) AND (thac0 < old_thac0) BEGIN
+  PATCH_IF (thac0 > 0) BEGIN
     WRITE_BYTE 0x52 thac0
   END
+END
+
+// A missing script is an empty destination for our blocks, not a reason to omit
+// them. This helper never inspects the contents of an existing script.
+DEFINE_ACTION_FUNCTION cie_ensure_script
+  STR_VAR script = ~~
+BEGIN
+  ACTION_IF !FILE_EXISTS_IN_GAME ~%script%.bcs~ BEGIN
+    COPY ~chriz-iwd-encounters/baf/cie_empty.baf~ ~override/%script%.bcs~
+      COMPILE_BAF_TO_BCS
+  END
+END
+
+// An area always gets a script for this component's behaviour. Existing area
+// scripts keep their names and unrelated blocks.
+DEFINE_ACTION_FUNCTION cie_area_script
+  STR_VAR area = ~~ fallback = ~~
+  RET script
+BEGIN
+  COPY_EXISTING ~%area%.are~ ~override~
+    LPF cie_read_script_slot INT_VAR offset = 0x94 RET script END
+    PATCH_IF (~%script%~ STRING_EQUAL ~~) BEGIN
+      SPRINT script ~%fallback%~
+      WRITE_ASCIIE 0x94 ~%script%~ (8)
+    END
+  BUT_ONLY
+  LAF cie_ensure_script STR_VAR script END
+END
+
+// The first creature script receives our behaviour. With no script, allocate the
+// caller's private override script. Existing AI remains in place.
+DEFINE_ACTION_FUNCTION cie_creature_script
+  STR_VAR creature = ~~ fallback = ~~
+  RET script
+BEGIN
+  OUTER_SPRINT script ~~
+  COPY_EXISTING ~%creature%.cre~ ~override~
+    FOR (slot = 0x248; slot < 0x270; slot += 8) BEGIN
+      LPF cie_read_script_slot INT_VAR offset = slot RET candidate = script END
+      PATCH_IF (~%script%~ STRING_EQUAL ~~) AND (~%candidate%~ STRING_COMPARE ~~) BEGIN
+        SPRINT script ~%candidate%~
+      END
+    END
+    PATCH_IF (~%script%~ STRING_EQUAL ~~) BEGIN
+      SPRINT script ~%fallback%~
+      WRITE_ASCIIE 0x248 ~%script%~ (8)
+    END
+  BUT_ONLY
+  LAF cie_ensure_script STR_VAR script END
+END
+
+// Keep the actors required by an encounter addressable. A missing placement is
+// made from the base game's placement record; unrelated area sections are not
+// moved. The actor table is relocated only when a record has to be added.
+DEFINE_PATCH_FUNCTION cie_ensure_actor
+  STR_VAR template = ~~
+BEGIN
+  INNER_PATCH_FILE ~%template%~ BEGIN
+    READ_ASCII 0 actor_name (32) NULL
+    READ_ASCII 0x80 actor_cre (8) NULL
+    READ_ASCII 0 actor_record (0x110)
+    SPRINT actor_fallback ~~
+    FOR (s = 0x50; s < 0x80; s += 8) BEGIN
+      LPF cie_read_script_slot INT_VAR offset = s RET candidate = script END
+      PATCH_IF (~%actor_fallback%~ STRING_EQUAL ~~) AND (~%candidate%~ STRING_COMPARE ~~) BEGIN
+        SPRINT actor_fallback ~%candidate%~
+      END
+    END
+  END
+  READ_LONG 0x54 actors_offset
+  READ_SHORT 0x58 actors_count
+  SET actor = 0 - 1
+  FOR (i = 0; i < actors_count; ++i) BEGIN
+    SET here = actors_offset + 0x110 * i
+    READ_ASCII here name (32) NULL
+    PATCH_IF (~%name%~ STRING_EQUAL_CASE ~%actor_name%~) BEGIN
+      SET actor = here
+    END
+  END
+  // A renamed actor of the same kind still fulfils this placement. Assign a name
+  // so the encounter can order it; do not add a duplicate for it.
+  PATCH_IF (actor < 0) BEGIN
+    FOR (i = 0; i < actors_count AND actor < 0; ++i) BEGIN
+      SET here = actors_offset + 0x110 * i
+      READ_ASCII (here + 0x80) cre (8) NULL
+      READ_ASCII here name (32) NULL
+      PATCH_IF (~%cre%~ STRING_EQUAL_CASE ~%actor_cre%~)
+          AND !VARIABLE_IS_SET $cie_actors_used(~%name%~)
+          AND !VARIABLE_IS_SET $cie_actor_names(~%name%~) BEGIN
+        SET actor = here
+      END
+    END
+  END
+  PATCH_IF (actor < 0) BEGIN
+    READ_ASCII actors_offset table (0x110 * actors_count)
+    SET actors_offset = BUFFER_LENGTH
+    INSERT_BYTES actors_offset (0x110 * (actors_count + 1))
+    WRITE_ASCIIE actors_offset ~%table%~ (0x110 * actors_count)
+    SET actor = actors_offset + 0x110 * actors_count
+    WRITE_ASCIIE actor ~%actor_record%~ (0x110)
+    WRITE_LONG 0x54 actors_offset
+    WRITE_SHORT 0x58 (actors_count + 1)
+  END
+  READ_ASCII actor name (32) NULL
+  READ_LONG (actor + 0x28) flags
+  PATCH_IF !(flags BAND 8) OR (~%name%~ STRING_EQUAL ~~) BEGIN
+    WRITE_ASCIIE actor ~%actor_name%~ (32)
+    SPRINT name ~%actor_name%~
+  END
+  SET $cie_actors_used(~%name%~) = 1
+  WRITE_LONG (actor + 0x28) (flags BOR 8)
+  SPRINT first ~~
+  PATCH_FOR_EACH s IN 0x50 0x78 0x60 0x68 0x58 0x70 BEGIN
+    LPF cie_read_script_slot INT_VAR offset = (actor + s) RET candidate = script END
+    PATCH_IF (~%first%~ STRING_EQUAL ~~) AND (~%candidate%~ STRING_COMPARE ~~) BEGIN
+      SPRINT first ~%candidate%~
+    END
+  END
+  PATCH_IF (~%first%~ STRING_EQUAL ~~) AND (~%actor_fallback%~ STRING_COMPARE ~~) BEGIN
+    INNER_PATCH_FILE ~%template%~ BEGIN READ_ASCII 0x50 fallback_slots (0x30) END
+    WRITE_ASCIIE (actor + 0x50) ~%fallback_slots%~ (0x30)
+  END
+END
+
+DEFINE_ACTION_FUNCTION cie_encounter_actors
+  STR_VAR area = ~~
+BEGIN
+  ACTION_CLEAR_ARRAY cie_actors_used
+  ACTION_CLEAR_ARRAY cie_actor_names
+  ACTION_BASH_FOR ~chriz-iwd-encounters/actors/%area%~ ~.*\.actor~ BEGIN
+    COPY - ~%BASH_FOR_FILESPEC%~ nowhere
+      READ_ASCII 0 name (32) NULL
+      SET $cie_actor_names(~%name%~) = 1
+  END
+  ACTION_BASH_FOR ~chriz-iwd-encounters/actors/%area%~ ~.*\.actor~ BEGIN
+    COPY_EXISTING ~%area%.are~ ~override~
+      LPF cie_ensure_actor STR_VAR template = EVAL ~%BASH_FOR_FILESPEC%~ END
+    BUT_ONLY
+  END
+END
+
+// Replace the behaviour's blocks at their first location, or insert at the top
+// when none exists. Markers identify what we own; they never decide whether the
+// replacement is installed.
+DEFINE_PATCH_FUNCTION cie_write_baf_blocks
+  STR_VAR marker = ~~ source = ~~
+BEGIN
+  LPF cie_find_baf_block STR_VAR text = EVAL ~%marker%~ RET start end END
+  SET insert_at = (start >= 0) ? start : 0
+  LPF cie_remove_baf_blocks STR_VAR text = EVAL ~%marker%~ RET removed END
+  INNER_PATCH_FILE ~%source%~ BEGIN
+    EVALUATE_BUFFER
+    READ_ASCII 0 replacement (BUFFER_LENGTH)
+  END
+  LPF cie_replace_text INT_VAR start = insert_at STR_VAR text = EVAL ~%replacement%%LNL%%LNL%~ END
+END
+
+DEFINE_ACTION_FUNCTION cie_write_script_blocks
+  STR_VAR script = ~~ marker = ~~ source = ~~
+BEGIN
+  LAF cie_ensure_script STR_VAR script END
+  COPY_EXISTING ~%script%.bcs~ ~override~
+    DECOMPILE_AND_PATCH BEGIN
+      LPF cie_write_baf_blocks STR_VAR marker source END
+    END
+  BUT_ONLY
+END
+
+// Join compiled blocks without passing existing timers through IDS aliases.
+DEFINE_ACTION_FUNCTION cie_join_scripts
+  STR_VAR first = ~~ second = ~~ target = ~~
+BEGIN
+  COPY_EXISTING ~%first%.bcs~ ~override/%target%.bcs~
+  ACTION_IF (~%second%~ STRING_COMPARE ~~) AND FILE_EXISTS_IN_GAME ~%second%.bcs~ BEGIN
+    COPY_EXISTING ~%target%.bcs~ ~override~
+      REPLACE_TEXTUALLY EXACT_MATCH ~%WNL%~ ~%LNL%~
+      INNER_PATCH_FILE ~%second%.bcs~ BEGIN
+        REPLACE_TEXTUALLY EXACT_MATCH ~%WNL%~ ~%LNL%~
+        READ_ASCII 3 tail (BUFFER_LENGTH - 6)
+      END
+      LPF cie_replace_text INT_VAR start = (BUFFER_LENGTH - 3) STR_VAR text = EVAL ~%tail%~ END
+  END
+END
+
+DEFINE_PATCH_FUNCTION cie_spl_one_ability BEGIN
+  WRITE_SHORT 0x1c 4     // innate
+  WRITE_LONG  0x34 1     // level
+  WRITE_LONG  0x64 0x72  // abilities offset
+  WRITE_SHORT 0x68 1     // abilities
+  WRITE_LONG  0x6a 0x9a  // effects offset
+  INSERT_BYTES 0x72 0x28
+  WRITE_SHORT 0x72 1     // type: melee
+  WRITE_SHORT 0x74 4     // location: innate
+  WRITE_BYTE  0x7e 1     // target: living creature
+  WRITE_SHORT 0x80 1     // range
+  WRITE_SHORT 0x82 1     // minimum level
+  WRITE_SHORT 0x94 1     // charges
+  WRITE_SHORT 0x98 1     // projectile: none
+END
+
+// Restore an absent region or door by name. Its record is followed by its own
+// vertices in the bundled template. Existing records keep their unrelated fields.
+// ARE V1.0 offsets: https://gibberlings3.github.io/iesdp/file_formats/ie_formats/are_v1.htm
+DEFINE_PATCH_FUNCTION cie_ensure_placement
+  INT_VAR door = 0
+  STR_VAR template = ~~
+BEGIN
+  SET record_size = door ? 0xc8 : 0xc4
+  SET offset_field = door ? 0xa8 : 0x5c
+  SET count_field = door ? 0xa4 : 0x5a
+  INNER_PATCH_FILE ~%template%~ BEGIN
+    READ_ASCII 0 wanted (32) NULL
+    READ_ASCII 0 record (record_size)
+    SET new_vertices = (BUFFER_LENGTH - record_size) / 4
+    READ_ASCII record_size points (new_vertices * 4)
+  END
+  READ_LONG offset_field records
+  PATCH_IF door BEGIN READ_LONG count_field count END
+  ELSE BEGIN READ_SHORT count_field count END
+  SET found = 0
+  FOR (i = 0; i < count; ++i) BEGIN
+    READ_ASCII (records + record_size * i) name (32) NULL
+    PATCH_IF (~%name%~ STRING_EQUAL_CASE ~%wanted%~) BEGIN SET found = 1 END
+  END
+  PATCH_IF !found BEGIN
+    READ_ASCII records old_records (record_size * count)
+    SET records = BUFFER_LENGTH
+    INSERT_BYTES records (record_size * (count + 1))
+    WRITE_ASCIIE records ~%old_records%~ (record_size * count)
+    SET added = records + record_size * count
+    WRITE_ASCIIE added ~%record%~ (record_size)
+    WRITE_LONG offset_field records
+    PATCH_IF door BEGIN WRITE_LONG count_field (count + 1) END
+    ELSE BEGIN WRITE_SHORT count_field (count + 1) END
+    READ_LONG 0x7c vertices
+    READ_SHORT 0x80 vertex_count
+    READ_ASCII vertices old_points (vertex_count * 4)
+    SET vertices = BUFFER_LENGTH
+    INSERT_BYTES vertices ((vertex_count + new_vertices) * 4)
+    WRITE_ASCIIE vertices ~%old_points%~ (vertex_count * 4)
+    WRITE_ASCIIE (vertices + vertex_count * 4) ~%points%~ (new_vertices * 4)
+    WRITE_LONG 0x7c vertices
+    WRITE_SHORT 0x80 (vertex_count + new_vertices)
+    READ_LONG (added + 0x2c) first
+    WRITE_LONG (added + 0x2c) (first + vertex_count)
+    PATCH_IF door BEGIN
+      PATCH_FOR_EACH field IN 0x34 0x48 0x50 BEGIN
+        READ_LONG (added + field) first
+        WRITE_LONG (added + field) (first + vertex_count)
+      END
+    END
+  END
+END
+
+// Only opcode-101 protections for the named effect are owned. Other immunities
+// on this creature remain, including other mods' effects.
+DEFINE_PATCH_FUNCTION cie_remove_cre_protection
+  INT_VAR protected_opcode = 0
+BEGIN
+  READ_LONG 0x2c4 effects
+  READ_LONG 0x2c8 count
+  READ_BYTE 0x33 version
+  SET size = (version = 1) ? 0x108 : 0x30
+  SET op_at = (version = 1) ? 8 : 0
+  SET p2_at = (version = 1) ? 0x18 : 8
+  FOR (i = 0; i < count; ++i) BEGIN
+    SET at = effects + size * i
+    READ_LONG (at + op_at) opcode
+    PATCH_IF (version != 1) BEGIN SET opcode = opcode BAND 0xffff END
+    READ_LONG (at + p2_at) p2
+    PATCH_IF (opcode = 101) AND (p2 = protected_opcode) BEGIN
+      PATCH_IF (version = 1) BEGIN WRITE_LONG (at + op_at) 999 END
+      ELSE BEGIN WRITE_SHORT (at + op_at) 999 END
+    END
+  END
+  LPF DELETE_CRE_EFFECT INT_VAR opcode_to_delete = 999 END
+END
+
+// An area can store its own creature. Patch the same owned fields there while
+// preserving the rest of that creature. The resized record is appended; no other
+// section or embedded actor moves.
+DEFINE_ACTION_FUNCTION cie_placed_stats
+  INT_VAR hp = 0 movement = 0 gloves = 0
+  STR_VAR area = ~~ creature = ~~
+BEGIN
+  COPY_EXISTING ~%area%.are~ ~override~
+    GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+    PHP_EACH actors AS index => actor BEGIN
+      READ_ASCII (actor + 0x80) cre (8) NULL
+      PATCH_IF (~%cre%~ STRING_EQUAL_CASE ~%creature%~) BEGIN
+        LPF cie_embedded_cre INT_VAR actor RET embedded = offset END
+        PATCH_IF embedded BEGIN
+          READ_LONG (actor + 0x8c) size
+          READ_ASCII embedded data (size)
+          INNER_PATCH_SAVE data ~%data%~ BEGIN
+            LPF cie_raise_creature INT_VAR hp RET old_hp old_apr old_thac0 END
+            PATCH_IF movement BEGIN
+              LPF DELETE_CRE_EFFECT INT_VAR opcode_to_delete = 126 END
+              LPF ADD_CRE_EFFECT INT_VAR opcode = 126 target = 1 timing = 9 parameter1 = 0 parameter2 = 1 END
+            END
+            PATCH_IF gloves BEGIN
+              REMOVE_CRE_ITEM ~CIIGEN~
+              ADD_CRE_ITEM ~CIIGEN~ #0 #0 #0 ~NONE~ ~GLOVES~ EQUIP
+            END
+          END
+          SET size = STRING_LENGTH ~%data%~
+          SET placed = BUFFER_LENGTH
+          INSERT_BYTES placed size
+          WRITE_ASCIIE placed ~%data%~ (size)
+          WRITE_LONG (actor + 0x88) placed
+          WRITE_LONG (actor + 0x8c) size
+        END
+      END
+    END
+  BUT_ONLY
 END

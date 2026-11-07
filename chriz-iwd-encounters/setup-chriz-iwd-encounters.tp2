@@ -35,7 +35,6 @@ LANGUAGE ~English~ ~english~ ~chriz-iwd-encounters/languages/english/setup.tra~
 BEGIN @100 DESIGNATED 100
 LABEL ~chriz-iwd-encounters-scs-caster-repairs~
 REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
-REQUIRE_PREDICATE (MOD_IS_INSTALLED ~stratagems/setup-stratagems.tp2~ ~6030~ OR MOD_IS_INSTALLED ~stratagems/setup-stratagems.tp2~ ~6040~) @9001
 INCLUDE ~chriz-iwd-encounters/lib/cie_scs_repairs.tpa~
 LAF cie_scs_caster_repairs END
 
@@ -48,7 +47,6 @@ LAF cie_banter_guard END
 BEGIN @200 DESIGNATED 200
 LABEL ~chriz-iwd-encounters-priest-prep~
 REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
-REQUIRE_PREDICATE MOD_IS_INSTALLED ~stratagems/setup-stratagems.tp2~ ~6040~ @9002
 INCLUDE ~chriz-iwd-encounters/lib/cie_priest_prep.tpa~
 LAF cie_priest_prep END
 

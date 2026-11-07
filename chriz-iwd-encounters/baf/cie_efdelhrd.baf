@@ -1,0 +1,17 @@
+IF
+  !Global("EFDELHRD_inactive","LOCALS",1)
+  DifficultyLT(HARD)
+  !See([PC])
+THEN
+  RESPONSE #100
+    DestroySelf()
+END
+
+IF
+  !Global("EFDELHRD_inactive","LOCALS",1)
+  True()
+THEN
+  RESPONSE #100
+    SetGlobal("EFDELHRD_inactive","LOCALS",1)
+END
+

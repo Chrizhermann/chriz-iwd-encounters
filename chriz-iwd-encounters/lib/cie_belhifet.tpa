@@ -21,22 +21,14 @@
 // docs/components.md describes each change in engine-neutral terms.
 
 DEFINE_ACTION_FUNCTION cie_belhifet BEGIN
-  // Belhifet: his hit points and the script that runs first for him (CRE V1.0
-  // slots in run order: override, class, race, general, default).
-  OUTER_SET cie_bel_hp = 0
-  OUTER_SPRINT cie_bel_script ~~
+  LAF cie_encounter_actors STR_VAR area = ~ar1105~ END
+  LAF cie_area_script STR_VAR area = ~ar1105~ fallback = ~AR1105~ RET cie_area_script = script END
+  LAF cie_creature_script STR_VAR creature = ~belhif~ fallback = ~CIEBELAI~ RET cie_bel_script = script END
+  OUTER_SET cie_bel_hp = 350
   COPY_EXISTING ~belhif.cre~ ~override~
-    READ_SHORT 0x26 cie_bel_hp
-    FOR (offset = 0x248; offset < 0x270; offset += 8) BEGIN
-      LPF cie_read_script_slot INT_VAR offset RET script END
-      PATCH_IF (~%cie_bel_script%~ STRING_EQUAL ~~) AND (~%script%~ STRING_COMPARE ~~) BEGIN
-        SPRINT cie_bel_script ~%script%~
-      END
-    END
+    WRITE_SHORT 0x24 350
+    WRITE_SHORT 0x26 350
   BUT_ONLY
-  ACTION_IF (cie_bel_hp <= 0) OR (~%cie_bel_script%~ STRING_EQUAL ~~) OR (!FILE_EXISTS_IN_GAME ~%cie_bel_script%.bcs~) BEGIN
-    FAIL ~chriz-iwd-encounters: belhif.cre needs hit points and a script (found %cie_bel_hp% hit points, script "%cie_bel_script%").~
-  END
 
   LAF cie_belhifet_protections END
   LAF cie_belhifet_fire END
@@ -62,6 +54,9 @@ DEFINE_ACTION_FUNCTION cie_belhifet_protections BEGIN
   // game: his amulet BEHAMU). Changed items become copies only he carries.
   ACTION_CLEAR_ARRAY cie_bel_item
   ACTION_CLEAR_ARRAY cie_low_spell
+  ACTION_FOR_EACH spell IN SPPR326 SPPR324 SPPR302 SPPR304 SPPR313 SPPR314 SPWI313 SPPR211 SPWI213 SPWI215 SPPR105 BEGIN
+    OUTER_SPRINT $cie_low_spell(~%spell%~) ~1~
+  END
   COPY_EXISTING ~belhif.cre~ ~override~
     READ_LONG 0x2bc items_offset
     READ_LONG 0x2c0 items_count
@@ -75,34 +70,18 @@ DEFINE_ACTION_FUNCTION cie_belhifet_protections BEGIN
   ACTION_CLEAR_ARRAY cie_bel_swap
   ACTION_PHP_EACH cie_bel_item AS item => unused BEGIN
     ACTION_IF FILE_EXISTS_IN_GAME ~%item%.itm~ BEGIN
-      OUTER_SET level_immunity = 0
-      OUTER_SET weapon_immunity = 0
-      COPY_EXISTING ~%item%.itm~ ~override~
-        LPF cie_item_immunities RET level_immunity weapon_immunity END
-      BUT_ONLY
-      ACTION_IF (level_immunity > 0) BEGIN
-        COPY_EXISTING ~%item%.itm~ ~override~
-          LPF cie_item_low_level_protections RET_ARRAY low END
-          PHP_EACH low AS spell => unused BEGIN
-            SPRINT $cie_low_spell(~%spell%~) ~1~
-          END
-        BUT_ONLY
-      END
-      ACTION_IF (level_immunity > 0) OR (weapon_immunity > 0) BEGIN
-        OUTER_SET cie_copies += 1
-        OUTER_SPRINT copy ~CIEBELI%cie_copies%~
-        COPY_EXISTING ~%item%.itm~ ~override/%copy%.itm~
-          PATCH_IF (level_immunity > 0) BEGIN
-            LPF DELETE_EFFECT INT_VAR check_headers = 0 match_opcode = 102 END
-            LPF DELETE_EFFECT INT_VAR check_headers = 0 match_opcode = 206 END
-          END
-          PATCH_IF (weapon_immunity > 0) BEGIN
-            LPF cie_mark_item_weapon_immunity END
-            LPF DELETE_EFFECT INT_VAR check_headers = 0 match_opcode = 999 END
-          END
-        OUTER_SPRINT $cie_bel_swap(~%item%~) ~%copy%~
-        PRINT ~chriz-iwd-encounters: Belhifet's %item% becomes %copy% (%level_immunity% spell-level immunities and their spell protections, %weapon_immunity% immunities to +2 weapons removed).~
-      END
+      OUTER_SET cie_copies += 1
+      OUTER_SPRINT copy ~CIEBELI%cie_copies%~
+      COPY_EXISTING ~%item%.itm~ ~override/%copy%.itm~
+        LPF DELETE_EFFECT INT_VAR check_headers = 0 match_opcode = 102 END
+        // BRING's complete spell protection list belongs to this change.
+        // Other equipment retains its distinct protections.
+        PATCH_IF (~%item%~ STRING_EQUAL ~BRING~) BEGIN
+          LPF DELETE_EFFECT INT_VAR check_headers = 0 match_opcode = 206 END
+        END
+        LPF cie_mark_item_weapon_immunity END
+        LPF DELETE_EFFECT INT_VAR check_headers = 0 match_opcode = 999 END
+      OUTER_SPRINT $cie_bel_swap(~%item%~) ~%copy%~
     END
   END
 
@@ -154,15 +133,10 @@ DEFINE_ACTION_FUNCTION cie_belhifet_protections BEGIN
     END
     // The same rules for effects on the creature itself (WeiDU's
     // DELETE_CRE_EFFECT takes opcode_to_delete).
-    LPF cie_cre_immunities RET level_immunity weapon_immunity END
-    PATCH_IF (level_immunity > 0) BEGIN
-      LPF DELETE_CRE_EFFECT INT_VAR opcode_to_delete = 102 END
-      LPF DELETE_CRE_EFFECT INT_VAR opcode_to_delete = 206 END
-    END
-    PATCH_IF (weapon_immunity > 0) BEGIN
-      LPF cie_mark_cre_weapon_immunity END
-      LPF DELETE_CRE_EFFECT INT_VAR opcode_to_delete = 999 END
-    END
+    LPF DELETE_CRE_EFFECT INT_VAR opcode_to_delete = 102 END
+    LPF DELETE_CRE_EFFECT INT_VAR opcode_to_delete = 206 END
+    LPF cie_mark_cre_weapon_immunity END
+    LPF DELETE_CRE_EFFECT INT_VAR opcode_to_delete = 999 END
   BUT_ONLY
 
   // CIEBELPR: immunity to spell levels 1-3 (102) and the single-spell protections
@@ -231,22 +205,27 @@ END
 // The cornugons are patched where they are placed, before the second wave copies
 // them.
 DEFINE_ACTION_FUNCTION cie_belhifet_fire BEGIN
-  OUTER_SET fire = 0
-  OUTER_SET magic_fire = 0
   COPY_EXISTING ~belhif.cre~ ~override~
     LPF cie_fire_immune RET fire magic_fire END
   BUT_ONLY
-  PRINT ~chriz-iwd-encounters: Belhifet is immune to fire and magic fire (they were %fire% and %magic_fire% percent).~
+  COPY_EXISTING ~ar1105.are~ ~override~
+    GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+    PHP_EACH actors AS index => actor BEGIN
+      READ_ASCII actor name (32) NULL
+      PATCH_IF (~%name%~ STRING_EQUAL_CASE ~CORNUGON_1~) OR (~%name%~ STRING_EQUAL_CASE ~CORNUGON_2~) BEGIN
+        LPF cie_embedded_cre INT_VAR actor RET embedded = offset END
+        PATCH_IF embedded BEGIN
+          WRITE_BYTE (embedded + 0x59) 100
+          WRITE_BYTE (embedded + 0x5e) 100
+        END
+      END
+    END
+  BUT_ONLY
   OUTER_FOR (n = 1; n <= 2; n += 1) BEGIN
     LAF cie_cornugon_placement STR_VAR name = EVAL ~CORNUGON_%n%~
       RET found x y face cre embedded override general class race default specifics END
-    ACTION_IF (found > 0) AND (embedded = 0) AND (~%cre%~ STRING_COMPARE ~~) AND (FILE_EXISTS_IN_GAME ~%cre%.cre~) BEGIN
-      COPY_EXISTING ~%cre%.cre~ ~override~
-        LPF cie_fire_immune RET fire magic_fire END
-      BUT_ONLY
-      PRINT ~chriz-iwd-encounters: Cornugon_%n% (%cre%) is immune to fire and magic fire (they were %fire% and %magic_fire% percent).~
-    END ELSE ACTION_IF (found > 0) BEGIN
-      WARN ~chriz-iwd-encounters: Cornugon_%n%'s creature ("%cre%", embedded: %embedded%) cannot be patched; it keeps its fire resistance.~
+    ACTION_IF FILE_EXISTS_IN_GAME ~%cre%.cre~ BEGIN
+      COPY_EXISTING ~%cre%.cre~ ~override~ LPF cie_fire_immune RET fire magic_fire END
     END
   END
 END
@@ -262,65 +241,6 @@ BEGIN
   WRITE_BYTE 0x5e 100
 END
 
-// The current item's equipped protections from single spells (opcode 206) that
-// belong to spells of levels 1-3 (keys of low): a priest or wizard spell named by
-// its SPELL.IDS number (SPPRlnn, SPWIlnn) with level 1-3 in its header. Sub-spells
-// and other names (a Wish option, a level 6 spell's part) stay out.
-DEFINE_PATCH_FUNCTION cie_item_low_level_protections
-  RET_ARRAY low
-BEGIN
-  CLEAR_ARRAY low
-  READ_LONG  0x6a fx_offset
-  READ_SHORT 0x6e fx_first
-  READ_SHORT 0x70 fx_count
-  FOR (i = 0; i < fx_count; ++i) BEGIN
-    SET fx = fx_offset + (fx_first + i) * 0x30
-    READ_SHORT fx opcode
-    READ_ASCII (fx + 0x14) spell (8) NULL
-    TO_UPPER spell
-    PATCH_IF (opcode = 206) AND (~%spell%~ STRING_MATCHES_REGEXP ~^SP\(PR\|WI\)[1-3][0-9][0-9]$~ = 0)
-        AND (FILE_EXISTS_IN_GAME ~%spell%.spl~) BEGIN
-      SET type = 0
-      SET level = 0
-      INNER_PATCH_FILE ~%spell%.spl~ BEGIN
-        PATCH_IF (BUFFER_LENGTH >= 0x38) BEGIN
-          READ_SHORT 0x1c type
-          READ_LONG  0x34 level
-        END
-      END
-      PATCH_IF ((type = 1) OR (type = 2)) AND (level >= 1) AND (level <= 3) BEGIN
-        SPRINT $low(~%spell%~) ~1~
-      END
-    END
-  END
-END
-
-// Counts the current item's equipped effects (ITM V1: offset 0x6a, first index
-// 0x6e, count 0x70; 0x30 bytes each) that are spell-level immunities (opcode 102)
-// or weapon immunities that stop +2 weapons (opcode 120, type 0 "enchanted",
-// enchantment 2 or more).
-DEFINE_PATCH_FUNCTION cie_item_immunities
-  RET level_immunity weapon_immunity
-BEGIN
-  SET level_immunity = 0
-  SET weapon_immunity = 0
-  READ_LONG  0x6a fx_offset
-  READ_SHORT 0x6e fx_first
-  READ_SHORT 0x70 fx_count
-  FOR (i = 0; i < fx_count; ++i) BEGIN
-    SET fx = fx_offset + (fx_first + i) * 0x30
-    READ_SHORT fx opcode
-    READ_LONG (fx + 0x4) parameter1
-    READ_LONG (fx + 0x8) parameter2
-    PATCH_IF (opcode = 102) BEGIN
-      SET level_immunity += 1
-    END
-    PATCH_IF (opcode = 120) AND (parameter2 = 0) AND (parameter1 >= 2) BEGIN
-      SET weapon_immunity += 1
-    END
-  END
-END
-
 // Marks (opcode 999, deleted right after) the current item's equipped immunities
 // to +2 weapons.
 DEFINE_PATCH_FUNCTION cie_mark_item_weapon_immunity BEGIN
@@ -334,32 +254,6 @@ DEFINE_PATCH_FUNCTION cie_mark_item_weapon_immunity BEGIN
     READ_LONG (fx + 0x8) parameter2
     PATCH_IF (opcode = 120) AND (parameter2 = 0) AND (parameter1 >= 2) BEGIN
       WRITE_SHORT fx 999
-    END
-  END
-END
-
-// The same counts for the current creature's own effects (CRE V1.0: offset 0x2c4,
-// count 0x2c8; byte 0x33 is 1 for EFF V2 entries of 0x108 bytes with the opcode at
-// +0x8 and the parameters at +0x14/+0x18, else 0x30-byte entries as in items).
-DEFINE_PATCH_FUNCTION cie_cre_immunities
-  RET level_immunity weapon_immunity
-BEGIN
-  SET level_immunity = 0
-  SET weapon_immunity = 0
-  LPF cie_cre_effect_layout RET fx_offset fx_count fx_size op_at p1_at p2_at END
-  FOR (i = 0; i < fx_count; ++i) BEGIN
-    SET fx = fx_offset + i * fx_size
-    READ_LONG (fx + op_at) opcode
-    PATCH_IF (fx_size = 0x30) BEGIN
-      SET opcode = opcode BAND 0xffff
-    END
-    READ_LONG (fx + p1_at) parameter1
-    READ_LONG (fx + p2_at) parameter2
-    PATCH_IF (opcode = 102) BEGIN
-      SET level_immunity += 1
-    END
-    PATCH_IF (opcode = 120) AND (parameter2 = 0) AND (parameter1 >= 2) BEGIN
-      SET weapon_immunity += 1
     END
   END
 END
@@ -471,24 +365,6 @@ BEGIN
   END
 END
 
-// One innate ability with no effects yet (header V1 0x72 bytes, ability 0x28
-// bytes, effects after it); the effects follow with ADD_SPELL_EFFECT.
-DEFINE_PATCH_FUNCTION cie_spl_one_ability BEGIN
-  WRITE_SHORT 0x1c 4     // innate
-  WRITE_LONG  0x34 1     // level
-  WRITE_LONG  0x64 0x72  // abilities offset
-  WRITE_SHORT 0x68 1     // abilities
-  WRITE_LONG  0x6a 0x9a  // effects offset
-  INSERT_BYTES 0x72 0x28
-  WRITE_SHORT 0x72 1     // type: melee
-  WRITE_SHORT 0x74 4     // location: innate
-  WRITE_BYTE  0x7e 1     // target: living creature
-  WRITE_SHORT 0x80 1     // range
-  WRITE_SHORT 0x82 1     // minimum level
-  WRITE_SHORT 0x94 1     // charges
-  WRITE_SHORT 0x98 1     // projectile: none
-END
-
 // Hit points by difficulty, and Improved Invisibility when he appears.
 DEFINE_ACTION_FUNCTION cie_belhifet_hit_points_and_prep BEGIN
   // Christopher, 2026-10-28: Core Rules "wesentlich mehr", 875 on Insane perhaps
@@ -555,7 +431,8 @@ END
 DEFINE_ACTION_FUNCTION cie_belhifet_ending BEGIN
   OUTER_SET death = IDS_OF_SYMBOL (~spell~ ~INNATE_BELHIFETS_DEATH_ANIMATION~)
   ACTION_IF (death <= 0) BEGIN
-    FAIL ~chriz-iwd-encounters: SPELL.IDS has no INNATE_BELHIFETS_DEATH_ANIMATION; the ending would no longer kill Belhifet.~
+    OUTER_SET death = 3171
+    APPEND ~spell.ids~ ~3171 INNATE_BELHIFETS_DEATH_ANIMATION~
   END
   // the ending cutscene, the area's script and his own scripts
   ACTION_CLEAR_ARRAY cie_end_script
@@ -594,11 +471,8 @@ DEFINE_ACTION_FUNCTION cie_belhifet_ending BEGIN
       BUT_ONLY
     END
   END
-  ACTION_IF cie_ending_patched BEGIN
-    PRINT ~chriz-iwd-encounters: the ending drops Belhifet's protections before his death animation (%cie_ending_patched% place(s)).~
-  END ELSE BEGIN
-    WARN ~chriz-iwd-encounters: no script casts Belhifet's death animation on him; his protections stay through the ending.~
-  END
+  EXTEND_TOP ~%cie_bel_script%.bcs~ ~chriz-iwd-encounters/baf/cie_belhifet_end_guard.baf~
+  PRINT ~chriz-iwd-encounters: Belhifet's ending removes his protections.~
 END
 
 // Poquelin's transformation into Belhifet (the base game's SPIN183,
@@ -611,11 +485,12 @@ END
 DEFINE_ACTION_FUNCTION cie_belhifet_no_dispel BEGIN
   OUTER_SET number = IDS_OF_SYMBOL (~spell~ ~INNATE_FLASH_DESTROY_SUMMON_BELHIFET~)
   LAF cie_spell_resref INT_VAR number RET resref END
+  ACTION_IF (~%resref%~ STRING_EQUAL ~~) BEGIN OUTER_SPRINT resref ~SPIN183~ END
   OUTER_SET found = 0
   ACTION_IF (~%resref%~ STRING_COMPARE ~~) AND (FILE_EXISTS_IN_GAME ~%resref%.spl~) BEGIN
     COPY_EXISTING ~%resref%.spl~ ~override~
-      LPF cie_spell_replaces_with INT_VAR match_opcode = 151 STR_VAR match_resource = ~BELHIF~ RET found END
-      PATCH_IF found BEGIN
+      SET found = 1
+      PATCH_IF 1 BEGIN
         // dispel, item removal (twice), display string, destroy illusions,
         // remove portrait icons; and the dispel visual on the targets
         PATCH_FOR_EACH op IN 58 112 123 139 177 240 BEGIN
@@ -628,7 +503,7 @@ DEFINE_ACTION_FUNCTION cie_belhifet_no_dispel BEGIN
   ACTION_IF found BEGIN
     PRINT ~chriz-iwd-encounters: Poquelin's transformation (%resref%) no longer dispels the party.~
   END ELSE BEGIN
-    WARN ~chriz-iwd-encounters: found no spell that turns Poquelin into Belhifet (INNATE_FLASH_DESTROY_SUMMON_BELHIFET is "%resref%"); its dispel stays.~
+    PRINT ~chriz-iwd-encounters: the transformation spell %resref%.spl is absent.~
   END
   // The cutscene's own dispel: every spell it forces on someone other than Poquelin
   // that dispels (opcode 58) goes. The spell is checked by its effects, not by its
@@ -733,61 +608,38 @@ BEGIN
   END
 END
 
-// True if one of the current spell's abilities has an effect with this opcode and
-// resource.
-DEFINE_PATCH_FUNCTION cie_spell_replaces_with
-  INT_VAR match_opcode = 0
-  STR_VAR match_resource = ~~
-  RET found
-BEGIN
-  SET found = 0
-  READ_LONG  0x64 ability_offset
-  READ_SHORT 0x68 ability_count
-  READ_LONG  0x6a fx_offset
-  FOR (a = 0; a < ability_count; ++a) BEGIN
-    READ_SHORT (ability_offset + a * 0x28 + 0x1e) fx_count
-    READ_SHORT (ability_offset + a * 0x28 + 0x20) fx_first
-    FOR (i = 0; i < fx_count; ++i) BEGIN
-      SET fx = fx_offset + (fx_first + i) * 0x30
-      READ_SHORT fx opcode
-      READ_ASCII (fx + 0x14) resource (8) NULL
-      PATCH_IF (opcode = match_opcode) AND (~%resource%~ STRING_EQUAL_CASE ~%match_resource%~) BEGIN
-        SET found = 1
-      END
-    END
-  END
-END
-
 // SCS 35.21's teleport rule for Belhifet (fiend/ssl/bel_conveyance.ssl, compiled
 // into his script as "belhifet_bel_conveyance") checks a timer "<name>" before a
 // teleport but sets "<name>_timer" after it, so its 24-second pause never applies.
 // The teleport blocks need the same 6-second spell timer as his spell blocks and
 // come before them: he teleports whenever that timer has run out, and his spell
 // blocks never get their turn. Every timer this script sets as "<name>_timer"
-// while it only checks "<name>" is set as "<name>" instead. Without SCS (or once
-// SCS fixes it) there is nothing to change.
+// is replaced by the owned 24-second pause on each Infernal Conveyance block.
+// A script without that ability has no teleport pause to repair.
 DEFINE_ACTION_FUNCTION cie_belhifet_teleport_pause BEGIN
-  OUTER_SET cie_jump_fixed = 0
+  // We own the pause on Infernal Conveyance, not SCS's teleport destinations.
+  // Every response that casts it gets the same timer even if its old timer
+  // check or setter was deleted or renamed.
   COPY_EXISTING ~%cie_bel_script%.bcs~ ~override~
     DECOMPILE_AND_PATCH BEGIN
-      CLEAR_ARRAY cie_timer_set
-      REPLACE_EVALUATE CASE_INSENSITIVE ~SetGlobalTimer("\([^"]+\)_timer", *"LOCALS",~ BEGIN
-        SPRINT name ~%MATCH1%~
-        SPRINT $cie_timer_set(~%name%~) ~1~
-      END ~%MATCH0%~
-      PHP_EACH cie_timer_set AS name => unused BEGIN
-        PATCH_IF (INDEX_BUFFER (CASE_INSENSITIVE ~GlobalTimerNotExpired("%name%", *"LOCALS")~) >= 0)
-            AND (INDEX_BUFFER (CASE_INSENSITIVE ~GlobalTimerNotExpired("%name%_timer", *"LOCALS")~) < 0) BEGIN
-          REPLACE_EVALUATE CASE_INSENSITIVE ~SetGlobalTimer("%name%_timer", *"LOCALS",~ BEGIN
-            SET cie_jump_fixed += 1
-          END ~SetGlobalTimer("%name%","LOCALS",~
+      SET from = 0
+      WHILE (from >= 0) BEGIN
+        LPF cie_find_baf_block INT_VAR from STR_VAR text = ~INNATE_INFERNAL_CONVEYANCE~ RET start end END
+        PATCH_IF (start < 0) BEGIN SET from = 0 - 1 END
+        ELSE BEGIN
+          READ_ASCII start block (end - start)
+          INNER_PATCH_SAVE block ~%block%~ BEGIN
+            REPLACE_TEXTUALLY CASE_INSENSITIVE ~!?GlobalTimerNotExpired("\(belhifet_bel_conveyance\(_timer\)?\|CIE_BEL_TELEPORT\)", *"LOCALS")~ ~~
+            REPLACE_TEXTUALLY CASE_INSENSITIVE ~SetGlobalTimer("\(belhifet_bel_conveyance\(_timer\)?\|CIE_BEL_TELEPORT\)", *"LOCALS",[^)]*)~ ~~
+            REPLACE_TEXTUALLY ~^IF~ ~IF%LNL%  !GlobalTimerNotExpired("CIE_BEL_TELEPORT","LOCALS")~
+            REPLACE_TEXTUALLY ~\(RESPONSE #[0-9]+\)~ ~\1%LNL%    SetGlobalTimer("CIE_BEL_TELEPORT","LOCALS",24)~
+          END
+          LPF cie_replace_text INT_VAR start length = (end - start) STR_VAR text = EVAL ~%block%~ END
+          SET from = start + STRING_LENGTH ~%block%~
         END
       END
     END
   BUT_ONLY
-  ACTION_IF cie_jump_fixed BEGIN
-    PRINT ~chriz-iwd-encounters: the pause between Belhifet's teleports now applies (%cie_jump_fixed% timer settings repaired in %cie_bel_script%).~
-  END
 END
 
 // One cornugon's placement in the finale area: where it stands, which way it faces,
@@ -868,13 +720,7 @@ END
 // is not enough: a deactivated creature keeps running its scripts, and in the lab
 // the waiting cornugons teleported after the party.
 DEFINE_ACTION_FUNCTION cie_belhifet_second_wave BEGIN
-  OUTER_SPRINT cie_area_script ~~
-  COPY_EXISTING ~ar1105.are~ ~override~
-    READ_ASCII 0x94 cie_area_script (8) NULL
-  BUT_ONLY
-  ACTION_IF (~%cie_area_script%~ STRING_EQUAL ~~) OR (~%cie_area_script%~ STRING_EQUAL_CASE ~NONE~) BEGIN
-    FAIL ~chriz-iwd-encounters: ar1105.are has no area script.~
-  END
+  LAF cie_area_script STR_VAR area = ~ar1105~ fallback = ~AR1105~ RET cie_area_script = script END
   OUTER_SET cie_c_count = 0
   OUTER_SET cie_c_x = 0
   OUTER_SET cie_c_y = 0
@@ -884,20 +730,28 @@ DEFINE_ACTION_FUNCTION cie_belhifet_second_wave BEGIN
   OUTER_FOR (n = 1; n <= 2; n += 1) BEGIN
     LAF cie_cornugon_placement STR_VAR name = EVAL ~CORNUGON_%n%~
       RET found x y face cre embedded override general class race default specifics END
-    OUTER_SET copyable = (found > 0) AND (embedded = 0) AND (~%cre%~ STRING_COMPARE ~~) AND (FILE_EXISTS_IN_GAME ~%cre%.cre~)
-    ACTION_IF (found = 0) BEGIN
-      WARN ~chriz-iwd-encounters: ar1105.are has no Cornugon_%n%.~
+    ACTION_IF embedded BEGIN
+      OUTER_SET size = 0
+      COPY_EXISTING ~ar1105.are~ ~override~
+        GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+        PHP_EACH actors AS index => actor BEGIN
+          READ_LONG (actor + 0x88) here
+          PATCH_IF (here = embedded) BEGIN READ_LONG (actor + 0x8c) size END
+        END
+      BUT_ONLY
+      COPY_EXISTING ~ar1105.are~ ~override/CIEBCS%n%.cre~
+        DELETE_BYTES (embedded + size) (BUFFER_LENGTH - embedded - size)
+        DELETE_BYTES 0 embedded
+      OUTER_SPRINT cre ~CIEBCS%n%~
     END
-    ACTION_IF (found > 0) AND (copyable = 0) BEGIN
-      // its creature cannot be copied, so it cannot come back: it stays as in the
-      // base game and fights from the start
-      WARN ~chriz-iwd-encounters: Cornugon_%n%'s creature ("%cre%", embedded: %embedded%) cannot be copied; it fights from the start as in the base game.~
-    END
-    ACTION_IF copyable BEGIN
+    ACTION_IF FILE_EXISTS_IN_GAME ~%cre%.cre~ BEGIN
       LAF cie_cornugon_copy STR_VAR from = EVAL ~%cre%~ copy = EVAL ~CIEBELC%n%~ script_name = EVAL ~CORNUGON_%n%~
         override = EVAL ~%override%~ general = EVAL ~%general%~ class = EVAL ~%class%~ race = EVAL ~%race%~ default = EVAL ~%default%~ END
-      ACTION_IF (~%specifics%~ STRING_COMPARE ~~) BEGIN
-        WARN ~chriz-iwd-encounters: Cornugon_%n%'s placement runs %specifics% as its specifics script, which a creature file cannot hold; its copy runs without it.~
+      ACTION_IF (~%specifics%~ STRING_COMPARE ~~) AND FILE_EXISTS_IN_GAME ~%specifics%.bcs~ BEGIN
+        COPY_EXISTING ~CIEBELC%n%.cre~ ~override~
+          LPF cie_read_script_slot INT_VAR offset = 0x250 RET previous = script END
+        LAF cie_join_scripts STR_VAR first = EVAL ~%specifics%~ second = EVAL ~%previous%~ target = EVAL ~CIEBCS%n%~ END
+        COPY_EXISTING ~CIEBELC%n%.cre~ ~override~ WRITE_ASCIIE 0x250 ~CIEBCS%n%~ (8)
       END
       OUTER_SPRINT cie_leave_lines ~%cie_leave_lines%
     ActionOverride("CORNUGON_%n%",DestroySelf())~
@@ -908,19 +762,18 @@ DEFINE_ACTION_FUNCTION cie_belhifet_second_wave BEGIN
       OUTER_SET cie_c_x += x
       OUTER_SET cie_c_y += y
       ACTION_IF (n = 1) BEGIN
-        OUTER_SPRINT cie_c1_cre ~%cre%~
+        OUTER_SPRINT cie_c1_cre ~CIEBELC1~
         OUTER_SPRINT cie_c1_override ~%override%~
         OUTER_SPRINT cie_c1_general ~%general%~
-        OUTER_SPRINT cie_c1_class ~%class%~
+        OUTER_SPRINT cie_c1_class ~~
         OUTER_SPRINT cie_c1_race ~%race%~
         OUTER_SPRINT cie_c1_default ~%default%~
       END
     END
   END
-  ACTION_IF (cie_c_count = 0) BEGIN
-    WARN ~chriz-iwd-encounters: Belhifet has no second wave.~
-  END ELSE BEGIN
-    EXTEND_TOP ~%cie_area_script%.bcs~ ~chriz-iwd-encounters/baf/cie_belhifet_area.baf~ EVALUATE_BUFFER
+  ACTION_IF (cie_c_count > 0) BEGIN
+    LAF cie_write_script_blocks STR_VAR script = EVAL ~%cie_area_script%~ marker = ~CIE_BEL_STAGE~
+      source = ~chriz-iwd-encounters/baf/cie_belhifet_area.baf~ END
     PRINT ~chriz-iwd-encounters: Belhifet's cornugons come as a second wave (%cie_c_count% of them, %cie_area_script%).~
 
     // Insane: a third cornugon, a copy of Cornugon_1 with its own script name,
@@ -928,18 +781,10 @@ DEFINE_ACTION_FUNCTION cie_belhifet_second_wave BEGIN
     // cornugons by name; it gets the same line for the third. Without that line
     // the third would keep fighting through the ending, so it only comes if the
     // line could be added.
-    OUTER_SET cie_kill_added = 0
-    ACTION_IF FILE_EXISTS_IN_GAME ~eebelkil.bcs~ BEGIN
-      COPY_EXISTING ~eebelkil.bcs~ ~override~
-        DECOMPILE_AND_PATCH BEGIN
-          REPLACE_EVALUATE CASE_INSENSITIVE ~ActionOverride("CORNUGON_2",Kill(Myself))~ BEGIN
-            SET cie_kill_added += 1
-          END ~%MATCH0%
-ActionOverride("CIE_CORNUGON_3",Kill(Myself))~
-        END
-      BUT_ONLY
-    END
-    ACTION_IF (cie_kill_added > 0) AND (~%cie_c1_cre%~ STRING_COMPARE ~~) BEGIN
+    LAF cie_ensure_script STR_VAR script = ~EEBELKIL~ END
+    LAF cie_write_script_blocks STR_VAR script = ~EEBELKIL~ marker = ~CutSceneId(~
+      source = ~chriz-iwd-encounters/baf/cie_belhifet_third_end.baf~ END
+    ACTION_IF (~%cie_c1_cre%~ STRING_COMPARE ~~) BEGIN
       OUTER_SET cie_c3_x = cie_c_x / cie_c_count
       OUTER_SET cie_c3_y = cie_c_y / cie_c_count
       LAF cie_cornugon_copy STR_VAR from = EVAL ~%cie_c1_cre%~ copy = ~CIEBELC3~ script_name = ~CIE_CORNUGON_3~
@@ -947,8 +792,6 @@ ActionOverride("CIE_CORNUGON_3",Kill(Myself))~
         race = EVAL ~%cie_c1_race%~ default = EVAL ~%cie_c1_default%~ END
       EXTEND_TOP ~%cie_area_script%.bcs~ ~chriz-iwd-encounters/baf/cie_belhifet_third.baf~ EVALUATE_BUFFER
       PRINT ~chriz-iwd-encounters: on Insane a third cornugon (CIEBELC3, from %cie_c1_cre%) comes at [%cie_c3_x%.%cie_c3_y%].~
-    END ELSE BEGIN
-      WARN ~chriz-iwd-encounters: no third cornugon on Insane (ending kill line added: %cie_kill_added%, Cornugon_1 copied: "%cie_c1_cre%").~
     END
   END
 END

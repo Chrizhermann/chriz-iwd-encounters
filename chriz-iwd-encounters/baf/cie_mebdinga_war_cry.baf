@@ -1,0 +1,19 @@
+// Decided encounter blocks; based on the IWD:EE game rules.
+IF
+  !GlobalTimerNotExpired("OH_Cast","LOCALS")
+  GlobalLT("CAST_WAR_CRY","LOCALS",3)
+  See(NearestEnemyOf(Myself))
+  See([ENEMY.0.0.0.0.MALE])
+  !StateCheck(LastSeenBy(Myself),STATE_HASTED)
+THEN
+  RESPONSE #60
+    IncrementGlobal("CAST_WAR_CRY","LOCALS",1)
+    ForceSpell(LastSeenBy(Myself),INNATE_WAR_CRY)
+    SetGlobalTimer("OH_Cast","LOCALS",12)
+  RESPONSE #25
+    ForceSpell(NearestEnemyOf(Myself),INNATE_UNDYING_LAMENT)
+    SetGlobalTimer("OH_Cast","LOCALS",12)
+  RESPONSE #15
+    ForceSpell(NearestEnemyOf(Myself),INNATE_MOURNFUL_WAIL)
+    SetGlobalTimer("OH_Cast","LOCALS",12)
+END

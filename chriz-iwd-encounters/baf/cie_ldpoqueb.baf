@@ -1,0 +1,30 @@
+IF
+  True()
+THEN
+  RESPONSE #100
+    CutSceneId("bdcutid")
+    HideGUI()
+    ClearAllActions()
+    MultiPlayerSync()
+    MoveViewObject("%cie_poq_name%",INSTANT)
+    Wait(2)
+    FadeToColor([0.0],0)
+    Wait(1)
+    MultiPlayerSync()
+    StartMovie("RETURN")
+    SmallWait(5)
+    Deactivate("%cie_poq_name%")
+    SmallWait(5)
+    ActionOverride(Player2,LeaveAreaLUA("AR1100","LOAD1100",[817.830],NW))
+    ActionOverride(Player3,LeaveAreaLUA("AR1100","LOAD1100",[889.760],NW))
+    ActionOverride(Player4,LeaveAreaLUA("AR1100","LOAD1100",[889.847],NW))
+    ActionOverride(Player5,LeaveAreaLUA("AR1100","LOAD1100",[966.802],NW))
+    ActionOverride(Player6,LeaveAreaLUA("AR1100","LOAD1100",[996.860],NW))
+    ActionOverride(Player1,LeaveAreaLUA("AR1100","LOAD1100",[817.765],NW))
+    LeaveAreaLUAPanic("AR1100","LOAD1100",[817.765],NW)
+    SmallWait(5)
+    MultiPlayerSync()
+    UnhideGUI()
+    EndCutSceneMode()
+END
+

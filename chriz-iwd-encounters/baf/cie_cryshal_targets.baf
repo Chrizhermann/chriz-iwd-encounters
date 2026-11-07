@@ -1,0 +1,26 @@
+// Decided encounter blocks; based on the IWD:EE game rules.
+IF
+  OR(12)
+    See([PC.0.0.FIGHTER_DRUID])
+    See([PC.0.0.FIGHTER_MAGE_THIEF])
+    See([PC.0.0.FIGHTER_MAGE_CLERIC])
+    See([PC.0.0.FIGHTER_CLERIC])
+    See([PC.0.0.BARD])
+    See([PC.0.0.CLERIC_THIEF])
+    See([PC.0.0.MAGE_THIEF])
+    See([PC.0.0.FIGHTER_MAGE])
+    See([PC.0.0.DRUID])
+    See([PC.0.0.CLERIC_MAGE])
+    See([PC.0.0.CLERIC])
+    See([PC.0.0.MAGE])
+THEN
+  RESPONSE #100
+    AttackReevaluate(LastSeenBy(Myself),75)
+END
+
+IF
+  See(NearestEnemyOf(Myself))
+THEN
+  RESPONSE #100
+    AttackReevaluate(NearestEnemyOf(Myself),75)
+END

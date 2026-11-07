@@ -1,0 +1,10 @@
+// The ending can remove the protections even if its former cast was replaced.
+IF
+  HPLT(Myself,10)
+  Global("CIE_BEL_ENDING","LOCALS",0)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_BEL_ENDING","LOCALS",1)
+    ApplySpellRES("CIEBELEN",Myself)
+    Continue()
+END

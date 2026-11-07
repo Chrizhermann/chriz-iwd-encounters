@@ -1,0 +1,11 @@
+// Decided encounter blocks; based on the IWD:EE game rules.
+IF
+  !Global("KULDAHAR_ALARM","GLOBAL",0)
+  !Global("#spawn_group_0","MYAREA",1)
+  Global("SPRITE_IS_DEADYXUNOMEI","GLOBAL",0)
+THEN
+  RESPONSE #100
+    SetGlobal("#spawn_group_0","MYAREA",1)
+    CreateCreature("arundel1",[1166.2291],NE)
+    Continue()
+END

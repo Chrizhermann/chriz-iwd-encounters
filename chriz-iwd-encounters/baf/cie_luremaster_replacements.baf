@@ -1,0 +1,60 @@
+// Decided encounter blocks; based on the IWD:EE game rules.
+IF
+  GlobalGT("%cie_lur_hero%","GLOBAL",0)
+  Global("#spectral_reinforcements","AR9711",0)
+THEN
+  RESPONSE #100
+    IncrementGlobal("%cie_lur_hero%","GLOBAL",-1)
+    IncrementGlobal("#spectral_reinforcements","AR9711",1)
+    CreateCreature("trsph4",[632.602],S)
+END
+
+IF
+  GlobalGT("%cie_lur_hero%","GLOBAL",0)
+  Global("#spectral_reinforcements","AR9711",1)
+THEN
+  RESPONSE #100
+    IncrementGlobal("%cie_lur_hero%","GLOBAL",-1)
+    IncrementGlobal("#spectral_reinforcements","AR9711",1)
+    CreateCreature("trsph5",[1512.372],S)
+END
+
+IF
+  GlobalGT("%cie_lur_hero%","GLOBAL",0)
+  Global("#spectral_reinforcements","AR9711",2)
+THEN
+  RESPONSE #100
+    IncrementGlobal("%cie_lur_hero%","GLOBAL",-1)
+    IncrementGlobal("#spectral_reinforcements","AR9711",1)
+    CreateCreature("trsph6",[1761.541],S)
+END
+
+IF
+  GlobalGT("%cie_lur_hero%","GLOBAL",0)
+  Global("#spectral_reinforcements","AR9711",3)
+THEN
+  RESPONSE #100
+    IncrementGlobal("%cie_lur_hero%","GLOBAL",-1)
+    IncrementGlobal("#spectral_reinforcements","AR9711",1)
+    CreateCreature("trsph7",[687.872],W)
+END
+
+IF
+  GlobalGT("%cie_lur_hero%","GLOBAL",0)
+  Global("#spectral_reinforcements","AR9711",4)
+THEN
+  RESPONSE #100
+    IncrementGlobal("%cie_lur_hero%","GLOBAL",-1)
+    IncrementGlobal("#spectral_reinforcements","AR9711",1)
+    CreateCreature("trsph8",[1247.294],NE)
+END
+
+IF
+  GlobalGT("%cie_lur_hero%","GLOBAL",0)
+  Global("#spectral_reinforcements","AR9711",5)
+THEN
+  RESPONSE #100
+    IncrementGlobal("%cie_lur_hero%","GLOBAL",-1)
+    IncrementGlobal("#spectral_reinforcements","AR9711",1)
+    CreateCreature("trsph9",[690.528],S)
+END

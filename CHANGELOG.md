@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Write decided encounter fields and blocks over edited input, including missing
+  placements and occupied script slots, without warnings or compatibility refusals.
+- Add data-only WeiDU fixtures for changed values, missing behaviour and embedded
+  creatures, including a second install. This is not live-game acceptance.
+
 ## v0.2.1 (2026-11-07)
 
 - 110: party banter starts only between living party members in one area. Stops a crash

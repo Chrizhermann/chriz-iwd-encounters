@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 *.log
 
+# Disposable extracted game data and retained failing fixtures.
+.overwrite-work/
+overwrite-*/

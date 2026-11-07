@@ -1,0 +1,42 @@
+// Decided encounter blocks; based on the IWD:EE game rules.
+IF
+  GlobalGT("CAST_KNELL","LOCALS",1)
+  !Difficulty(EASIEST)
+  !GlobalTimerNotExpired("CIE_MEB_WAIL","LOCALS")
+  See(NearestEnemyOf(Myself))
+THEN
+  RESPONSE #50
+    SetGlobal("CAST_KNELL","LOCALS",0)
+    ForceSpell(NearestEnemyOf(Myself),INNATE_DEATH_KNELL)
+    SetGlobalTimer("CIE_MEB_WAIL","LOCALS",7)
+  RESPONSE #25
+    ForceSpell(NearestEnemyOf(Myself),INNATE_MOURNFUL_WAIL)
+    SetGlobalTimer("CIE_MEB_WAIL","LOCALS",7)
+  RESPONSE #25
+    ForceSpell(NearestEnemyOf(Myself),INNATE_UNDYING_LAMENT)
+    SetGlobalTimer("CIE_MEB_WAIL","LOCALS",7)
+END
+
+IF
+  !GlobalTimerNotExpired("CIE_MEB_WAIL","LOCALS")
+  See(NearestEnemyOf(Myself))
+THEN
+  RESPONSE #50
+    IncrementGlobal("CAST_KNELL","LOCALS",1)
+    ForceSpell(NearestEnemyOf(Myself),INNATE_MOURNFUL_WAIL)
+    SetGlobalTimer("CIE_MEB_WAIL","LOCALS",7)
+  RESPONSE #50
+    IncrementGlobal("CAST_KNELL","LOCALS",1)
+    ForceSpell(NearestEnemyOf(Myself),INNATE_UNDYING_LAMENT)
+    SetGlobalTimer("CIE_MEB_WAIL","LOCALS",5)
+END
+
+IF
+  !GlobalTimerNotExpired("CIE_MEB_RUN","LOCALS")
+  Allegiance(Myself,ENEMY)
+  AttackedBy([GOODCUTOFF],DEFAULT)
+THEN
+  RESPONSE #100
+    SetGlobalTimer("CIE_MEB_RUN","LOCALS",18)
+    RunAwayFromNoLeaveArea(LastAttackerOf(Myself),45)
+END

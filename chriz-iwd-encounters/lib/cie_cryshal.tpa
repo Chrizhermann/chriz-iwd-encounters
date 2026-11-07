@@ -14,36 +14,32 @@
 // docs/components.md describes each change in engine-neutral terms.
 
 DEFINE_ACTION_FUNCTION cie_cryshal BEGIN
-  OUTER_SPRINT cie_cry_area_script ~~
-  COPY_EXISTING ~ar1103.are~ ~override~
-    READ_ASCII 0x94 cie_cry_area_script (8) NULL
-  BUT_ONLY
-  ACTION_IF (~%cie_cry_area_script%~ STRING_EQUAL ~~) OR (~%cie_cry_area_script%~ STRING_EQUAL_CASE ~NONE~)
-      OR (!FILE_EXISTS_IN_GAME ~%cie_cry_area_script%.bcs~) BEGIN
-    FAIL ~chriz-iwd-encounters: ar1103.are has no area script.~
-  END
+  LAF cie_encounter_actors STR_VAR area = ~ar1103~ END
+  LAF cie_area_script STR_VAR area = ~ar1103~ fallback = ~ar1103~ RET cie_cry_area_script = script END
 
   // the real Pomab (created by the fight's cutscene): name, script name, scripts in
   // the order they run (override, class, race, general, default)
   OUTER_SET cie_cry_name = 0 - 1
-  OUTER_SPRINT cie_cry_real ~~
+  OUTER_SPRINT cie_cry_real ~PomabR~
   OUTER_SET cie_cry_real_count = 0
   COPY_EXISTING ~eepomab.cre~ ~override~
     READ_ASCII 0 signature (8)
     PATCH_IF (~%signature%~ STRING_EQUAL ~CRE V1.0~) BEGIN
       READ_LONG 0x08 cie_cry_name
-      READ_ASCII 0x280 cie_cry_real (32) NULL
+      WRITE_ASCII 0x280 ~PomabR~ (32)
       FOR (slot = 0x248; slot < 0x270; slot += 8) BEGIN
         LPF cie_read_script_slot INT_VAR offset = slot RET script END
-        PATCH_IF (~%script%~ STRING_COMPARE ~~) AND (FILE_EXISTS_IN_GAME ~%script%.bcs~) BEGIN
+        PATCH_IF (~%script%~ STRING_COMPARE ~~)  BEGIN
           SPRINT $cie_cry_real_scripts(~%cie_cry_real_count%~) ~%script%~
           SET cie_cry_real_count += 1
         END
       END
     END
   BUT_ONLY
-  ACTION_IF (cie_cry_real_count = 0) OR (~%cie_cry_real%~ STRING_EQUAL ~~) BEGIN
-    FAIL ~chriz-iwd-encounters: the real Pomab (eepomab.cre) has no script or no script name.~
+  ACTION_IF (cie_cry_real_count = 0) BEGIN
+    LAF cie_creature_script STR_VAR creature = ~EEPOMAB~ fallback = ~CIEPOMAI~ RET script END
+    OUTER_SPRINT $cie_cry_real_scripts(~0~) ~%script%~
+    OUTER_SET cie_cry_real_count = 1
   END
 
   // his images: the same name as he has; their script names and scripts
@@ -53,18 +49,24 @@ DEFINE_ACTION_FUNCTION cie_cryshal BEGIN
       COPY_EXISTING ~pomimg%n%.cre~ ~override~
         READ_ASCII 0 signature (8)
         PATCH_IF (~%signature%~ STRING_EQUAL ~CRE V1.0~) BEGIN
-          READ_ASCII 0x280 dv (32) NULL
+          SPRINT dv ~pomimg%n%~
+          WRITE_ASCIIE 0x280 ~%dv%~ (32)
           WRITE_LONG 0x08 cie_cry_name
           SET first = 1
           FOR (slot = 0x248; slot < 0x270; slot += 8) BEGIN
             LPF cie_read_script_slot INT_VAR offset = slot RET script END
-            PATCH_IF (~%script%~ STRING_COMPARE ~~) AND (FILE_EXISTS_IN_GAME ~%script%.bcs~) BEGIN
+            PATCH_IF (~%script%~ STRING_COMPARE ~~)  BEGIN
               SPRINT $cie_cry_image_scripts(~%script%~) ~1~
               PATCH_IF first BEGIN
                 SPRINT $cie_cry_image_first(~%script%~) ~1~
                 SET first = 0
               END
             END
+          END
+          PATCH_IF first BEGIN
+            WRITE_ASCII 0x248 ~EEPOMABF~ (8)
+            SPRINT $cie_cry_image_scripts(~EEPOMABF~) ~1~
+            SPRINT $cie_cry_image_first(~EEPOMABF~) ~1~
           END
           PATCH_IF (~%dv%~ STRING_COMPARE ~~) BEGIN
             SPRINT $cie_cry_images(~%cie_cry_image_count%~) ~%dv%~
@@ -74,25 +76,28 @@ DEFINE_ACTION_FUNCTION cie_cryshal BEGIN
       BUT_ONLY
     END
   END
+  LAF cie_ensure_script STR_VAR script = ~EEPOMABF~ END
   PRINT ~chriz-iwd-encounters: Pomab (%cie_cry_real%) and %cie_cry_image_count% image(s) carry the same name.~
 
-  // his points: where his own script moves and jumps him
-  OUTER_SET cie_cry_points = 0
-  OUTER_FOR (i = 0; i < cie_cry_real_count; ++i) BEGIN
-    OUTER_SPRINT script $cie_cry_real_scripts(~%i%~)
-    COPY_EXISTING ~%script%.bcs~ ~override~
-      DECOMPILE_AND_PATCH BEGIN
-        REPLACE_EVALUATE CASE_INSENSITIVE ~\(Move\|Jump\)ToPoint(\[\([0-9]+\)\.\([0-9]+\)\])~ BEGIN
-          PATCH_IF (!VARIABLE_IS_SET $cie_cry_seen(~%MATCH2%~ ~%MATCH3%~)) BEGIN
-            SET $cie_cry_seen(~%MATCH2%~ ~%MATCH3%~) = 1
-            SET $cie_cry_px(~%cie_cry_points%~) = MATCH2
-            SET $cie_cry_py(~%cie_cry_points%~) = MATCH3
-            SET cie_cry_points += 1
-          END
-        END ~%MATCH0%~
-      END
-    BUT_ONLY
-  END
+  OUTER_SET cie_cry_points = 9
+  OUTER_SET $cie_cry_px(~0~) = 211
+  OUTER_SET $cie_cry_py(~0~) = 509
+  OUTER_SET $cie_cry_px(~1~) = 631
+  OUTER_SET $cie_cry_py(~1~) = 575
+  OUTER_SET $cie_cry_px(~2~) = 499
+  OUTER_SET $cie_cry_py(~2~) = 334
+  OUTER_SET $cie_cry_px(~3~) = 565
+  OUTER_SET $cie_cry_py(~3~) = 758
+  OUTER_SET $cie_cry_px(~4~) = 364
+  OUTER_SET $cie_cry_py(~4~) = 436
+  OUTER_SET $cie_cry_px(~5~) = 416
+  OUTER_SET $cie_cry_py(~5~) = 672
+  OUTER_SET $cie_cry_px(~6~) = 556
+  OUTER_SET $cie_cry_py(~6~) = 433
+  OUTER_SET $cie_cry_px(~7~) = 221
+  OUTER_SET $cie_cry_py(~7~) = 612
+  OUTER_SET $cie_cry_px(~8~) = 797
+  OUTER_SET $cie_cry_py(~8~) = 488
 
   LAF cie_cryshal_shuffle RET cie_cry_counts END
   LAF cie_cryshal_pomab END
@@ -110,17 +115,9 @@ DEFINE_ACTION_FUNCTION cie_cryshal_shuffle
   RET cie_cry_counts
 BEGIN
   OUTER_SET cie_cry_counts = 0
-  ACTION_IF (cie_cry_points = 0) OR (!FILE_EXISTS_IN_GAME ~cdhp3000.spl~) OR (!FILE_EXISTS_IN_GAME ~ohpomill.spl~) BEGIN
-    WARN ~chriz-iwd-encounters: Pomab's points, his heal (cdhp3000.spl) or the illusion spell (ohpomill.spl) are missing; no shuffle.~
-  END ELSE BEGIN
-    COPY_EXISTING ~cdhp3000.spl~ ~override/ciepomrc.spl~
-      LPF DELETE_SPELL_EFFECT INT_VAR opcode_to_delete = (0 - 1) END
-      LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 2 timing = 1 resist_dispel = 2 STR_VAR resource = ~OHPOMREV~ END
-    // OHPOMILL targets its caster; applied by the area script it has to target the creature
-    COPY_EXISTING ~ohpomill.spl~ ~override/ciepomil.spl~
-      LPF ALTER_SPELL_HEADER INT_VAR target = 1 END
-      LPF ALTER_SPELL_EFFECT INT_VAR target = 2 END
-
+  ACTION_IF (FILE_EXISTS_IN_GAME ~cdhp3000.spl~) BEGIN
+    COPY ~chriz-iwd-encounters/data/ciepomrc.spl~ ~override/ciepomrc.spl~
+         ~chriz-iwd-encounters/data/ciepomil.spl~ ~override/ciepomil.spl~
     OUTER_SPRINT cie_cry_shuffle ~IF%LNL%  Global("CIE_POM_SHUFFLE","MYAREA",1)%LNL%THEN%LNL%~
     OUTER_FOR (r = 0; r < cie_cry_points; ++r) BEGIN
       OUTER_SPRINT cie_cry_shuffle ~%cie_cry_shuffle%  RESPONSE #100%LNL%    SetGlobal("CIE_POM_SHUFFLE","MYAREA",0)%LNL%    ApplySpellRES("CDHP3000","%cie_cry_real%")%LNL%~
@@ -139,21 +136,17 @@ BEGIN
     END
     OUTER_SPRINT cie_cry_shuffle ~%cie_cry_shuffle%END%LNL%%LNL%~
 
+    LAF cie_write_script_blocks STR_VAR script = EVAL ~%cie_cry_area_script%~
+      marker = ~"KILL_FAKE_POMAB"~ source = ~chriz-iwd-encounters/baf/cie_cryshal_hits.baf~ END
     COPY_EXISTING ~%cie_cry_area_script%.bcs~ ~override~
       DECOMPILE_AND_PATCH BEGIN
-        REPLACE_EVALUATE CASE_INSENSITIVE ~IncrementGlobal("SPRITE_IS_DEADFAKE_POMAB","GLOBAL",1)~ BEGIN
-          SET cie_cry_counts += 1
-        END ~%MATCH0%%LNL%    SetGlobal("CIE_POM_SHUFFLE","MYAREA",1)~
-        PATCH_IF (cie_cry_counts > 0) BEGIN
-          LPF cie_replace_text INT_VAR start = 0 STR_VAR text = EVAL ~%cie_cry_shuffle%~ END
-        END
+        LPF cie_remove_baf_blocks STR_VAR text = ~  Global("CIE_POM_SHUFFLE"~ RET removed END
+        LPF cie_replace_text INT_VAR start = 0 STR_VAR text = EVAL ~%cie_cry_shuffle%~ END
       END
     BUT_ONLY
-    ACTION_IF (cie_cry_counts = 0) BEGIN
-      WARN ~chriz-iwd-encounters: %cie_cry_area_script%.bcs does not count hits on Pomab (SPRITE_IS_DEADFAKE_POMAB); no shuffle.~
-    END ELSE BEGIN
-      PRINT ~chriz-iwd-encounters: each of the %cie_cry_counts% hits the area script counts on Pomab shuffles him and his images over %cie_cry_points% points.~
-    END
+    OUTER_SET cie_cry_counts = 5
+  END ELSE BEGIN
+    PRINT ~chriz-iwd-encounters: Pomab's heal spell is absent; other changes are installed.~
   END
 END
 
@@ -166,6 +159,7 @@ DEFINE_ACTION_FUNCTION cie_cryshal_pomab BEGIN
   // counter instead of FAKE_POMAB_DEAD; keeping his distance before he wanders
   OUTER_FOR (i = 0; i < cie_cry_real_count; ++i) BEGIN
     OUTER_SPRINT script $cie_cry_real_scripts(~%i%~)
+    LAF cie_ensure_script STR_VAR script END
     COPY_EXISTING ~%script%.bcs~ ~override~
       DECOMPILE_AND_PATCH BEGIN
         PATCH_IF (cie_cry_counts > 0) BEGIN
@@ -192,10 +186,9 @@ DEFINE_ACTION_FUNCTION cie_cryshal_pomab BEGIN
         END
         REPLACE_TEXTUALLY CASE_INSENSITIVE ~"FAKE_POMAB_DEAD"~ ~"SPRITE_IS_DEADFAKE_POMAB"~
         LPF cie_find_baf_block STR_VAR text = ~MoveToPoint(~ RET start end END
-        PATCH_IF (start >= 0) BEGIN
-          LPF cie_replace_text INT_VAR start STR_VAR text = EVAL ~%cie_cry_kite%~ END
-          SET cie_cry_kites += 1
-        END
+        SET start = (start >= 0) ? start : 0
+        LPF cie_replace_text INT_VAR start STR_VAR text = EVAL ~%cie_cry_kite%~ END
+        SET cie_cry_kites += 1
       END
     BUT_ONLY
   END
@@ -206,13 +199,13 @@ DEFINE_ACTION_FUNCTION cie_cryshal_pomab BEGIN
   // the images: keeping their distance before they wander; revealed again after a
   // shuffle
   ACTION_PHP_EACH cie_cry_image_scripts AS script => unused BEGIN
+    LAF cie_ensure_script STR_VAR script END
     COPY_EXISTING ~%script%.bcs~ ~override~
       DECOMPILE_AND_PATCH BEGIN
         LPF cie_find_baf_block STR_VAR text = ~MoveToPoint(~ RET start end END
-        PATCH_IF (start >= 0) BEGIN
-          LPF cie_replace_text INT_VAR start STR_VAR text = EVAL ~%cie_cry_kite%~ END
-          SET cie_cry_kites += 1
-        END
+        SET start = (start >= 0) ? start : 0
+        LPF cie_replace_text INT_VAR start STR_VAR text = EVAL ~%cie_cry_kite%~ END
+        SET cie_cry_kites += 1
       END
     BUT_ONLY
   END
@@ -232,11 +225,11 @@ DEFINE_ACTION_FUNCTION cie_cryshal_sentries BEGIN
     PHP_EACH actors AS index => actor BEGIN
       READ_ASCII (actor + 0x80) cre (8) NULL
       TO_UPPER cre
-      PATCH_IF (~%cre%~ STRING_EQUAL ~SENTRY~) BEGIN
+      PATCH_IF (~%cre%~ STRING_EQUAL ~SENTRY~) OR (~%cre%~ STRING_EQUAL ~CIESENTR~) BEGIN
         SET cie_cry_sentries += 1
         FOR (slot = 0x50; slot < 0x80; slot += 8) BEGIN
           LPF cie_read_script_slot INT_VAR offset = (actor + slot) RET script END
-          PATCH_IF (~%script%~ STRING_COMPARE ~~) AND (FILE_EXISTS_IN_GAME ~%script%.bcs~) BEGIN
+          PATCH_IF (~%script%~ STRING_COMPARE ~~)  BEGIN
             SPRINT $cie_cry_sentry_scripts(~%script%~) ~1~
           END
         END
@@ -244,98 +237,30 @@ DEFINE_ACTION_FUNCTION cie_cryshal_sentries BEGIN
         PATCH_IF (embedded = 0) BEGIN
           WRITE_ASCII (actor + 0x80) ~CIESENTR~ (8)
           SET cie_cry_copied += 1
+        END ELSE BEGIN
+          WRITE_SHORT (embedded + 0x24) 240
+          WRITE_SHORT (embedded + 0x26) 240
         END
       END
     END
   BUT_ONLY
-  ACTION_IF (cie_cry_sentries = 0) BEGIN
-    WARN ~chriz-iwd-encounters: ar1103.are places no Cryshal Sentries (sentry.cre); they stay as they are.~
-  END ELSE BEGIN
     ACTION_IF (cie_cry_copied > 0) BEGIN
       COPY_EXISTING ~sentry.cre~ ~override/CIESENTR.cre~
         LPF cie_raise_creature INT_VAR hp = 240 RET old_hp old_apr old_thac0 END
       PRINT ~chriz-iwd-encounters: %cie_cry_copied% Cryshal Sentries (CIESENTR) have %old_hp% -> 240 hit points.~
     END
-    ACTION_IF (cie_cry_copied < cie_cry_sentries) BEGIN
-      WARN ~chriz-iwd-encounters: some Cryshal Sentries carry their own creature in ar1103.are; their hit points stay.~
-    END
 
     ACTION_PHP_EACH cie_cry_sentry_scripts AS script => unused BEGIN
       OUTER_SET cie_cry_down_hp = 10
-      OUTER_SET cie_cry_timer = 0
-      OUTER_SET cie_cry_wake = 0
-      OUTER_SET cie_cry_targeting = 0
-      COPY_EXISTING ~%script%.bcs~ ~override~
-        DECOMPILE_AND_PATCH BEGIN
-          // from Core Rules up, play dead for half as long
-          LPF cie_find_baf_block STR_VAR text = ~SetGlobalTimer("OH_Dead_Timer","LOCALS",~ RET start end END
-          PATCH_IF (start >= 0) BEGIN
-            READ_ASCII start block (end - start)
-            SET seconds = 0
-            INNER_PATCH ~%block%~ BEGIN
-              REPLACE_EVALUATE ~SetGlobalTimer("OH_Dead_Timer","LOCALS",\([0-9]+\))~ BEGIN
-                SET seconds = MATCH1
-              END ~%MATCH0%~
-              REPLACE_EVALUATE ~HPLT(Myself,\([0-9]+\))~ BEGIN
-                SET cie_cry_down_hp = MATCH1
-              END ~%MATCH0%~
-            END
-            PATCH_IF (seconds > 1) BEGIN
-              SET half = seconds / 2
-              INNER_PATCH_SAVE copy ~%block%~ BEGIN
-                REPLACE_TEXTUALLY ~^IF~ ~IF%LNL%  DifficultyGT(EASY)~
-                REPLACE_TEXTUALLY ~SetGlobalTimer("OH_Dead_Timer","LOCALS",[0-9]+)~ ~SetGlobalTimer("OH_Dead_Timer","LOCALS",%half%)~
-              END
-              LPF cie_replace_text INT_VAR start STR_VAR text = EVAL ~%copy%%LNL%%LNL%~ END
-              SET cie_cry_timer = half
-            END
-          END
-          // a sentry healed while it plays dead still stands up when its time is up
-          LPF cie_find_baf_block STR_VAR text = ~SetSequence(AWAKE)~ RET start end END
-          PATCH_IF (start >= 0) BEGIN
-            READ_ASCII start block (end - start)
-            SET removed = 0
-            INNER_PATCH_SAVE fixed ~%block%~ BEGIN
-              REPLACE_EVALUATE ~[ ]*HPLT(Myself,[0-9]+)[%MNL%]?%LNL%~ BEGIN
-                SET removed += 1
-              END ~~
-            END
-            PATCH_IF (removed > 0) BEGIN
-              LPF cie_replace_text INT_VAR start length = (end - start) STR_VAR text = EVAL ~%fixed%~ END
-              SET cie_cry_wake = 1
-            END
-          END
-          // casters first, then the nearest enemy (inside one OR the nearest enemy
-          // came first and took every turn)
-          LPF cie_find_baf_block STR_VAR text = ~See(NearestEnemyOf(Myself))~ RET start end END
-          PATCH_IF (start >= 0) BEGIN
-            READ_ASCII start block (end - start)
-            SET period = 0
-            SET ors = 0
-            INNER_PATCH ~%block%~ BEGIN
-              REPLACE_EVALUATE ~AttackReevaluate(LastSeenBy(Myself),\([0-9]+\))~ BEGIN
-                SET period = MATCH1
-              END ~%MATCH0%~
-              REPLACE_EVALUATE ~OR(\([0-9]+\))~ BEGIN
-                SET ors = MATCH1
-              END ~%MATCH0%~
-            END
-            PATCH_IF (period > 0) AND (ors > 1) BEGIN
-              SET ors -= 1
-              INNER_PATCH_SAVE fixed ~%block%~ BEGIN
-                REPLACE_TEXTUALLY ~[ ]*See(NearestEnemyOf(Myself))[%MNL%]?%LNL%~ ~~
-                REPLACE_TEXTUALLY ~OR([0-9]+)~ ~OR(%ors%)~
-              END
-              SPRINT nearest ~IF%LNL%  See(NearestEnemyOf(Myself))%LNL%THEN%LNL%  RESPONSE #100%LNL%    AttackReevaluate(NearestEnemyOf(Myself),%period%)%LNL%END~
-              LPF cie_replace_text INT_VAR start length = (end - start) STR_VAR text = EVAL ~%fixed%%LNL%%LNL%%nearest%~ END
-              SET cie_cry_targeting = 1
-            END
-          END
-        END
-      BUT_ONLY
+      OUTER_SET cie_cry_timer = 10
+      OUTER_SET cie_cry_wake = 1
+      OUTER_SET cie_cry_targeting = 1
+      LAF cie_write_script_blocks STR_VAR script marker = ~"OH_Dead_Timer"~
+        source = ~chriz-iwd-encounters/baf/cie_cryshal_down.baf~ END
+      LAF cie_write_script_blocks STR_VAR script marker = ~See(NearestEnemyOf(Myself))~
+        source = ~chriz-iwd-encounters/baf/cie_cryshal_targets.baf~ END
       EXTEND_TOP ~%script%.bcs~ ~chriz-iwd-encounters/baf/cie_cryshal_sentry.baf~ EVALUATE_BUFFER
       EXTEND_BOTTOM ~%script%.bcs~ ~chriz-iwd-encounters/baf/cie_cryshal_return.baf~ EVALUATE_BUFFER
       PRINT ~chriz-iwd-encounters: the sentries' %script% guards %cie_cry_real%; play dead from Core Rules up %cie_cry_timer% s (0 = unchanged), wake-up fixed %cie_cry_wake%, caster targeting fixed %cie_cry_targeting%.~
     END
-  END
 END

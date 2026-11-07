@@ -11,14 +11,8 @@
 // docs/components.md describes each change in engine-neutral terms.
 
 DEFINE_ACTION_FUNCTION cie_joril BEGIN
-  OUTER_SPRINT cie_jor_area_script ~~
-  COPY_EXISTING ~ar7004.are~ ~override~
-    READ_ASCII 0x94 cie_jor_area_script (8) NULL
-  BUT_ONLY
-  ACTION_IF (~%cie_jor_area_script%~ STRING_EQUAL ~~) OR (~%cie_jor_area_script%~ STRING_EQUAL_CASE ~NONE~)
-      OR (!FILE_EXISTS_IN_GAME ~%cie_jor_area_script%.bcs~) BEGIN
-    FAIL ~chriz-iwd-encounters: ar7004.are has no area script.~
-  END
+  LAF cie_encounter_actors STR_VAR area = ~ar7004~ END
+  LAF cie_area_script STR_VAR area = ~ar7004~ fallback = ~ar7004~ RET cie_jor_area_script = script END
   // the court's scripts: what Joril's, his bodyguards' and his guards' placements run
   // (base game: WTGIANT1), leaving out the base game's difficulty script and teams;
   // Gorg's script; the placed wolves of his pack by script name
@@ -66,14 +60,17 @@ DEFINE_ACTION_FUNCTION cie_joril BEGIN
   LAF cie_joril_court END
   LAF cie_joril_gorg END
   LAF cie_joril_badge END
+  LAF cie_placed_stats INT_VAR hp = 185 STR_VAR area = ~ar7004~ creature = ~joril~ END
 END
 
-// Joril's hit points: 185, never lower than what he has.
+// Joril's hit points: 185.
 DEFINE_ACTION_FUNCTION cie_joril_hit_points BEGIN
   ACTION_IF FILE_EXISTS_IN_GAME ~joril.cre~ BEGIN
     COPY_EXISTING ~joril.cre~ ~override~
       LPF cie_raise_creature INT_VAR hp = 185 RET old_hp old_apr old_thac0 END
     PRINT ~chriz-iwd-encounters: Joril has %old_hp% -> 185 hit points.~
+  END ELSE BEGIN
+    PRINT ~chriz-iwd-encounters: joril.cre is absent; placed creatures and the other court changes are installed.~
   END
 END
 
@@ -83,37 +80,25 @@ END
 DEFINE_ACTION_FUNCTION cie_joril_court BEGIN
   OUTER_SET cie_jor_scripts = 0
   ACTION_PHP_EACH cie_jor_court AS script => unused BEGIN
+    LAF cie_ensure_script STR_VAR script END
     ACTION_IF FILE_EXISTS_IN_GAME ~%script%.bcs~ BEGIN
       EXTEND_TOP ~%script%.bcs~ ~chriz-iwd-encounters/baf/cie_joril_court.baf~
       OUTER_SET cie_jor_scripts += 1
     END
   END
-  ACTION_IF (cie_jor_scripts = 0) BEGIN
-    WARN ~chriz-iwd-encounters: Joril's court runs no script this component knows; it fights as before.~
-  END ELSE BEGIN
     PRINT ~chriz-iwd-encounters: Joril's court uses Hold Person and the Berserker rage (%cie_jor_scripts% script).~
-  END
 END
 
 // Gorg: once he is hostile his script sets his pack's group variable
 // (MAP_GROUP_HOSTILE1, which his base script answers to) and CIE_JOR_GORG; the area
 // script then sends the placed wolves of the pack to him.
 DEFINE_ACTION_FUNCTION cie_joril_gorg BEGIN
-  OUTER_SET cie_jor_pack_var = 0
-  ACTION_IF (~%cie_jor_gorg%~ STRING_COMPARE ~~) AND FILE_EXISTS_IN_GAME ~%cie_jor_gorg%.bcs~ BEGIN
-    COPY_EXISTING ~%cie_jor_gorg%.bcs~ ~override~
-      PATCH_IF (INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~"MYAREAMAP_GROUP_HOSTILE1"~) >= 0) BEGIN
-        SET cie_jor_pack_var = 1
-      END
-    BUT_ONLY
+  ACTION_IF (~%cie_jor_gorg%~ STRING_EQUAL ~~) BEGIN
+    OUTER_SPRINT cie_jor_gorg ~WTGORG~
   END
-  ACTION_IF (cie_jor_pack_var = 0) OR (cie_jor_wolves = 0) BEGIN
-    WARN ~chriz-iwd-encounters: Gorg's pack stays as it is (Gorg's script "%cie_jor_gorg%" answers to MAP_GROUP_HOSTILE1: %cie_jor_pack_var%; wolves placed by name: %cie_jor_wolves%).~
-  END ELSE BEGIN
-    EXTEND_TOP ~%cie_jor_gorg%.bcs~ ~chriz-iwd-encounters/baf/cie_joril_gorg.baf~
-    EXTEND_TOP ~%cie_jor_area_script%.bcs~ ~chriz-iwd-encounters/baf/cie_joril_pack.baf~ EVALUATE_BUFFER
-    PRINT ~chriz-iwd-encounters: when Gorg turns hostile, his pack (%cie_jor_wolves% wolves) turns with him and comes to him.~
-  END
+  LAF cie_ensure_script STR_VAR script = EVAL ~%cie_jor_gorg%~ END
+  EXTEND_TOP ~%cie_jor_gorg%.bcs~ ~chriz-iwd-encounters/baf/cie_joril_gorg.baf~
+  EXTEND_TOP ~%cie_jor_area_script%.bcs~ ~chriz-iwd-encounters/baf/cie_joril_pack.baf~ EVALUATE_BUFFER
 END
 
 // The badge: the area script pays "Level_10_AVERAGE" when the party has Joril's
@@ -121,33 +106,8 @@ END
 // already paid the same. The payment moves into its own block that also needs
 // Got_Joril_Badge 0; the badge block keeps the rest.
 DEFINE_ACTION_FUNCTION cie_joril_badge BEGIN
-  OUTER_SPRINT cie_jor_xp ~~
-  COPY_EXISTING ~%cie_jor_area_script%.bcs~ ~override~
-    DECOMPILE_AND_PATCH BEGIN
-      SET at = INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~Global("JORIL_BADGE","GLOBAL",0)~)
-      PATCH_IF (at >= 0) BEGIN
-        SET start = RINDEX_BUFFER (CASE_SENSITIVE EVALUATE_REGEXP ~^IF~ at)
-        SET end = INDEX_BUFFER (CASE_SENSITIVE EVALUATE_REGEXP ~^END~ at)
-        PATCH_IF (start >= 0) AND (end > start) BEGIN
-          READ_ASCII start block (end - start)
-          PATCH_IF (INDEX (CASE_INSENSITIVE EXACT_MATCH ~PartyHasItem("JORIL")~ ~%block%~) >= 0) BEGIN
-            INNER_PATCH_SAVE block ~%block%~ BEGIN
-              REPLACE_EVALUATE CASE_INSENSITIVE ~[%TAB% ]*AddXP2DA("\([^"]+\)")[%TAB% ]*[%MNL%]?[%LNL%]~ BEGIN
-                SPRINT cie_jor_xp ~%MATCH1%~
-              END ~~
-            END
-            DELETE_BYTES start (end - start)
-            INSERT_BYTES start (STRING_LENGTH ~%block%~)
-            WRITE_ASCIIE start ~%block%~
-          END
-        END
-      END
-    END
-  BUT_ONLY
-  ACTION_IF (~%cie_jor_xp%~ STRING_EQUAL ~~) BEGIN
-    WARN ~chriz-iwd-encounters: found no experience payment in %cie_jor_area_script%.bcs's badge block; it stays as it is.~
-  END ELSE BEGIN
-    EXTEND_TOP ~%cie_jor_area_script%.bcs~ ~chriz-iwd-encounters/baf/cie_joril_badge.baf~ EVALUATE_BUFFER
-    PRINT ~chriz-iwd-encounters: Joril's badge pays %cie_jor_xp% only when he did not hand it over himself.~
-  END
+  OUTER_SPRINT cie_jor_xp ~Level_10_AVERAGE~
+  LAF cie_write_script_blocks STR_VAR script = EVAL ~%cie_jor_area_script%~
+    marker = ~SetGlobal("JORIL_BADGE"~ source = ~chriz-iwd-encounters/baf/cie_joril_badge_record.baf~ END
+  EXTEND_TOP ~%cie_jor_area_script%.bcs~ ~chriz-iwd-encounters/baf/cie_joril_badge.baf~ EVALUATE_BUFFER
 END
