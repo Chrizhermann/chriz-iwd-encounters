@@ -1,0 +1,10 @@
+// Decided encounter blocks; based on the IWD:EE game rules.
+IF
+  Global("JORIL_BADGE","GLOBAL",0)
+  PartyHasItem("JORIL")
+THEN
+  RESPONSE #100
+    SetGlobal("JORIL_BADGE","GLOBAL",1)
+    DisplayStringNoName(Myself,19559)
+    Continue()
+END

@@ -11,14 +11,8 @@
 // docs/components.md describes each change in engine-neutral terms.
 
 DEFINE_ACTION_FUNCTION cie_poquelin BEGIN
-  OUTER_SPRINT cie_poq_area_script ~~
-  COPY_EXISTING ~ar8013.are~ ~override~
-    READ_ASCII 0x94 cie_poq_area_script (8) NULL
-  BUT_ONLY
-  ACTION_IF (~%cie_poq_area_script%~ STRING_EQUAL ~~) OR (~%cie_poq_area_script%~ STRING_EQUAL_CASE ~NONE~)
-      OR (!FILE_EXISTS_IN_GAME ~%cie_poq_area_script%.bcs~) BEGIN
-    FAIL ~chriz-iwd-encounters: ar8013.are has no area script.~
-  END
+  LAF cie_encounter_actors STR_VAR area = ~ar8013~ END
+  LAF cie_area_script STR_VAR area = ~ar8013~ fallback = ~ar8013~ RET cie_poq_area_script = script END
   // his placement: script, script name (actor name when flag bit 3 is set)
   OUTER_SPRINT cie_poq_script ~~
   OUTER_SPRINT cie_poq_name ~~
@@ -29,7 +23,7 @@ DEFINE_ACTION_FUNCTION cie_poquelin BEGIN
     PHP_EACH actors AS index => actor BEGIN
       READ_ASCII (actor + 0x80) cre (8) NULL
       TO_UPPER cre
-      PATCH_IF (~%cre%~ STRING_EQUAL ~POQUELIN~) AND (~%cie_poq_script%~ STRING_EQUAL ~~) BEGIN
+      PATCH_IF ((~%cre%~ STRING_EQUAL ~POQUELIN~) OR (~%cre%~ STRING_EQUAL ~CIEPOQ~)) AND (~%cie_poq_script%~ STRING_EQUAL ~~) BEGIN
         READ_LONG (actor + 0x28) flags
         READ_ASCII actor name (32) NULL
         READ_SHORT (actor + 0x20) cie_poq_x
@@ -48,9 +42,7 @@ DEFINE_ACTION_FUNCTION cie_poquelin BEGIN
       END
     END
   BUT_ONLY
-  ACTION_IF (~%cie_poq_script%~ STRING_EQUAL ~~) OR (!FILE_EXISTS_IN_GAME ~%cie_poq_script%.bcs~) BEGIN
-    FAIL ~chriz-iwd-encounters: ar8013.are has no Poquelin (POQUELIN) with a script.~
-  END
+  LAF cie_ensure_script STR_VAR script = EVAL ~%cie_poq_script%~ END
 
   LAF cie_poquelin_creature END
   LAF cie_poquelin_jump END
@@ -62,29 +54,35 @@ END
 // (imprisonment), 238 (disintegration). On a copy of his creature (CIEPOQ) that only
 // this cave's placement uses: the finale in Easthaven places the same creature file.
 DEFINE_ACTION_FUNCTION cie_poquelin_creature BEGIN
-  OUTER_SET cie_poq_copied = 0
+  COPY_EXISTING ~poquelin.cre~ ~override/CIEPOQ.cre~
   COPY_EXISTING ~ar8013.are~ ~override~
     GET_OFFSET_ARRAY actors ARE_V10_ACTORS
     PHP_EACH actors AS index => actor BEGIN
       READ_ASCII (actor + 0x80) cre (8) NULL
-      TO_UPPER cre
-      LPF cie_embedded_cre INT_VAR actor RET embedded = offset END
-      PATCH_IF (~%cre%~ STRING_EQUAL ~POQUELIN~) AND (embedded = 0) BEGIN
+      PATCH_IF (~%cre%~ STRING_EQUAL_CASE ~POQUELIN~) OR (~%cre%~ STRING_EQUAL_CASE ~CIEPOQ~) BEGIN
+        LPF cie_embedded_cre INT_VAR actor RET embedded = offset END
+        PATCH_IF embedded BEGIN
+          READ_LONG (actor + 0x8c) size
+          INNER_ACTION BEGIN
+            COPY_EXISTING ~ar8013.are~ ~override/CIEPOQ.cre~
+              DELETE_BYTES (embedded + size) (BUFFER_LENGTH - embedded - size)
+              DELETE_BYTES 0 embedded
+          END
+        END
+        READ_LONG (actor + 0x28) flags
+        WRITE_LONG (actor + 0x28) (flags BOR 1)
+        WRITE_LONG (actor + 0x88) 0
+        WRITE_LONG (actor + 0x8c) 0
         WRITE_ASCII (actor + 0x80) ~CIEPOQ~ (8)
-        SET cie_poq_copied += 1
       END
     END
   BUT_ONLY
-  ACTION_IF (cie_poq_copied = 0) BEGIN
-    WARN ~chriz-iwd-encounters: Poquelin's placement in ar8013.are carries its own creature; his hit points and protections stay.~
-  END ELSE BEGIN
-    COPY_EXISTING ~poquelin.cre~ ~override/CIEPOQ.cre~
-      LPF cie_raise_creature INT_VAR hp = 420 RET old_hp old_apr old_thac0 END
-      PATCH_FOR_EACH op IN 13 55 134 209 211 238 BEGIN
-        LPF ADD_CRE_EFFECT INT_VAR opcode = 101 target = 1 timing = 9 parameter2 = op END
-      END
-    PRINT ~chriz-iwd-encounters: in the Ascension Cave Poquelin (CIEPOQ) has %old_hp% -> 420 hit points and nothing kills or removes him outright.~
-  END
+  COPY_EXISTING ~CIEPOQ.cre~ ~override~
+    LPF cie_raise_creature INT_VAR hp = 420 RET old_hp old_apr old_thac0 END
+    PATCH_FOR_EACH op IN 13 55 134 209 211 238 BEGIN
+      LPF cie_remove_cre_protection INT_VAR protected_opcode = op END
+      LPF ADD_CRE_EFFECT INT_VAR opcode = 101 target = 1 timing = 9 parameter2 = op END
+    END
 END
 
 // The jump: on top of his script, once between three quarters and half his hit
@@ -93,31 +91,21 @@ END
 // himself (he is fire immune). His script sets CIE_POQ_WAVE; the area script then
 // ends the pause before the next wave (only between waves, not in a spawn window).
 DEFINE_ACTION_FUNCTION cie_poquelin_jump BEGIN
-  OUTER_SET cie_poq_door_x = 0
-  OUTER_SET cie_poq_door_y = 0
-  // the opener's Dimension Door point, from his script
-  COPY_EXISTING ~%cie_poq_script%.bcs~ ~override~
-    DECOMPILE_AND_PATCH BEGIN
-      REPLACE_EVALUATE CASE_INSENSITIVE ~ForceSpellPoint(\[\([0-9]+\)\.\([0-9]+\)\],WIZARD_DIMENSION_DOOR)~ BEGIN
-        PATCH_IF (cie_poq_door_x = 0) BEGIN
-          SET cie_poq_door_x = MATCH1
-          SET cie_poq_door_y = MATCH2
-        END
-      END ~%MATCH0%~
-    END
-  BUT_ONLY
-  ACTION_IF (cie_poq_x = 0) OR (cie_poq_door_x = 0) BEGIN
-    WARN ~chriz-iwd-encounters: Poquelin's two places are not known (placement [%cie_poq_x%.%cie_poq_y%], opener's jump [%cie_poq_door_x%.%cie_poq_door_y%]); no jump at three quarters.~
-  END ELSE BEGIN
+  OUTER_SET cie_poq_door_x = 817
+  OUTER_SET cie_poq_door_y = 551
+  // The doorway point is part of the decided encounter, not an input fingerprint.
     EXTEND_TOP ~%cie_poq_script%.bcs~ ~chriz-iwd-encounters/baf/cie_poquelin_jump.baf~ EVALUATE_BUFFER
     EXTEND_TOP ~%cie_poq_area_script%.bcs~ ~chriz-iwd-encounters/baf/cie_poquelin_wave.baf~
     PRINT ~chriz-iwd-encounters: below three quarters Poquelin jumps between [%cie_poq_x%.%cie_poq_y%] and [%cie_poq_door_x%.%cie_poq_door_y%], calls Fire Storm, and the next wave comes at once.~
-  END
 END
 
 // The escape cutscenes (the ones his script starts below half) name him "POQUELIN",
 // his creature's script name; his placement names him by its actor name.
 DEFINE_ACTION_FUNCTION cie_poquelin_cutscenes BEGIN
+  ACTION_FOR_EACH cutscene IN ~ldpoqueb~ ~ldpoquec~ BEGIN
+    LAF cie_write_script_blocks STR_VAR script = EVAL ~%cutscene%~ marker = ~CutSceneId(~
+      source = EVAL ~chriz-iwd-encounters/baf/cie_%cutscene%.baf~ END
+  END
   ACTION_IF (~%cie_poq_name%~ STRING_COMPARE ~~) AND (~%cie_poq_name%~ STRING_COMPARE_CASE ~POQUELIN~) BEGIN
     ACTION_CLEAR_ARRAY cie_poq_cutscenes
     COPY_EXISTING ~%cie_poq_script%.bcs~ ~override~

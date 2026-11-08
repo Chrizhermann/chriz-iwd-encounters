@@ -374,7 +374,9 @@ def main():
     ch1, ch2 = cres.get("SDELFCH1"), cres.get("SDELFCH2")
     if ch1 and ch2:
         casters = [s for s in (slot(ch2, o) for o in CRE_SLOTS if o) if s and c.is_caster(s)]
-        c.check(bool(casters), "SDELFCH2 runs an SCS caster script (%s)" % ", ".join(casters))
+        donor_has_scs = any(c.is_caster(slot(ch1,o)) for o in CRE_SLOTS if o and slot(ch1,o))
+        c.check(bool(casters) if donor_has_scs else "SHELFCS1" in [slot(ch2,o) for o in CRE_SLOTS if o],
+                "SDELFCH2 runs the donor caster AI (SCS or SHELFCS1)")
         c.check(cre_priest_spells(ch2) == cre_priest_spells(ch1), "SDELFCH2 has SDELFCH1's SCS spell selection")
 
     # 100: no melee AI runs before an SCS caster AI, in creature files and area placements
@@ -415,7 +417,9 @@ def main():
     # 200: priest preparation
     prepared = [n for n in res.names("BCS") if b"cie_self" in c.script(n)]
     scs_prepared = [n for n in prepared if c.is_caster(n)]
-    c.check(len(scs_prepared) > 0, "%d SCS caster scripts carry the preparation" % len(scs_prepared))
+    priest_casters = {slot(d,o) for d in cres.values() for o in CRE_SLOTS if o
+                      and d[0x273] in (3,8,11,14,15,16,17,18,21) and c.is_caster(slot(d,o))}
+    c.check(priest_casters <= set(scs_prepared), "every existing SCS priest caster carries preparation (%d)" % len(scs_prepared))
     for script in ("SHELFPS1", "CAJSHA1M"):
         c.check(b"cie_self" in c.script(script), "%s carries the preparation" % script)
     # one copy of the blocks names CIE_SELF eight times (four checks, four sets)
@@ -743,7 +747,7 @@ def main():
                     for s in p["scripts"].values() if s and s != "EFDELDEF" and not s.startswith("GNTEAM")})
     if expect(330, bool(court) and any(b'"localscie_jor_rage"' in c.script(s) for s in court)):
         joril = cres.get("JORIL")
-        c.check(joril is not None and struct.unpack_from("<H", joril, 0x26)[0] >= 185,
+        c.check(joril is not None and struct.unpack_from("<H", joril, 0x26)[0] == 185,
                 "Joril has %d hit points" % (struct.unpack_from("<H", joril, 0x26)[0] if joril else 0))
         for script in court:
             c.check(b'"localscie_jor_hold"' in c.script(script) and b'"localscie_jor_rage"' in c.script(script),
@@ -769,7 +773,7 @@ def main():
     ilm_scripts = [s for s in ilm["scripts"].values() if s and not s.startswith("GNTEAM")] if ilm else []
     if expect(340, bool(ilm_scripts) and any(b'"localscie_ilm_aura"' in c.script(s) for s in ilm_scripts)):
         cre = cres.get("ILMADIA")
-        c.check(cre is not None and struct.unpack_from("<H", cre, 0x26)[0] >= 135,
+        c.check(cre is not None and struct.unpack_from("<H", cre, 0x26)[0] == 135,
                 "Maiden Ilmadia has %d hit points" % (struct.unpack_from("<H", cre, 0x26)[0] if cre else 0))
         for spell in ("SPCL102", "SPCL103", "SPCL423"):
             c.check(any(b'"' + spell.lower().encode() + b'"' in c.script(s) for s in ilm_scripts),
@@ -799,7 +803,7 @@ def main():
         c.check(pwk is not None and not [n for _, n in forced_spells(text_i) if n == pwk]
                 and b"ac\n113ob\n" in text_i, "the Idol casts without Power Word: Kill")
         cre = cres.get("IDOL")
-        c.check(cre is not None and struct.unpack_from("<H", cre, 0x26)[0] >= 225 and any(e[0] == 126 for e in cre_effects(cre)),
+        c.check(cre is not None and struct.unpack_from("<H", cre, 0x26)[0] == 225 and any(e[0] == 126 for e in cre_effects(cre)),
                 "the Idol has %d hit points and does not move" % (struct.unpack_from("<H", cre, 0x26)[0] if cre else 0))
         c.check(b'"myareacie_idol_rally"' in text_i, "the Idol calls its undead when attacked")
         text = c.script(slot(area, 0x94))
@@ -834,7 +838,7 @@ def main():
         c.check(poq is not None, "Poquelin's placement in the cave uses CIEPOQ")
         cre = res.get("CIEPOQ", "CRE")
         blocked = sorted({e[2] for e in cre_effects(cre) if e[0] == 101})
-        c.check(struct.unpack_from("<H", cre, 0x26)[0] >= 420 and all(op in blocked for op in (13, 55, 134, 209, 211, 238)),
+        c.check(struct.unpack_from("<H", cre, 0x26)[0] == 420 and all(op in blocked for op in (13, 55, 134, 209, 211, 238)),
                 "CIEPOQ has %d hit points and protections %s" % (struct.unpack_from("<H", cre, 0x26)[0], blocked))
         original = res.get("POQUELIN", "CRE")
         c.check(original is not None and not [e for e in cre_effects(original) if e[0] == 101 and e[2] == 238],
@@ -886,7 +890,7 @@ def main():
         sentries = [p for p in placed.values() if p["cre"] in ("SENTRY", "CIESENTR")]
         c.check(sentries and all(p["cre"] == "CIESENTR" for p in sentries), "the %d sentries use CIESENTR" % len(sentries))
         cre = res.get("CIESENTR", "CRE")
-        c.check(cre is not None and struct.unpack_from("<H", cre, 0x26)[0] >= 240,
+        c.check(cre is not None and struct.unpack_from("<H", cre, 0x26)[0] == 240,
                 "CIESENTR has %d hit points" % (struct.unpack_from("<H", cre, 0x26)[0] if cre else 0))
         for script in sorted({s for p in sentries for s in p["scripts"].values() if s}):
             t = c.script(script)
@@ -941,7 +945,7 @@ def main():
     if expect(390, len(fallback) == 2):
         for name, hp in (("ICASA", 650), ("DLSGEM", 250)):
             cre = cres.get(name)
-            c.check(cre is not None and struct.unpack_from("<H", cre, 0x26)[0] >= hp,
+            c.check(cre is not None and struct.unpack_from("<H", cre, 0x26)[0] == hp,
                     "%s has %d hit points" % (name, struct.unpack_from("<H", cre, 0x26)[0] if cre else 0))
         c.check(any(b'"dlsgem"' not in b for b in fallback), "with the gem there, the fallback creates no second gem")
         c.check(b'"ring91"' not in c.script("ILDRGDED"), "the fallback cutscene fills the gem's ring slot")
@@ -949,7 +953,7 @@ def main():
         if first and second:
             rnd = {i for i in cre_items(first) if i.startswith("DW#RND")}
             c.check(rnd <= set(cre_items(second)), "DWSARU0 carries SARUNPR's random items (%s)" % ", ".join(sorted(rnd)))
-            c.check(first[0x53] != 5 and second[0x53] != 5, "the underpriestesses no longer have five attacks per round")
+            c.check(first[0x53] == 1 and second[0x53] == 1, "the underpriestesses no longer have five attacks per round")
     # 400: Lord Maluradek (only when installed: his banishing script carries the alarm)
     area = res.get("AR9712", "ARE")
     placed = are_actors(area)
@@ -964,7 +968,7 @@ def main():
             c.check(len([b for b in blocks if flag in b.split(b"rs\n", 1)[-1]]) >= 2,
                     "a banishment to room %s and the alarm below half set TELEPORT_%s" % (room.decode(), room.decode()))
         cre = cres.get("LORDM")
-        c.check(cre is not None and struct.unpack_from("<H", cre, 0x26)[0] >= 350,
+        c.check(cre is not None and struct.unpack_from("<H", cre, 0x26)[0] == 350,
                 "Lord Maluradek has %d hit points" % (struct.unpack_from("<H", cre, 0x26)[0] if cre else 0))
         items = cre_items(cre) if cre else []
         so, = struct.unpack_from("<I", cre, 0x2B8) if cre else (0,)
@@ -976,6 +980,7 @@ def main():
             scripts = [slot(d, o) for o in CRE_SLOTS if o] if d else []
             c.check(bool({"DWMESSGE", "EFATKMEL"} & set(scripts)), "%s fights (%s)" % (plate, ", ".join(s for s in scripts if s)))
         holders = [p for p in placed.values() if "KEBEHLDD" in p["scripts"].values() and "KEBEHLD1" in p["scripts"].values()]
+        c.check(b"myareadance_cutscene" in c.script("CIEMALBH"), "the first beholder has its dance hold in its override script")
         order = ["override", "specifics", "class", "race", "general", "default"]
         c.check(all(order.index(next(k for k, v in p["scripts"].items() if v == "KEBEHLDD"))
                     < order.index(next(k for k, v in p["scripts"].items() if v == "KEBEHLD1")) for p in holders),
@@ -999,7 +1004,8 @@ def main():
         t = c.script("CIELURHP")
         c.check(b'"cie_lur_hop" "locals"' in t and t.count(b"ac\n") >= 9,
                 "he opens with Improved Invisibility and hops away from an enemy next to him")
-        spells = next((s for s in lure_scripts if re.search(rb"tr\n\d+ 2323 ", c.script(s))), "")
+        spells = next((s for s in lure_scripts if re.search(rb'tr\n.*?"spwi323"',c.script(s),re.S)
+                       or re.search(rb"tr\n\d+ 2323 ", c.script(s))), "")
         c.check(bool(spells) and not re.search(rb"tr\n\d+ 2302 ", c.script(spells)),
                 "his Dispel Magic entry checks the Dispel Magic he memorises (%s)" % (spells or "-"))
         text = c.script(slot(area, 0x94))

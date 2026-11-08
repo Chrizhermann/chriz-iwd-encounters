@@ -1,0 +1,8 @@
+IF
+  Entered([GOODCUTOFF])
+THEN
+  RESPONSE #100
+    DisplayString(Myself,14381)
+    ReallyForceSpell(LastTrigger,TRAP_POISON_CONFUSION_DARTS)
+    Wait(2)
+END

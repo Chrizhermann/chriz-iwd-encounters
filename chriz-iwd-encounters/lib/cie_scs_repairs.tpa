@@ -17,19 +17,13 @@ END
 // the missing script the SCS script and SCS spell selection of that twin, which
 // is what SCS meant to produce.
 DEFINE_ACTION_FUNCTION cie_repair_shadowed_cleric_typo BEGIN
-  ACTION_IF (!FILE_EXISTS_IN_GAME ~sdelfcs1.bcs~) AND (FILE_EXISTS_IN_GAME ~sdelfch1.cre~) BEGIN
+  ACTION_IF FILE_EXISTS_IN_GAME ~sdelfch1.cre~ BEGIN
     OUTER_SPRINT cie_donor_script ~~
     ACTION_CLEAR_ARRAY cie_donor_spell
     ACTION_CLEAR_ARRAY cie_donor_level
     ACTION_CLEAR_ARRAY cie_donor_slots
     ACTION_CLEAR_ARRAY cie_donor_slots_after
     COPY_EXISTING ~sdelfch1.cre~ ~override~
-      READ_BYTE 0x273 cie_twin_class
-      READ_BYTE 0x272 cie_twin_race
-      READ_BYTE 0x234 cie_twin_level1
-      READ_BYTE 0x235 cie_twin_level2
-      READ_BYTE 0x236 cie_twin_level3
-      READ_LONG 0x244 cie_twin_kit
       FOR (slot = 0x248; slot < 0x270; slot += 8) BEGIN
         LPF cie_read_script_slot INT_VAR offset = slot RET script END
         PATCH_IF VARIABLE_IS_SET $cie_scs_caster(~%script%~) BEGIN
@@ -64,11 +58,13 @@ DEFINE_ACTION_FUNCTION cie_repair_shadowed_cleric_typo BEGIN
     BUT_ONLY
 
     ACTION_IF (~%cie_donor_script%~ STRING_EQUAL ~~) BEGIN
-      WARN ~chriz-iwd-encounters: sdelfch1 has no SCS caster script, so the Shadowed Elven Clerics that point at the missing sdelfcs1 stay as SCS left them.~
-    END ELSE BEGIN
+      OUTER_SPRINT cie_donor_script ~SHELFCS1~
+      LAF cie_ensure_script STR_VAR script = ~SHELFCS1~ END
+    END
+    ACTION_IF 1 BEGIN
       COPY_EXISTING_REGEXP GLOB ~^.+\.cre$~ ~override~
         PATCH_IF (BUFFER_LENGTH >= 0x2d4) BEGIN
-          SET broken_slot = 0
+          SET broken_slot = (~%SOURCE_RES%~ STRING_EQUAL_CASE ~SDELFCH2~) ? 0x268 : 0
           FOR (slot = 0x248; slot < 0x270; slot += 8) BEGIN
             LPF cie_read_script_slot INT_VAR offset = slot RET script END
             PATCH_IF (~%script%~ STRING_EQUAL ~SDELFCS1~) BEGIN
@@ -76,93 +72,104 @@ DEFINE_ACTION_FUNCTION cie_repair_shadowed_cleric_typo BEGIN
             END
           END
           PATCH_IF broken_slot BEGIN
-            READ_BYTE 0x273 class
-            READ_BYTE 0x272 race
-            READ_BYTE 0x234 level_1
-            READ_BYTE 0x235 level_2
-            READ_BYTE 0x236 level_3
-            READ_LONG 0x244 kit
-            // SCS picks a priest's spells from its class, kit, race and levels; only a
-            // creature that matches the twin in those would have got the same kind of
-            // selection.
-            PATCH_IF (class = cie_twin_class) AND (race = cie_twin_race) AND (kit = cie_twin_kit)
-                AND (level_1 = cie_twin_level1) AND (level_2 = cie_twin_level2) AND (level_3 = cie_twin_level3) BEGIN
-              WRITE_ASCIIE broken_slot ~%cie_donor_script%~ (8)
-              LPF cie_replace_priest_spells END
-              PATCH_PRINT ~chriz-iwd-encounters: %SOURCE_RES% now runs %cie_donor_script% with sdelfch1's SCS spell selection.~
-            END ELSE BEGIN
-              PATCH_WARN ~chriz-iwd-encounters: %SOURCE_RES% points at the missing sdelfcs1 but is not a twin of sdelfch1 (class %class%/%cie_twin_class%, race %race%/%cie_twin_race%, kit %kit%/%cie_twin_kit%, levels %level_1%.%level_2%.%level_3%/%cie_twin_level1%.%cie_twin_level2%.%cie_twin_level3%); left unchanged.~
-            END
+            WRITE_ASCIIE broken_slot ~%cie_donor_script%~ (8)
+            LPF cie_replace_priest_spells END
+            PATCH_PRINT ~chriz-iwd-encounters: %SOURCE_RES% now runs %cie_donor_script% with sdelfch1's spell selection.~
           END
         END
       BUT_ONLY
     END
+  END ELSE BEGIN
+    PRINT ~chriz-iwd-encounters: sdelfch1.cre is absent; the other caster repairs are installed.~
   END
 END
 
 // Replaces the current creature's priest spells with the donor's (arrays filled
 // by cie_repair_shadowed_cleric_typo), including the slots per level.
 DEFINE_PATCH_FUNCTION cie_replace_priest_spells BEGIN
-  // The creature's own priest spells: known (0x2a0/0x2a4, 12 bytes: resref,
-  // level-1, type) and memorised (through the memorisation info).
-  CLEAR_ARRAY own_spell
+  // Rebuild the owned priest part by format. Other spell types retain their
+  // records. Relocated tables avoid changing unrelated CRE sections.
+  SPRINT known_rows ~~
+  SPRINT info_rows ~~
+  SPRINT mem_rows ~~
+  SET known_total = 0
+  SET info_total = 0
+  SET mem_total = 0
   READ_LONG 0x2a0 known_offset
   READ_LONG 0x2a4 known_count
-  FOR (i = 0; i < known_count; ++i) BEGIN
-    READ_SHORT (known_offset + i * 0xc + 0xa) type
-    PATCH_IF (type = 0) BEGIN
-      READ_ASCII (known_offset + i * 0xc) spell (8) NULL
-      TO_UPPER spell
-      SPRINT $own_spell(~%spell%~) ~1~
+  FOR (i = 0; i < known_count; i += 1) BEGIN
+    READ_SHORT (known_offset + 12 * i + 10) type
+    PATCH_IF (type != 0) BEGIN
+      READ_ASCII (known_offset + 12 * i) row (12)
+      SPRINT known_rows ~%known_rows%%row%~
+      SET known_total += 1
     END
   END
   READ_LONG 0x2a8 info_offset
   READ_LONG 0x2ac info_count
-  READ_LONG 0x2b0 memorised_offset
-  FOR (i = 0; i < info_count; ++i) BEGIN
-    READ_SHORT (info_offset + i * 0x10 + 0x6) type
-    READ_LONG  (info_offset + i * 0x10 + 0x8) first
-    READ_LONG  (info_offset + i * 0x10 + 0xc) count
-    PATCH_IF (type = 0) BEGIN
-      FOR (j = 0; j < count; ++j) BEGIN
-        READ_ASCII (memorised_offset + (first + j) * 0xc) spell (8) NULL
-        TO_UPPER spell
-        SPRINT $own_spell(~%spell%~) ~1~
+  READ_LONG 0x2b0 mem_offset
+  FOR (i = 0; i < info_count; i += 1) BEGIN
+    READ_SHORT (info_offset + 16 * i + 6) type
+    PATCH_IF (type != 0) BEGIN
+      READ_ASCII (info_offset + 16 * i) row (16)
+      READ_LONG (info_offset + 16 * i + 8) first
+      READ_LONG (info_offset + 16 * i + 12) count
+      INNER_PATCH_SAVE row ~%row%~ BEGIN WRITE_LONG 8 mem_total END
+      SPRINT info_rows ~%info_rows%%row%~
+      SET info_total += 1
+      READ_ASCII (mem_offset + first * 12) spells (count * 12)
+      SPRINT mem_rows ~%mem_rows%%spells%~
+      SET mem_total += count
+    END
+  END
+  CLEAR_ARRAY added
+  PHP_EACH cie_donor_slots AS level => slots BEGIN
+    SET first = mem_total
+    FOR (k = 0; k < cie_donor_count; k += 1) BEGIN
+      PATCH_IF ($cie_donor_level(~%k%~) = level) BEGIN
+        SPRINT spell $cie_donor_spell(~%k%~)
+        INNER_PATCH_SAVE row ~~ BEGIN
+          INSERT_BYTES 0 12
+          WRITE_ASCIIE 0 ~%spell%~ (8)
+          WRITE_LONG 8 1
+        END
+        SPRINT mem_rows ~%mem_rows%%row%~
+        SET mem_total += 1
+        PATCH_IF !VARIABLE_IS_SET $added(~%spell%~ ~%level%~) BEGIN
+          INNER_PATCH_SAVE row ~%row%~ BEGIN
+            WRITE_SHORT 8 level
+            WRITE_SHORT 10 0
+          END
+          SPRINT known_rows ~%known_rows%%row%~
+          SET known_total += 1
+          SET $added(~%spell%~ ~%level%~) = 1
+        END
       END
     END
-  END
-  PHP_EACH own_spell AS spell => unused BEGIN
-    REMOVE_MEMORIZED_SPELL ~%spell%~
-    REMOVE_KNOWN_SPELL ~%spell%~
-  END
-
-  FOR (k = 0; k < cie_donor_count; ++k) BEGIN
-    SPRINT spell $cie_donor_spell(~%k%~)
-    SET level = $cie_donor_level(~%k%~)
-    PATCH_MATCH level WITH
-      0 BEGIN ADD_MEMORIZED_SPELL ~%spell%~ #0 ~priest~ END
-      1 BEGIN ADD_MEMORIZED_SPELL ~%spell%~ #1 ~priest~ END
-      2 BEGIN ADD_MEMORIZED_SPELL ~%spell%~ #2 ~priest~ END
-      3 BEGIN ADD_MEMORIZED_SPELL ~%spell%~ #3 ~priest~ END
-      4 BEGIN ADD_MEMORIZED_SPELL ~%spell%~ #4 ~priest~ END
-      5 BEGIN ADD_MEMORIZED_SPELL ~%spell%~ #5 ~priest~ END
-      6 BEGIN ADD_MEMORIZED_SPELL ~%spell%~ #6 ~priest~ END
-      DEFAULT
-        PATCH_FAIL ~chriz-iwd-encounters: priest spell %spell% has level index %level%, outside 0-6.~
+    INNER_PATCH_SAVE row ~~ BEGIN
+      INSERT_BYTES 0 16
+      WRITE_SHORT 0 level
+      WRITE_SHORT 2 slots
+      WRITE_SHORT 4 $cie_donor_slots_after(~%level%~)
+      WRITE_LONG 8 first
+      WRITE_LONG 12 (mem_total - first)
     END
+    SPRINT info_rows ~%info_rows%%row%~
+    SET info_total += 1
   END
-
-  // Same slots per level as the donor.
-  READ_LONG 0x2a8 info_offset
-  READ_LONG 0x2ac info_count
-  FOR (i = 0; i < info_count; ++i) BEGIN
-    READ_SHORT (info_offset + i * 0x10)       level
-    READ_SHORT (info_offset + i * 0x10 + 0x6) type
-    PATCH_IF (type = 0) AND (VARIABLE_IS_SET $cie_donor_slots(~%level%~)) BEGIN
-      WRITE_SHORT (info_offset + i * 0x10 + 0x2) $cie_donor_slots(~%level%~)
-      WRITE_SHORT (info_offset + i * 0x10 + 0x4) $cie_donor_slots_after(~%level%~)
-    END
-  END
+  SET known_offset = BUFFER_LENGTH
+  SET info_offset = known_offset + known_total * 12
+  SET mem_offset = info_offset + info_total * 16
+  INSERT_BYTES known_offset (known_total * 12 + info_total * 16 + mem_total * 12)
+  WRITE_ASCIIE known_offset ~%known_rows%~ (known_total * 12)
+  WRITE_ASCIIE info_offset ~%info_rows%~ (info_total * 16)
+  WRITE_ASCIIE mem_offset ~%mem_rows%~ (mem_total * 12)
+  WRITE_LONG 0x2a0 known_offset
+  WRITE_LONG 0x2a4 known_total
+  WRITE_LONG 0x2a8 info_offset
+  WRITE_LONG 0x2ac info_total
+  WRITE_LONG 0x2b0 mem_offset
+  WRITE_LONG 0x2b4 mem_total
 END
 
 // A few casters carry a melee AI in a slot the engine runs before their caster
@@ -179,7 +186,7 @@ END
 //   scripts that replace it) is removed: the caster AI fights on its own;
 //   one built from the base game's GNTRPM1 is replaced by CIETMWK, GNTRPM1's
 //   group wake-up;
-//   any other is left as it is and named in the WeiDU log.
+//   any other moves below the caster, keeping both scripts.
 // Creature files are repaired first; an area actor falls back to its creature's
 // script wherever its own slot is empty.
 DEFINE_ACTION_FUNCTION cie_repair_melee_over_caster BEGIN
@@ -342,11 +349,14 @@ BEGIN
       WRITE_ASCII offset ~~ (8)
       SET repaired += 1
       PATCH_PRINT ~chriz-iwd-encounters: %where%: removed %script%, which ran before the caster AI %caster%.~
-    END ELSE PATCH_IF (~%kind%~ STRING_COMPARE ~~) BEGIN
-      // Another melee AI (its own blocks are unknown here), or a plain one this
-      // file cannot remove: an area actor's empty slot falls back to its
-      // creature's script, so clearing it would bring that script back.
-      PATCH_WARN ~chriz-iwd-encounters: %where%: %script% (%kind% melee AI) runs before the caster AI %caster%; left unchanged.~
+    END ELSE PATCH_IF (~%kind%~ STRING_COMPARE ~~) AND offset BEGIN
+      SET caster_offset = $cie_slot_offset(~%caster_rank%~)
+      WRITE_ASCIIE offset ~%caster%~ (8)
+      PATCH_IF caster_offset BEGIN
+        WRITE_ASCIIE caster_offset ~%script%~ (8)
+      END
+      SET repaired += 1
+      SET caster_rank = rank
     END
   END
 END

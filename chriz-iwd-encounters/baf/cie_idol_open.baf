@@ -1,0 +1,10 @@
+// Decided encounter blocks; based on the IWD:EE game rules.
+IF
+  !Global("LDBDGOPN_inactive","LOCALS",1)
+  GlobalGT("ALL_KEYS","GLOBAL",5)
+THEN
+  RESPONSE #100
+    OpenDoor(Myself)
+    TriggerActivation("To8013",TRUE)
+    SetGlobal("LDBDGOPN_inactive","LOCALS",1)
+END

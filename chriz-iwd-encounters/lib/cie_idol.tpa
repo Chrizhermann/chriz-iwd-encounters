@@ -12,14 +12,8 @@
 // docs/components.md describes each change in engine-neutral terms.
 
 DEFINE_ACTION_FUNCTION cie_idol BEGIN
-  OUTER_SPRINT cie_idol_area_script ~~
-  COPY_EXISTING ~ar8012.are~ ~override~
-    READ_ASCII 0x94 cie_idol_area_script (8) NULL
-  BUT_ONLY
-  ACTION_IF (~%cie_idol_area_script%~ STRING_EQUAL ~~) OR (~%cie_idol_area_script%~ STRING_EQUAL_CASE ~NONE~)
-      OR (!FILE_EXISTS_IN_GAME ~%cie_idol_area_script%.bcs~) BEGIN
-    FAIL ~chriz-iwd-encounters: ar8012.are has no area script.~
-  END
+  LAF cie_encounter_actors STR_VAR area = ~ar8012~ END
+  LAF cie_area_script STR_VAR area = ~ar8012~ fallback = ~ar8012~ RET cie_idol_area_script = script END
   // the Idol's placement (position, script), the undead around it by script name
   OUTER_SET cie_idol_x = 0
   OUTER_SET cie_idol_y = 0
@@ -53,9 +47,7 @@ DEFINE_ACTION_FUNCTION cie_idol BEGIN
       END
     END
   BUT_ONLY
-  ACTION_IF (cie_idol_x = 0) OR (~%cie_idol_script%~ STRING_EQUAL ~~) OR (!FILE_EXISTS_IN_GAME ~%cie_idol_script%.bcs~) BEGIN
-    FAIL ~chriz-iwd-encounters: ar8012.are has no Idol (IDOL) with a script.~
-  END
+  LAF cie_ensure_script STR_VAR script = EVAL ~%cie_idol_script%~ END
   OUTER_PATCH_SAVE cie_idol_rally ~%cie_idol_rally%~ BEGIN
     REPLACE_TEXTUALLY EXACT_MATCH ~@@X@@~ ~%cie_idol_x%~
     REPLACE_TEXTUALLY EXACT_MATCH ~@@Y@@~ ~%cie_idol_y%~
@@ -66,12 +58,14 @@ DEFINE_ACTION_FUNCTION cie_idol BEGIN
   LAF cie_idol_rally END
   LAF cie_idol_aura END
   LAF cie_idol_badges END
+  LAF cie_placed_stats INT_VAR hp = 225 movement = 1 STR_VAR area = ~ar8012~ creature = ~idol~ END
 END
 
 // 225 hit points; movement rate set to 0 (opcode 126), so it stays on its plinth.
 DEFINE_ACTION_FUNCTION cie_idol_creature BEGIN
   COPY_EXISTING ~idol.cre~ ~override~
     LPF cie_raise_creature INT_VAR hp = 225 RET old_hp old_apr old_thac0 END
+    LPF DELETE_CRE_EFFECT INT_VAR opcode_to_delete = 126 END
     LPF ADD_CRE_EFFECT INT_VAR opcode = 126 target = 1 timing = 9 parameter1 = 0 parameter2 = 1 END
   PRINT ~chriz-iwd-encounters: the Idol has %old_hp% -> 225 hit points and does not move.~
 END
@@ -81,96 +75,67 @@ END
 // (CIE_IDOL_CAST), each on its own cooldown, at the nearest or second-nearest enemy
 // it sees, only where the spell can work: Finger of Death not at undead or summoned
 // creatures, Flesh to Stone not at petrified ones, Sol's Searing Orb and Flame
-// Strike not at fire-immune ones. Flame Strike only when its ability for the Idol's
-// caster level has effects (SCS's caster-level abilities plus Tweaks Anthology can
-// leave them empty).
+// Strike not at fire-immune ones. The collection's decided three-spell rotation
+// leaves Flame Strike out regardless of the installed spell data.
 DEFINE_ACTION_FUNCTION cie_idol_casting BEGIN
-  OUTER_SET cie_idol_level = 16
-  COPY_EXISTING ~idol.cre~ ~override~
-    READ_BYTE 0x234 cie_idol_level
-  BUT_ONLY
-  OUTER_SET cie_idol_fs = 0
-  ACTION_IF FILE_EXISTS_IN_GAME ~sppr503.spl~ BEGIN
-    COPY_EXISTING ~sppr503.spl~ ~override~
-      READ_LONG 0x64 ab_off
-      READ_SHORT 0x68 ab_count
-      SET best = 0 - 1
-      SET best_level = 0 - 1
-      FOR (i = 0; i < ab_count; i += 1) BEGIN
-        READ_SHORT (ab_off + 0x28 * i + 0x10) min_level
-        PATCH_IF (min_level <= cie_idol_level) AND (min_level > best_level) BEGIN
-          SET best = i
-          SET best_level = min_level
-        END
-      END
-      PATCH_IF (best >= 0) BEGIN
-        READ_SHORT (ab_off + 0x28 * best + 0x1e) effects
-        SET cie_idol_fs = (effects > 0)
-      END
-    BUT_ONLY
-  END
-  OUTER_SET cie_idol_random = 0
+  // The Idol owns its casting rotation. An absent or edited random block does
+  // not change it. Keep its non-casting reactions.
   COPY_EXISTING ~%cie_idol_script%.bcs~ ~override~
     DECOMPILE_AND_PATCH BEGIN
-      LPF cie_remove_baf_blocks STR_VAR text = ~WIZARD_POWER_WORD_KILL~ RET removed END
-      SET cie_idol_random = removed
+      LPF cie_remove_baf_blocks STR_VAR text = ~ForceSpell~ RET removed END
+      LPF cie_remove_baf_blocks STR_VAR text = ~Spell(~ RET removed END
     END
   BUT_ONLY
-  ACTION_IF (cie_idol_random = 0) BEGIN
-    WARN ~chriz-iwd-encounters: %cie_idol_script%.bcs has no random Power Word: Kill block; the Idol keeps its casting.~
-  END ELSE BEGIN
-    OUTER_SPRINT cie_idol_fs_note ~(Flame Strike has no effects at caster level %cie_idol_level% here; left out)~
-    ACTION_IF cie_idol_fs BEGIN
-      EXTEND_TOP ~%cie_idol_script%.bcs~ ~chriz-iwd-encounters/baf/cie_idol_flame.baf~
-      OUTER_SPRINT cie_idol_fs_note ~(with Flame Strike)~
-    END
-    EXTEND_TOP ~%cie_idol_script%.bcs~ ~chriz-iwd-encounters/baf/cie_idol_casting.baf~
-    PRINT ~chriz-iwd-encounters: the Idol casts one spell per round, each on a cooldown and only where it can work, no Power Word: Kill %cie_idol_fs_note%.~
-  END
+  // The target collection's rotation has Finger of Death, Flesh to Stone and
+  // Sol's Searing Orb. Do not change it based on the current Flame Strike data.
+  EXTEND_TOP ~%cie_idol_script%.bcs~ ~chriz-iwd-encounters/baf/cie_idol_casting.baf~
 END
 
 // The rally: when the Idol is attacked or hurt, its script sets CIE_IDOL_RALLY; the
 // area script sends the placed greater mummies and zombie lords to it once.
 DEFINE_ACTION_FUNCTION cie_idol_rally BEGIN
-  ACTION_IF (cie_idol_guards = 0) BEGIN
-    WARN ~chriz-iwd-encounters: no greater mummies or zombie lords placed by name in ar8012.are; nobody rallies to the Idol.~
-  END ELSE BEGIN
     EXTEND_TOP ~%cie_idol_script%.bcs~ ~chriz-iwd-encounters/baf/cie_idol_alarm.baf~
     EXTEND_TOP ~%cie_idol_area_script%.bcs~ ~chriz-iwd-encounters/baf/cie_idol_rally.baf~ EVALUATE_BUFFER
     PRINT ~chriz-iwd-encounters: when the Idol is attacked, %cie_idol_guards% greater mummies and zombie lords come to it.~
-  END
 END
 
 // The zombie lords' aura: their creature's race script (ZLAURA) casts it, but their
 // placements put LDIDLKIL ("die with the Idol") in the race slot, which wins. That
-// script moves to the placement's free class slot, so the creature's own race script
+// script runs before any previous class AI, so the creature's own race script
 // runs again.
 DEFINE_ACTION_FUNCTION cie_idol_aura BEGIN
-  OUTER_SET cie_idol_auras = 0
-  OUTER_SPRINT cie_idol_cre_race ~~
   ACTION_IF FILE_EXISTS_IN_GAME ~zombiel.cre~ BEGIN
     COPY_EXISTING ~zombiel.cre~ ~override~
-      LPF cie_read_script_slot INT_VAR offset = 0x258 RET cie_idol_cre_race = script END
-    BUT_ONLY
-  END
-  ACTION_IF (~%cie_idol_cre_race%~ STRING_COMPARE ~~) BEGIN
-    COPY_EXISTING ~ar8012.are~ ~override~
-      GET_OFFSET_ARRAY actors ARE_V10_ACTORS
-      PHP_EACH actors AS index => actor BEGIN
-        READ_ASCII (actor + 0x80) cre (8) NULL
-        TO_UPPER cre
-        LPF cie_read_script_slot INT_VAR offset = (actor + 0x68) RET race = script END
-        LPF cie_read_script_slot INT_VAR offset = (actor + 0x60) RET class = script END
-        PATCH_IF (~%cre%~ STRING_EQUAL ~ZOMBIEL~) AND (~%race%~ STRING_COMPARE ~~)
-            AND (~%race%~ STRING_COMPARE ~%cie_idol_cre_race%~) AND (~%class%~ STRING_EQUAL ~~) BEGIN
-          WRITE_ASCIIE (actor + 0x60) ~%race%~ (8)
-          WRITE_ASCII (actor + 0x68) ~~ (8)
-          SET cie_idol_auras += 1
-        END
+      PATCH_IF (BUFFER_LENGTH >= 0x260) BEGIN
+        WRITE_ASCII 0x258 ~ZLAURA~ (8)
+      END ELSE BEGIN
+        PATCH_PRINT ~chriz-iwd-encounters: zombiel.cre is too short to write its race script; the other Idol changes are installed.~
       END
     BUT_ONLY
+  END ELSE BEGIN
+    PRINT ~chriz-iwd-encounters: zombiel.cre is absent; the other Idol changes are installed.~
   END
-  PRINT ~chriz-iwd-encounters: %cie_idol_auras% zombie lords run their aura script (%cie_idol_cre_race%) again; their "die with the Idol" script moves to the class slot.~
+  LAF cie_write_script_blocks STR_VAR script = ~ZLAURA~ marker = ~ForceSpell~
+    source = ~chriz-iwd-encounters/baf/cie_zlaura.baf~ END
+  LAF cie_write_script_blocks STR_VAR script = ~LDIDLKIL~ marker = ~SPRITE_IS_DEADIDOL~
+    source = ~chriz-iwd-encounters/baf/cie_ldidlkil.baf~ END
+  COPY_EXISTING ~ar8012.are~ ~override~
+    GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+    PHP_EACH actors AS index => actor BEGIN
+      READ_ASCII (actor + 0x80) cre (8) NULL
+      PATCH_IF (~%cre%~ STRING_EQUAL_CASE ~ZOMBIEL~) BEGIN
+        LPF cie_read_script_slot INT_VAR offset = (actor + 0x60) RET previous = script END
+        PATCH_IF (~%previous%~ STRING_COMPARE ~~) AND (~%previous%~ STRING_COMPARE ~LDIDLKIL~) BEGIN
+          SPRINT copy ~CIEIZ%index%~
+          INNER_ACTION BEGIN
+            LAF cie_join_scripts STR_VAR first = ~LDIDLKIL~ second = EVAL ~%previous%~ target = EVAL ~%copy%~ END
+          END
+          WRITE_ASCIIE (actor + 0x60) ~%copy%~ (8)
+        END ELSE BEGIN WRITE_ASCII (actor + 0x60) ~LDIDLKIL~ (8) END
+        WRITE_ASCII (actor + 0x68) ~~ (8)
+      END
+    END
+  BUT_ONLY
 END
 
 // The badge doors: the door script adds 1 to ALL_KEYS both when a door is unlocked
@@ -178,55 +143,33 @@ END
 // in one round step past 6 for good. Each badge door gets its own copy that counts it
 // once; the hidden door opens at 6 or more.
 DEFINE_ACTION_FUNCTION cie_idol_badges BEGIN
-  OUTER_SET cie_idol_doors = 0
-  OUTER_SPRINT cie_idol_door_script ~~
-  OUTER_SPRINT cie_idol_open_script ~~
+  ACTION_BASH_FOR ~chriz-iwd-encounters/placements/ar8012~ ~.*\.door~ BEGIN
+    COPY_EXISTING ~ar8012.are~ ~override~
+      LPF cie_ensure_placement INT_VAR door = 1 STR_VAR template = EVAL ~%BASH_FOR_FILESPEC%~ END
+    BUT_ONLY
+  END
+  // Door identity is the row address; neither its old key nor its script is a
+  // prerequisite. Six badge doors and the hidden door own these script slots.
   COPY_EXISTING ~ar8012.are~ ~override~
     READ_LONG 0xa8 door_off
     READ_LONG 0xa4 door_count
     FOR (i = 0; i < door_count; i += 1) BEGIN
       SET door = door_off + 0xc8 * i
-      LPF cie_read_script_slot INT_VAR offset = (door + 0x80) RET script END
-      READ_ASCII (door + 0x78) key (8) NULL
-      PATCH_IF (~%script%~ STRING_COMPARE ~~) AND (~%key%~ STRING_COMPARE ~~) AND (cie_idol_doors < 9) BEGIN
-        PATCH_IF (~%cie_idol_door_script%~ STRING_EQUAL ~~) BEGIN
-          SPRINT cie_idol_door_script ~%script%~
-        END
-        PATCH_IF (~%script%~ STRING_EQUAL ~%cie_idol_door_script%~) BEGIN
-          SET cie_idol_doors += 1
-          WRITE_ASCIIE (door + 0x80) ~CIEBDG%cie_idol_doors%~ (8)
+      READ_ASCII door name (32) NULL
+      FOR (n = 1; n <= 6; n += 1) BEGIN
+        PATCH_IF (~%name%~ STRING_EQUAL_CASE ~AR8012Badge%n%~) BEGIN
+          WRITE_ASCIIE (door + 0x80) ~CIEBDG%n%~ (8)
         END
       END
-      PATCH_IF (~%script%~ STRING_COMPARE ~~) AND (~%key%~ STRING_EQUAL ~~) BEGIN
-        SPRINT cie_idol_open_script ~%script%~
+      PATCH_IF (~%name%~ STRING_EQUAL_CASE ~AR8012HideMe~) BEGIN
+        WRITE_ASCII (door + 0x80) ~LDBDGOPN~ (8)
       END
     END
   BUT_ONLY
-  OUTER_SET cie_idol_counts = 0
-  ACTION_IF (cie_idol_doors > 0) AND FILE_EXISTS_IN_GAME ~%cie_idol_door_script%.bcs~ BEGIN
-    COPY_EXISTING ~%cie_idol_door_script%.bcs~ ~override~
-      PATCH_IF (INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~"GLOBALALL_KEYS"~) >= 0) BEGIN
-        SET cie_idol_counts = 1
-      END
-    BUT_ONLY
+  OUTER_FOR (cie_n = 1; cie_n <= 6; cie_n += 1) BEGIN
+    COPY ~chriz-iwd-encounters/baf/cie_idol_badge.baf~ ~override/CIEBDG%cie_n%.bcs~
+      EVALUATE_BUFFER COMPILE_BAF_TO_BCS
   END
-  ACTION_IF (cie_idol_counts = 0) BEGIN
-    FAIL ~chriz-iwd-encounters: the badge doors' script (%cie_idol_door_script%) does not count ALL_KEYS.~
-  END
-  OUTER_FOR (cie_n = 1; cie_n <= cie_idol_doors; cie_n += 1) BEGIN
-    COMPILE EVALUATE_BUFFER ~chriz-iwd-encounters/baf/cie_idol_badge.baf~
-    COPY ~override/cie_idol_badge.bcs~ ~override/CIEBDG%cie_n%.bcs~
-  END
-  DELETE ~override/cie_idol_badge.bcs~
-  OUTER_SET cie_idol_open = 0
-  ACTION_IF (~%cie_idol_open_script%~ STRING_COMPARE ~~) AND FILE_EXISTS_IN_GAME ~%cie_idol_open_script%.bcs~ BEGIN
-    COPY_EXISTING ~%cie_idol_open_script%.bcs~ ~override~
-      DECOMPILE_AND_PATCH BEGIN
-        REPLACE_EVALUATE CASE_INSENSITIVE ~Global("ALL_KEYS","GLOBAL",6)~ BEGIN
-          SET cie_idol_open += 1
-        END ~GlobalGT("ALL_KEYS","GLOBAL",5)~
-      END
-    BUT_ONLY
-  END
-  PRINT ~chriz-iwd-encounters: %cie_idol_doors% badge doors count once each (CIEBDG1-%cie_idol_doors%); the hidden door opens at six or more (%cie_idol_open% check in %cie_idol_open_script%).~
+  LAF cie_write_script_blocks STR_VAR script = ~LDBDGOPN~ marker = ~"ALL_KEYS"~
+    source = ~chriz-iwd-encounters/baf/cie_idol_open.baf~ END
 END

@@ -1,0 +1,17 @@
+IF
+  !Global("EFDELEAS_inactive","LOCALS",1)
+  Difficulty(EASIEST)
+  !See([PC])
+THEN
+  RESPONSE #100
+    DestroySelf()
+END
+
+IF
+  !Global("EFDELEAS_inactive","LOCALS",1)
+  True()
+THEN
+  RESPONSE #100
+    SetGlobal("EFDELEAS_inactive","LOCALS",1)
+END
+

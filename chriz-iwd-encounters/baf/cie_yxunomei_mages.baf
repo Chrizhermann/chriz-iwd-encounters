@@ -1,0 +1,14 @@
+IF
+  !Global("YXUN_ATTACK","MYAREA",0)
+  !Global("#spawn_group_0","MYAREA",1)
+THEN
+  RESPONSE #100
+    SetGlobal("#spawn_group_0","MYAREA",1)
+    CreateVisualEffect("DDOORH",[2288.669])
+    CreateVisualEffect("DDOORH",[2159.820])
+    CreateVisualEffect("DDOORH",[2488.855])
+    CreateCreature("CIEYXM1",[2288.669],E)
+    CreateCreature("CIEYXM2",[2159.820],E)
+    CreateCreature("CIEYXM3",[2488.855],E)
+    Continue()
+END

@@ -1,0 +1,76 @@
+// Decided encounter blocks; based on the IWD:EE game rules.
+IF
+  Global("KILL_FAKE_POMAB","GLOBAL",0)
+  HPPercentLT("%cie_cry_real%",100)
+THEN
+  RESPONSE #100
+    SetInterrupt(FALSE)
+    SetGlobal("KILL_FAKE_POMAB","GLOBAL",1)
+    ClearActions(LastAttackerOf("%cie_cry_real%"))
+    SetInterrupt(TRUE)
+END
+
+IF
+  !Global("KILL_FAKE_POMAB","GLOBAL",0)
+  Global("SPRITE_IS_DEADFAKE_POMAB","GLOBAL",0)
+THEN
+  RESPONSE #100
+    SetInterrupt(FALSE)
+    SetGlobal("KILL_FAKE_POMAB","GLOBAL",0)
+    IncrementGlobal("SPRITE_IS_DEADFAKE_POMAB","GLOBAL",1)
+    SetGlobal("CIE_POM_SHUFFLE","MYAREA",1)
+    ActionOverride("pomimg1",DestroySelf())
+    SetInterrupt(TRUE)
+END
+
+IF
+  !Global("KILL_FAKE_POMAB","GLOBAL",0)
+  Global("SPRITE_IS_DEADFAKE_POMAB","GLOBAL",1)
+THEN
+  RESPONSE #100
+    SetInterrupt(FALSE)
+    SetGlobal("KILL_FAKE_POMAB","GLOBAL",0)
+    IncrementGlobal("SPRITE_IS_DEADFAKE_POMAB","GLOBAL",1)
+    SetGlobal("CIE_POM_SHUFFLE","MYAREA",1)
+    ActionOverride("pomimg2",DestroySelf())
+    SetInterrupt(TRUE)
+END
+
+IF
+  !Global("KILL_FAKE_POMAB","GLOBAL",0)
+  Global("SPRITE_IS_DEADFAKE_POMAB","GLOBAL",2)
+THEN
+  RESPONSE #100
+    SetInterrupt(FALSE)
+    SetGlobal("KILL_FAKE_POMAB","GLOBAL",0)
+    IncrementGlobal("SPRITE_IS_DEADFAKE_POMAB","GLOBAL",1)
+    SetGlobal("CIE_POM_SHUFFLE","MYAREA",1)
+    ActionOverride("pomimg3",DestroySelf())
+    SetInterrupt(TRUE)
+END
+
+IF
+  !Global("KILL_FAKE_POMAB","GLOBAL",0)
+  Global("SPRITE_IS_DEADFAKE_POMAB","GLOBAL",3)
+THEN
+  RESPONSE #100
+    SetInterrupt(FALSE)
+    SetGlobal("KILL_FAKE_POMAB","GLOBAL",0)
+    IncrementGlobal("SPRITE_IS_DEADFAKE_POMAB","GLOBAL",1)
+    SetGlobal("CIE_POM_SHUFFLE","MYAREA",1)
+    ActionOverride("pomimg4",DestroySelf())
+    SetInterrupt(TRUE)
+END
+
+IF
+  !Global("KILL_FAKE_POMAB","GLOBAL",0)
+  Global("SPRITE_IS_DEADFAKE_POMAB","GLOBAL",4)
+THEN
+  RESPONSE #100
+    SetInterrupt(FALSE)
+    SetGlobal("KILL_FAKE_POMAB","GLOBAL",0)
+    IncrementGlobal("SPRITE_IS_DEADFAKE_POMAB","GLOBAL",1)
+    SetGlobal("CIE_POM_SHUFFLE","MYAREA",1)
+    ActionOverride("pomimg5",DestroySelf())
+    SetInterrupt(TRUE)
+END

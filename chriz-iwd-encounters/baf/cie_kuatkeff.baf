@@ -1,0 +1,46 @@
+// Decided encounter blocks; based on the IWD:EE game rules.
+IF
+  OnCreation()
+  Global("SPRITE_IS_DEADYXUNOMEI","GLOBAL",3)
+THEN
+  RESPONSE #100
+    DestroySelf()
+END
+
+IF
+  !Global("KULDAHAR_FORCEREMOVE","GLOBAL",0)
+THEN
+  RESPONSE #100
+    DestroySelf()
+END
+
+IF
+  !Global("CREATURE_STATE_VARBit6","LOCALS",1)
+  Range([PC],35)
+THEN
+  RESPONSE #100
+    SetGlobal("CREATURE_STATE_VARBit6","LOCALS",1)
+    Continue()
+END
+
+IF
+  AttackedBy([ANYTHING],DEFAULT)
+THEN
+  RESPONSE #100
+    SetGlobal("CREATURE_STATE_VARBit6","LOCALS",1)
+    ChangeAIScript("KUATKREM",GENERAL)
+END
+
+IF
+  Global("CREATURE_STATE_VARBit6","LOCALS",1)
+THEN
+  RESPONSE #100
+    ChangeAIScript("KUATKREM",GENERAL)
+END
+
+IF
+  True()
+THEN
+  RESPONSE #100
+    NoAction()
+END

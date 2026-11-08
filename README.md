@@ -27,8 +27,9 @@ Details per change, written so they can move to the Chriz script engine later:
 
 ## Install
 
-Needs IWD:EE (built and tested on 2.7.3.0) and SCS's smarter priests (component 200)
-or smarter mages/priests (component 100); components 300 to 410 also work without SCS.
+Needs IWD:EE (target 2.7.3.0). SCS is recommended and supplies the AI repaired by
+component 100 and prepared by component 200; its installation record is not a gate.
+The two named original priest AIs and encounter components also work without SCS.
 Extract the release zip from the GitHub
 releases into the game folder (it holds `chriz-iwd-encounters/`) and run
 `setup-chriz-iwd-encounters` with WeiDU after SCS.
@@ -43,6 +44,16 @@ whose changes are missing fails.
 `tests/test_banter_guard.py` runs component 110's patch with real WeiDU on script text
 and works out every chance as an exact fraction; it needs no game
 (`python -I tests/test_banter_guard.py <weidu.exe>`).
+
+`python -I tests/test_overwrite.py <weidu.exe> <read-only-reference> <scenario>`
+builds a disposable data-only fixture inside the checkout and installs all 15
+components twice. Scenarios are `base` (BIFF resources), `stack` (effective resources
+with this mod's available backups restored), `edited` (changed values and missing
+blocks, placements and effects), and `embedded` (area-owned creatures). It checks
+the decided output and rejects WeiDU errors and warnings. No game executable runs.
+BIFF and backup fixtures are snapshots, not proof of a pristine game or every stack.
+`python -I tests/test_templates.py` checks the bundled binary records and spawn
+sections without opening a game.
 
 ## Credits
 

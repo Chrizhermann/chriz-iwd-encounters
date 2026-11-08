@@ -27,7 +27,7 @@ IF
 THEN
   RESPONSE #100
     IncrementGlobal("CIE_ILM_POISON","LOCALS",1)
-    SetGlobalTimer("CIE_ILM_POISON_TIMER","LOCALS",FIVE_ROUNDS)
+    SetGlobalTimer("CIE_ILM_POISON_TIMER","LOCALS",30)
     ReallyForceSpellRES("SPCL423",Myself)
 END
 

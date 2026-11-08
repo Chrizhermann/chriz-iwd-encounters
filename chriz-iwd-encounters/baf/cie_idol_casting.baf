@@ -12,8 +12,8 @@ IF
   !Gender(NearestEnemyOf(Myself),SUMMONED)
 THEN
   RESPONSE #100
-    SetGlobalTimer("CIE_IDOL_CAST","LOCALS",ONE_ROUND)
-    SetGlobalTimer("CIE_IDOL_DEATH","LOCALS",FOUR_ROUNDS)
+    SetGlobalTimer("CIE_IDOL_CAST","LOCALS",6)
+    SetGlobalTimer("CIE_IDOL_DEATH","LOCALS",24)
     ForceSpell(NearestEnemyOf(Myself),WIZARD_FINGER_OF_DEATH)
 END
 
@@ -25,8 +25,8 @@ IF
   !Gender(SecondNearestEnemyOf(Myself),SUMMONED)
 THEN
   RESPONSE #100
-    SetGlobalTimer("CIE_IDOL_CAST","LOCALS",ONE_ROUND)
-    SetGlobalTimer("CIE_IDOL_DEATH","LOCALS",FOUR_ROUNDS)
+    SetGlobalTimer("CIE_IDOL_CAST","LOCALS",6)
+    SetGlobalTimer("CIE_IDOL_DEATH","LOCALS",24)
     ForceSpell(SecondNearestEnemyOf(Myself),WIZARD_FINGER_OF_DEATH)
 END
 
@@ -37,8 +37,8 @@ IF
   !StateCheck(NearestEnemyOf(Myself),STATE_STONE_DEATH)
 THEN
   RESPONSE #100
-    SetGlobalTimer("CIE_IDOL_CAST","LOCALS",ONE_ROUND)
-    SetGlobalTimer("CIE_IDOL_STONE","LOCALS",FOUR_ROUNDS)
+    SetGlobalTimer("CIE_IDOL_CAST","LOCALS",6)
+    SetGlobalTimer("CIE_IDOL_STONE","LOCALS",24)
     ForceSpell(NearestEnemyOf(Myself),WIZARD_FLESH_TO_STONE)
 END
 
@@ -49,8 +49,8 @@ IF
   !StateCheck(SecondNearestEnemyOf(Myself),STATE_STONE_DEATH)
 THEN
   RESPONSE #100
-    SetGlobalTimer("CIE_IDOL_CAST","LOCALS",ONE_ROUND)
-    SetGlobalTimer("CIE_IDOL_STONE","LOCALS",FOUR_ROUNDS)
+    SetGlobalTimer("CIE_IDOL_CAST","LOCALS",6)
+    SetGlobalTimer("CIE_IDOL_STONE","LOCALS",24)
     ForceSpell(SecondNearestEnemyOf(Myself),WIZARD_FLESH_TO_STONE)
 END
 
@@ -61,8 +61,8 @@ IF
   !CheckStatGT(NearestEnemyOf(Myself),99,RESISTFIRE)
 THEN
   RESPONSE #100
-    SetGlobalTimer("CIE_IDOL_CAST","LOCALS",ONE_ROUND)
-    SetGlobalTimer("CIE_IDOL_ORB","LOCALS",TWO_ROUNDS)
+    SetGlobalTimer("CIE_IDOL_CAST","LOCALS",6)
+    SetGlobalTimer("CIE_IDOL_ORB","LOCALS",12)
     ForceSpell(NearestEnemyOf(Myself),CLERIC_SOL_SEARING_ORB)
 END
 
@@ -73,7 +73,7 @@ IF
   !CheckStatGT(SecondNearestEnemyOf(Myself),99,RESISTFIRE)
 THEN
   RESPONSE #100
-    SetGlobalTimer("CIE_IDOL_CAST","LOCALS",ONE_ROUND)
-    SetGlobalTimer("CIE_IDOL_ORB","LOCALS",TWO_ROUNDS)
+    SetGlobalTimer("CIE_IDOL_CAST","LOCALS",6)
+    SetGlobalTimer("CIE_IDOL_ORB","LOCALS",12)
     ForceSpell(SecondNearestEnemyOf(Myself),CLERIC_SOL_SEARING_ORB)
 END

@@ -1,0 +1,24 @@
+// Decided encounter blocks; based on the IWD:EE game rules.
+IF
+  Exists("GEM")
+  Global("GEM_ACTIVE","GLOBAL",0)
+  !Global("SPRITE_IS_DEADICASARACHT","GLOBAL",0)
+THEN
+  RESPONSE #100
+    SetGlobal("GEM_ACTIVE","GLOBAL",1)
+    StartCutSceneMode()
+    HideGUI()
+    StartCutSceneEx("ILDRGDED",FALSE)
+END
+
+IF
+  Global("GEM_ACTIVE","GLOBAL",0)
+  !Global("SPRITE_IS_DEADICASARACHT","GLOBAL",0)
+THEN
+  RESPONSE #100
+    SetGlobal("GEM_ACTIVE","GLOBAL",1)
+    StartCutSceneMode()
+    HideGUI()
+    CreateCreature("dlsgem",[943.839],SE)
+    StartCutSceneEx("ILDRGDED",FALSE)
+END

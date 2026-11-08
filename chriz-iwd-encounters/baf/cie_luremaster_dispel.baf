@@ -1,0 +1,11 @@
+// A complete entry when another AI removed the original Dispel Magic entry.
+IF
+  Allegiance(Myself,ENEMY)
+  HaveSpellRES("SPWI323")
+  !GlobalTimerNotExpired("CIE_LUR_DISPEL","LOCALS")
+  See(NearestEnemyOf(Myself))
+THEN
+  RESPONSE #100
+    SetGlobalTimer("CIE_LUR_DISPEL","LOCALS",6)
+    SpellRES("SPWI323",LastSeenBy(Myself))
+END

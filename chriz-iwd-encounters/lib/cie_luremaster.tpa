@@ -12,22 +12,24 @@
 // docs/components.md describes each change in engine-neutral terms.
 
 DEFINE_ACTION_FUNCTION cie_luremaster BEGIN
-  // the hop points: his old circuit (DULURWRP), where the base game hopped him
-  OUTER_SET cie_lur_points = 0
-  ACTION_IF FILE_EXISTS_IN_GAME ~dulurwrp.bcs~ BEGIN
-    COPY_EXISTING ~dulurwrp.bcs~ ~override~
-      DECOMPILE_AND_PATCH BEGIN
-        REPLACE_EVALUATE CASE_INSENSITIVE ~ForceSpellPoint(\[\([0-9]+\)\.\([0-9]+\)\],WIZARD_DIMENSION_DOOR)~ BEGIN
-          PATCH_IF (!VARIABLE_IS_SET $cie_lur_seen(~%MATCH1%~ ~%MATCH2%~)) BEGIN
-            SET $cie_lur_seen(~%MATCH1%~ ~%MATCH2%~) = 1
-            SET $cie_lur_px(~%cie_lur_points%~) = MATCH1
-            SET $cie_lur_py(~%cie_lur_points%~) = MATCH2
-            SET cie_lur_points += 1
-          END
-        END ~%MATCH0%~
-      END
-    BUT_ONLY
-  END
+  LAF cie_encounter_actors STR_VAR area = ~ar9711~ END
+  OUTER_SET cie_lur_points = 8
+  OUTER_SET $cie_lur_px(~0~) = 1251
+  OUTER_SET $cie_lur_py(~0~) = 269
+  OUTER_SET $cie_lur_px(~1~) = 836
+  OUTER_SET $cie_lur_py(~1~) = 1023
+  OUTER_SET $cie_lur_px(~2~) = 539
+  OUTER_SET $cie_lur_py(~2~) = 575
+  OUTER_SET $cie_lur_px(~3~) = 1616
+  OUTER_SET $cie_lur_py(~3~) = 359
+  OUTER_SET $cie_lur_px(~4~) = 1058
+  OUTER_SET $cie_lur_py(~4~) = 952
+  OUTER_SET $cie_lur_px(~5~) = 1769
+  OUTER_SET $cie_lur_py(~5~) = 560
+  OUTER_SET $cie_lur_px(~6~) = 1144
+  OUTER_SET $cie_lur_py(~6~) = 361
+  OUTER_SET $cie_lur_px(~7~) = 604
+  OUTER_SET $cie_lur_py(~7~) = 826
 
   // his placement: the fight form (TRGBARD), its scripts
   OUTER_SET cie_lur_found = 0
@@ -48,9 +50,6 @@ DEFINE_ACTION_FUNCTION cie_luremaster BEGIN
       END
     END
   BUT_ONLY
-  ACTION_IF (cie_lur_found = 0) BEGIN
-    FAIL ~chriz-iwd-encounters: ar9711.are has no Luremaster (TRGBARD).~
-  END
 
   LAF cie_luremaster_hop END
   LAF cie_luremaster_dispel END
@@ -61,9 +60,6 @@ END
 // else in his class slot when that points at a missing script (SCS leaves NULL there),
 // else in his first free slot.
 DEFINE_ACTION_FUNCTION cie_luremaster_hop BEGIN
-  ACTION_IF (cie_lur_points = 0) BEGIN
-    WARN ~chriz-iwd-encounters: the Luremaster's hop points (dulurwrp.bcs) are missing; he does not hop.~
-  END ELSE BEGIN
     OUTER_SPRINT cie_lur_hops ~~
     OUTER_FOR (k = 0; k < cie_lur_points; ++k) BEGIN
       OUTER_SET x = $cie_lur_px(~%k%~)
@@ -81,78 +77,66 @@ DEFINE_ACTION_FUNCTION cie_luremaster_hop BEGIN
         READ_ASCII (actor + 0x80) cre (8) NULL
         TO_UPPER cre
         PATCH_IF (~%cre%~ STRING_EQUAL ~TRGBARD~) AND (cie_lur_slotted = 0) BEGIN
-          // in place of his old hop circuit where it still runs (without SCS): the
-          // reactive hop replaces it, it does not hop on top of it
-          FOR (slot = 0x50; slot < 0x80; slot += 8) BEGIN
-            LPF cie_read_script_slot INT_VAR offset = (actor + slot) RET script END
-            PATCH_IF (cie_lur_slotted = 0) AND (~%script%~ STRING_EQUAL ~DULURWRP~) BEGIN
-              WRITE_ASCII (actor + slot) ~CIELURHP~ (8)
-              SET cie_lur_slotted = 1
+          LPF cie_read_script_slot INT_VAR offset = (actor + 0x60) RET previous = script END
+          PATCH_IF (~%previous%~ STRING_COMPARE ~~) AND (~%previous%~ STRING_COMPARE ~DULURWRP~)
+              AND (~%previous%~ STRING_COMPARE ~CIELURHP~) AND FILE_EXISTS_IN_GAME ~%previous%.bcs~ BEGIN
+            INNER_ACTION BEGIN
+              LAF cie_join_scripts STR_VAR first = ~CIELURHP~ second = EVAL ~%previous%~ target = ~CIELURHP~ END
             END
           END
-          // else the class slot when its script is missing (SCS leaves NULL there), then
-          // the free slots in run order
-          LPF cie_read_script_slot INT_VAR offset = (actor + 0x60) RET script END
-          PATCH_IF (cie_lur_slotted = 0) AND (~%script%~ STRING_COMPARE ~~) AND (!FILE_EXISTS_IN_GAME ~%script%.bcs~) BEGIN
-            WRITE_ASCII (actor + 0x60) ~CIELURHP~ (8)
-            SET cie_lur_slotted = 1
+          FOR (s = 0x50; s < 0x80; s += 8) BEGIN
+            LPF cie_read_script_slot INT_VAR offset = (actor + s) RET old = script END
+            PATCH_IF (~%old%~ STRING_EQUAL ~DULURWRP~) BEGIN WRITE_ASCII (actor + s) ~~ (8) END
           END
-          PATCH_FOR_EACH slot IN 0x50 0x78 0x60 0x68 0x58 0x70 BEGIN
-            LPF cie_read_script_slot INT_VAR offset = (actor + slot) RET script END
-            PATCH_IF (cie_lur_slotted = 0) AND (~%script%~ STRING_EQUAL ~~) BEGIN
-              WRITE_ASCII (actor + slot) ~CIELURHP~ (8)
-              SET cie_lur_slotted = 1
-            END
-          END
+          WRITE_ASCII (actor + 0x60) ~CIELURHP~ (8)
+          SET cie_lur_slotted = 1
+
         END
       END
     BUT_ONLY
-    ACTION_IF (cie_lur_slotted = 0) BEGIN
-      WARN ~chriz-iwd-encounters: the Luremaster's placement has no free script slot; he does not hop.~
-    END ELSE BEGIN
       PRINT ~chriz-iwd-encounters: the Luremaster opens with Improved Invisibility and hops over %cie_lur_points% points when an enemy is next to him (CIELURHP).~
-    END
-  END
 END
 
 // His spell script checks Remove Magic for his Dispel Magic entry. In IWD:EE's SPELL.IDS
 // 2302 is Remove Magic (SPWI302, also listed as WIZARD_DISPEL_MAGIC) and his Dispel Magic
 // is SPWI323 (2323). Where he memorises SPWI323 and not SPWI302, the entry uses 2323.
 DEFINE_ACTION_FUNCTION cie_luremaster_dispel BEGIN
-  OUTER_SET cie_lur_has323 = 0
-  OUTER_SET cie_lur_has302 = 0
-  COPY_EXISTING ~trgbard.cre~ ~override~
-    READ_LONG 0x2b0 spells
-    READ_LONG 0x2b4 count
-    FOR (i = 0; i < count; ++i) BEGIN
-      READ_ASCII (spells + 12 * i) spell (8) NULL
-      PATCH_IF (~%spell%~ STRING_EQUAL_CASE ~SPWI323~) BEGIN
-        SET cie_lur_has323 = 1
+  OUTER_SPRINT cie_lur_entry ~~
+  // Locate the owned Dispel entry, not a particular script version. Existing
+  // selection conditions and cast targets remain; missing entries get our block.
+  ACTION_PHP_EACH cie_lur_scripts AS script => unused BEGIN
+    COPY_EXISTING ~%script%.bcs~ ~override~
+      DECOMPILE_AND_PATCH BEGIN
+        SET at = INDEX_BUFFER (CASE_INSENSITIVE ~\(HaveSpell\|Spell\)(.*WIZARD_\(REMOVE\|DISPEL\)_MAGIC)~)
+        SET res_at = INDEX_BUFFER (CASE_INSENSITIVE ~HaveSpellRES("SPWI323")~)
+        PATCH_IF (at >= 0) OR (res_at >= 0) BEGIN
+          SPRINT cie_lur_entry ~%script%~
+        END
+        REPLACE_TEXTUALLY CASE_INSENSITIVE ~HaveSpell(WIZARD_\(REMOVE\|DISPEL\)_MAGIC)~ ~HaveSpellRES("SPWI323")~
+        REPLACE_TEXTUALLY CASE_INSENSITIVE ~Spell(\(.*\),WIZARD_\(REMOVE\|DISPEL\)_MAGIC)~ ~SpellRES("SPWI323",\1)~
       END
-      PATCH_IF (~%spell%~ STRING_EQUAL_CASE ~SPWI302~) BEGIN
-        SET cie_lur_has302 = 1
-      END
-    END
-  BUT_ONLY
-  OUTER_SET cie_lur_dispels = 0
-  ACTION_IF cie_lur_has323 AND !cie_lur_has302 BEGIN
-    OUTER_SPRINT cie_lur_dispel ~~
-    OUTER_PATCH ~~ BEGIN
-      LOOKUP_IDS_SYMBOL_OF_INT cie_lur_dispel ~spell~ 2323
-    END
-    ACTION_IF (~%cie_lur_dispel%~ STRING_COMPARE ~2323~) BEGIN
-      ACTION_PHP_EACH cie_lur_scripts AS script => unused BEGIN
-        COPY_EXISTING ~%script%.bcs~ ~override~
-          DECOMPILE_AND_PATCH BEGIN
-            REPLACE_EVALUATE ~WIZARD_\(REMOVE\|DISPEL\)_MAGIC\([^_A-Z0-9]\)~ BEGIN
-              SET cie_lur_dispels += 1
-            END ~%cie_lur_dispel%%MATCH2%~
-          END
-        BUT_ONLY
-      END
-    END
+    BUT_ONLY
   END
-  PRINT ~chriz-iwd-encounters: the Luremaster's Dispel Magic entry uses the spell he memorises (%cie_lur_dispels% place(s)).~
+  ACTION_IF (~%cie_lur_entry%~ STRING_EQUAL ~~) BEGIN
+    // The race slot is his spell AI. Preserve a different spell script and put
+    // the replacement entry before it, in a copy used by this placement only.
+    COPY ~chriz-iwd-encounters/baf/cie_luremaster_dispel.baf~ ~override/CIELURDS.bcs~ COMPILE_BAF_TO_BCS
+    COPY_EXISTING ~ar9711.are~ ~override~
+      GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+      PHP_EACH actors AS index => actor BEGIN
+        READ_ASCII (actor + 0x80) cre (8) NULL
+        PATCH_IF (~%cre%~ STRING_EQUAL_CASE ~TRGBARD~) BEGIN
+          LPF cie_read_script_slot INT_VAR offset = (actor + 0x68) RET previous = script END
+          PATCH_IF (~%previous%~ STRING_COMPARE ~~) AND (~%previous%~ STRING_COMPARE ~CIELURDS~) BEGIN
+            INNER_ACTION BEGIN
+              LAF cie_join_scripts STR_VAR first = ~CIELURDS~ second = EVAL ~%previous%~ target = ~CIELURDS~ END
+            END
+          END
+          WRITE_ASCII (actor + 0x68) ~CIELURDS~ (8)
+        END
+      END
+    BUT_ONLY
+  END
 END
 
 // The heroes' replacements: the area script spawns one while its counter (the heroes'
@@ -160,29 +144,17 @@ END
 // raises SPRITE_IS_DEAD<that name>. A block on top of the area script turns each new
 // death into one replacement (the area script still stops at six).
 DEFINE_ACTION_FUNCTION cie_luremaster_heroes BEGIN
-  OUTER_SPRINT cie_lur_hero ~~
+  OUTER_SPRINT cie_lur_hero ~AR9711_HERO~
   ACTION_IF FILE_EXISTS_IN_GAME ~trsph1.cre~ BEGIN
     COPY_EXISTING ~trsph1.cre~ ~override~
       READ_ASCII 0x280 cie_lur_hero (32) NULL
-    BUT_ONLY
-  END
-  OUTER_SPRINT cie_lur_area_script ~~
-  COPY_EXISTING ~ar9711.are~ ~override~
-    READ_ASCII 0x94 cie_lur_area_script (8) NULL
-  BUT_ONLY
-  OUTER_SET cie_lur_spends = 0 - 1
-  ACTION_IF (~%cie_lur_hero%~ STRING_COMPARE ~~) AND (~%cie_lur_area_script%~ STRING_COMPARE ~~)
-      AND (FILE_EXISTS_IN_GAME ~%cie_lur_area_script%.bcs~) BEGIN
-    COPY_EXISTING ~%cie_lur_area_script%.bcs~ ~override~
-      DECOMPILE_AND_PATCH BEGIN
-        SET cie_lur_spends = INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~IncrementGlobal("%cie_lur_hero%","GLOBAL",-1)~)
+      PATCH_IF (~%cie_lur_hero%~ STRING_EQUAL ~~) BEGIN
+        SPRINT cie_lur_hero ~AR9711_HERO~
       END
     BUT_ONLY
   END
-  ACTION_IF (cie_lur_spends < 0) BEGIN
-    WARN ~chriz-iwd-encounters: the hall's area script spends no hero counter (%cie_lur_hero%); the heroes' replacements stay as they are.~
-  END ELSE BEGIN
-    EXTEND_TOP ~%cie_lur_area_script%.bcs~ ~chriz-iwd-encounters/baf/cie_luremaster_heroes.baf~ EVALUATE_BUFFER
-    PRINT ~chriz-iwd-encounters: each spectral hero that dies brings one replacement (%cie_lur_hero%).~
-  END
+  LAF cie_area_script STR_VAR area = ~ar9711~ fallback = ~AR9711~ RET cie_lur_area_script = script END
+  LAF cie_write_script_blocks STR_VAR script = EVAL ~%cie_lur_area_script%~ marker = ~"#spectral_reinforcements"~
+    source = ~chriz-iwd-encounters/baf/cie_luremaster_replacements.baf~ END
+  EXTEND_TOP ~%cie_lur_area_script%.bcs~ ~chriz-iwd-encounters/baf/cie_luremaster_heroes.baf~ EVALUATE_BUFFER
 END

@@ -82,7 +82,7 @@ DEFINE_ACTION_FUNCTION cie_priest_prep BEGIN
   OUTER_SET cie_prep_count = 0
   ACTION_PHP_EACH cie_prep_candidate AS script => unused BEGIN
     ACTION_IF VARIABLE_IS_SET $cie_scs_caster(~%script%~) BEGIN
-      EXTEND_TOP ~%script%.bcs~ ~chriz-iwd-encounters/baf/cie_prep.baf~ EVALUATE_BUFFER
+      LAF cie_write_priest_prep STR_VAR script END
       OUTER_SET cie_prep_count += 1
     END
   END
@@ -95,9 +95,24 @@ DEFINE_ACTION_FUNCTION cie_priest_prep BEGIN
   OUTER_SPRINT cie_self_gate ~DifficultyGT(EASY)~
   OUTER_SPRINT cie_self_note ~original AI that SCS missed, self-protection on Core Rules and up.~
   ACTION_FOR_EACH script IN SHELFPS1 CAJSHA1M BEGIN
-    ACTION_IF (FILE_EXISTS_IN_GAME ~%script%.bcs~) AND (NOT VARIABLE_IS_SET $cie_scs_caster(~%script%~)) BEGIN
-      EXTEND_TOP ~%script%.bcs~ ~chriz-iwd-encounters/baf/cie_prep.baf~ EVALUATE_BUFFER
+    ACTION_IF NOT VARIABLE_IS_SET $cie_scs_caster(~%script%~) BEGIN
+      LAF cie_write_priest_prep STR_VAR script END
       PRINT ~chriz-iwd-encounters: priest preparation added to %script% (original AI).~
     END
   END
+END
+
+// Replace this component's preparation, including an earlier installed copy.
+// The CIE_SELF and CIE_GROUP variables identify our own blocks only.
+DEFINE_ACTION_FUNCTION cie_write_priest_prep
+  STR_VAR script = ~~
+BEGIN
+  LAF cie_ensure_script STR_VAR script END
+  COPY_EXISTING ~%script%.bcs~ ~override~
+    DECOMPILE_AND_PATCH BEGIN
+      LPF cie_remove_baf_blocks STR_VAR text = ~CIE_SELF~ RET removed END
+      LPF cie_remove_baf_blocks STR_VAR text = ~CIE_GROUP~ RET removed END
+    END
+  BUT_ONLY
+  EXTEND_TOP ~%script%.bcs~ ~chriz-iwd-encounters/baf/cie_prep.baf~ EVALUATE_BUFFER
 END

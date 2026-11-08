@@ -1,0 +1,29 @@
+// Decided encounter blocks; based on the IWD:EE game rules.
+IF
+  !Global("SPRITE_IS_DEADYXUNOMEI","GLOBAL",0)
+  !Global("#spawn_group_1","MYAREA",1)
+THEN
+  RESPONSE #100
+    SetGlobal("#spawn_group_1","MYAREA",1)
+    CreateCreature("kaorog",[3239.1610],SE)
+    CreateCreature("kaorog",[3229.1745],E)
+    CreateCreature("kaoroge",[3034.1409],S)
+    CreateCreature("kaorog",[3075.1435],SW)
+    CreateCreature("katown1",[3032.1443],N)
+    CreateCreature("katown2",[2562.1566],SE)
+    CreateCreature("katown3",[2632.1639],NW)
+    CreateCreature("kaoroge",[2593.1591],NW)
+    CreateCreature("kaorog",[2309.593],N)
+    CreateCreature("kaorog",[2272.599],NW)
+    CreateCreature("katown1",[2249.569],SE)
+    CreateCreature("katown2",[2311.554],S)
+    CreateCreature("katown3",[2339.573],SW)
+    CreateCreature("kaoroge",[2090.1073],S)
+    CreateCreature("kaorog",[1932.2412],SE)
+    CreateCreature("kaorog",[2072.2453],W)
+    CreateCreature("katown1",[1953.2431],NW)
+    CreateCreature("katown3",[2022.2462],E)
+    SetMusic(DAY,MX2100B)
+    SetMusic(NIGHT,MX2100B)
+    Continue()
+END

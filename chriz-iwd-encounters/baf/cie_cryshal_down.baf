@@ -1,0 +1,31 @@
+// Decided encounter blocks; based on the IWD:EE game rules.
+IF
+  DifficultyGT(EASY)
+  !GlobalTimerNotExpired("OH_Dead_Timer","LOCALS")
+  Global("OH_Dead","LOCALS",0)
+  HPLT(Myself,10)
+THEN
+  RESPONSE #100
+    SetGlobal("OH_Dead","LOCALS",1)
+    SetGlobalTimer("OH_Dead_Timer","LOCALS",10)
+END
+
+IF
+  !GlobalTimerNotExpired("OH_Dead_Timer","LOCALS")
+  Global("OH_Dead","LOCALS",0)
+  HPLT(Myself,10)
+THEN
+  RESPONSE #100
+    SetGlobal("OH_Dead","LOCALS",1)
+    SetGlobalTimer("OH_Dead_Timer","LOCALS",20)
+END
+
+IF
+  !GlobalTimerNotExpired("OH_Dead_Timer","LOCALS")
+  Global("OH_Dead","LOCALS",1)
+THEN
+  RESPONSE #100
+    SetGlobal("OH_Dead","LOCALS",0)
+    SetSequence(AWAKE)
+    ApplySpellRES("CDHP3000",Myself)
+END

@@ -5,23 +5,43 @@ behaviour can later move to the Chriz script engine. Spell names are SPELL.IDS
 symbols. Difficulty names are the in-game slider: Easy, Normal, Core Rules, Hard,
 Insane (DIFFLEV 1–5).
 
+## Installation ownership
+
+The installer writes each component's decided fields and behaviour regardless of
+earlier values. Required actors, regions, doors and script blocks are created when
+absent; existing unrelated area sections and creature fields remain. Fixed hit
+points are final values, including when a previous mod set higher values. Scripts
+keep unrelated blocks; private copies keep unrelated AI when a slot is occupied.
+Only genuinely absent external targets and unreadable formats may be logged and
+left out. The game-type and essential encounter-resource requirements remain.
+
+Bundled placement records contain only the encounter placements that a component
+needs. A surviving renamed actor fills only one required placement; each missing
+actor is added separately. Empty script slots are restored individually while
+occupied slots keep their AI. Missing region and door polygons are appended with
+their vertices; existing polygons are preserved. Embedded creatures receive the
+same owned fields as their external counterparts. Components 100 and 200 identify SCS AI by its behaviour,
+without requiring a particular SCS version or installation record.
+
+The overwrite changes have offline fixture coverage only. The dated game tests
+below describe earlier versions and do not certify these installer changes.
+
 ## 100: SCS caster-AI repairs
 
-Needs Sword Coast Stratagems' smarter mages or smarter priests. Each repair finds its
-cases from the installed files; when SCS has done the job, it changes nothing.
+Uses the installed caster AI. Without SCS the Shadowed Elven Cleric repair uses
+the original `SHELFCS1` caster script.
 
 ### Shadowed Elven Clerics without AI
 
-- **Who:** every creature whose script slot names `SDELFCS1` while no such script
-  exists. On SCS 35.21 that is `SDELFCH2`, the two Shadowed Elven Clerics that
+- **Who:** `SDELFCH2` and every creature whose script slot names `SDELFCS1`. On SCS 35.21 that is `SDELFCH2`, the two Shadowed Elven Clerics that
   `AR5202.bcs` spawns in the Severed Hand.
 - **Cause:** SCS's `priest/priest_iwd.tpa:109` writes `sdelfcs1`, a typo for
   `shelfcs1`, before its creature pass. The clerics keep their old spells and have no
   combat script; their other scripts only make them hostile and walk to Player1.
 - **Change:** take the twin `SDELFCH1`, which SCS converted normally. Put its SCS
   caster script in the broken slot, and replace the creature's priest spells and
-  slots per level with the twin's SCS selection. Only a creature that matches the
-  twin in class, race, kit and levels is changed.
+  slots per level with the twin's selection. Class, race, kit, levels and unrelated
+  spell types remain; their earlier values do not prevent the repair.
 
 ### Melee script above a caster AI
 
@@ -47,7 +67,7 @@ cases from the installed files; when SCS has done the job, it changes nothing.
     wake-up without the melee blocks: stay deactivated until `AREA_GROUP_VARBit1`
     (MYAREA) is set, then activate and become hostile, and walk to Player1 when idle
     and no PC is in sight;
-  - any other melee AI there is left unchanged and named in the WeiDU log.
+  - other melee AI moves below the caster, retaining its own blocks.
 - Which SCS script came from which base-game script is read from SCS's own record,
   `weidu_external/data/stratagems/genai_scripts_built.txt` (lines
   `original-base---built`).
@@ -102,7 +122,7 @@ and are in the same area.
 
 ## 200: enemy priests prepare when they first see the party
 
-Needs SCS's smarter priests. Christopher, 2026-10-25: "Einfach nur so, dass sie
+Prepares SCS priests and the two original AIs listed below. Christopher, 2026-10-25: "Einfach nur so, dass sie
 nicht nackt sind". Graded by difficulty on 2026-10-28: "ab Core ein paar prebuffs
 … bis auf Insane das Ganze dann erhöhen".
 
@@ -174,13 +194,13 @@ SCS, and with a real party.
   1 hit point at least (and protects him from vorpal hits), so the area script plays
   the ending once he is below 10 hit points. SCS adds 50 % magic resistance.
 - **Change:**
-  - an item that carries a spell-level immunity loses it and its protections from
-    single spells (the ring);
+  - his equipment loses spell-level immunity; the ring `BRING` loses its complete
+    single-spell protection list;
   - instead he is immune to spell levels 1–3, and keeps the item's protections from
     single spells that belong to those levels: a priest or wizard spell named by its
-    SPELL.IDS number (`SPPRlnn`, `SPWIlnn`) with level 1–3 in its header. In the
-    reference install 11 of the ring's 44, such as Stinking Cloud and Skull Trap; a
-    Wish option and a part of a level 6 spell that carry a low level stay out.
+    SPELL.IDS number (`SPPRlnn`, `SPWIlnn`). The 11 decided protections are written
+    from the mod, including Stinking Cloud and Skull Trap; prior spell levels or
+    missing effects do not change the list.
     Christopher, 2026-10-29. Spells his own scripts apply to him pass a spell-level
     immunity (base game: SCS's level 2 invisibility worked through the ring's
     levels 1–9), so the immunity does not block his own protections;
@@ -241,9 +261,8 @@ SCS, and with a real party.
 
 ### Hit points
 
-- Easy and Normal: unchanged (base game 350).
-- Core Rules ×10/7, Hard ×25/14, Insane ×15/7 of his installed hit points (base
-  game: 500, 625, 750), rounded. Christopher, 2026-10-28: Core Rules "wesentlich
+- Easy and Normal: 350 hit points.
+- Core Rules: 500; Hard: 625; Insane: 750. These are final values. Christopher, 2026-10-28: Core Rules "wesentlich
   mehr", 875 on Insane perhaps too much.
 - Applied once, when he appears: a permanent raise of maximum and current hit points
   (opcode 18, mode 0), which his magic resistance does not stop. Built at install
@@ -494,8 +513,8 @@ real party.
   over the map) and sets it. A Marauder the party reaches or attacks first still
   fights at once, as in the base game.
 - **Stronger:** Marauders 70 hit points (base game 42), 2 attacks per round (1),
-  THAC0 10 (12); Avengers 45 hit points (31). Values are only raised, never lowered
-  (attacks per round by their real number: 1½ becomes 2, 2½ stays).
+  THAC0 10 (12); Avengers 45 hit points (31). These are final values, including
+  when an earlier mod gave them more hit points or attacks.
 
 ### Repairs
 
@@ -545,7 +564,8 @@ Not tested in the game: the badge experience, without SCS, and with a real party
   confusion, fear, feeblemind, hold, imprisonment, level drain, maze, stun and sleep,
   and some extra hit points. Without SCS they have no kit and no rage. The bodyguards'
   Flame Blade stays unused: it would replace their giant weapon (2d10) with a 1d4+4
-  fire blade.
+  fire blade. An empty combat slot is restored even if a difficulty gate or team
+  script remains, including on the three optional guards when they are present.
 - **Gorg's pack:** when Gorg (`WTGORG`) is hostile, he sets his pack's group variable
   `MAP_GROUP_HOSTILE1` and `CIE_JOR_GORG`; the area script then turns the eight placed
   winter wolves of the pack (`WINWOLFP`, Winter Wolf 9–16) hostile and sends them to
@@ -614,9 +634,8 @@ boneguards. Its death frees the brothers and kills every undead.
   four rounds, Sol's Searing Orb two — at the nearest or else the second-nearest enemy
   it sees, only where the spell can work: Finger of Death not at undead or summoned
   creatures, Flesh to Stone not at petrified ones, the fire spells not at fire-immune
-  ones. Flame Strike (three rounds) only when its ability for the Idol's caster level
-  has effects: with SCS's caster-level abilities (component 2000) plus Tweaks
-  Anthology's save penalties, those of levels 2 and up have none, so it is left out.
+  ones. Flame Strike stays out of the rotation, matching the collection's existing
+  three-spell result, independently of the installed spell's effects.
 - **Hit points and place:** 225 (base game 150); movement rate 0 (opcode 126), so it
   never leaves its plinth.
 - **The rally:** when the Idol is attacked or hurt, its script sets `CIE_IDOL_RALLY`;
@@ -625,7 +644,9 @@ boneguards. Its death frees the brothers and kills every undead.
 - **Repairs:**
   - The zombie lords' aura: their creature's race script `ZLAURA` casts it, but their
     placements put `LDIDLKIL` ("die with the Idol") in the race slot, which wins; that
-    script moves to the placements' free class slot.
+    script runs in the placements' class slot, ahead of any unrelated class AI.
+    An absent or unreadable zombie-lord creature costs only that creature's repair,
+    with one installer log line; the other Idol changes still install.
   - The way to Poquelin: the six badge doors' script (`LDBDGDOR`) adds 1 to
     `ALL_KEYS` when a door is unlocked and again when it is opened (and on every
     opening), and the hidden door (`LDBDGOPN`) opens only at exactly 6, so two counts
@@ -716,7 +737,7 @@ True Sight) lift the images' illusion: they turn translucent and glow (`OHPOMREV
 - **Repairs:**
   - His own full heal could come before the area script had counted the hit, so a hit
     sometimes removed no image. His script no longer heals him; the shuffle does, after
-    the count.
+    the count. This removes his independent heal whether or not it also makes him jump.
   - His script read `FAKE_POMAB_DEAD`, a variable nothing sets, instead of the image
     counter.
   - A sentry healed while it played dead stayed down for good (its wake-up also checked
@@ -856,7 +877,9 @@ for rooms 1 and 2 once their alarm is set.
   that room's alarm (in his script, as room 3 does), so its plates appear.
 - **The plates fight:** they had a script that only plays their arrival and raises the
   alarm; they get SCS's melee script (`DWMESSGE`, else the base game's `EFATKMEL`) in a
-  free slot.
+  general slot. If that slot already has unrelated AI, it runs first, followed by the
+  selected melee AI in a private script. A bundled melee fallback is used only when
+  both external melee scripts are absent.
 - **Hit points:** 350 (base game 250).
 - **Below half his hit points,** at the latest, all three rooms raise their alarm: the
   plates still missing appear and come for the party, and he fights in melee between his
@@ -894,11 +917,12 @@ slot pointing at a missing `NULL.BCS`; since then he stands at his throne.
 - **He hops away when cornered:** while he has spells and is not beaten, an enemy next to
   him makes him Dimension Door to one of the eight points of his old circuit, every 12
   or 18 seconds at most (`CIELURHP`, in his class slot: with SCS in place of the
-  missing `NULL.BCS`, without SCS in place of `DULURWRP`, so he hops the same way in
+  missing `NULL.BCS`, without SCS in place of `DULURWRP`; any other class AI remains
+  below the hop blocks, so he hops the same way in
   both and never after every spell on top of it).
 - **Repairs:** his spell script's Dispel Magic entry checked `WIZARD_REMOVE_MAGIC` (2302,
   Remove Magic in IWD:EE), which he does not memorise, so his three Dispel Magic
-  (`SPWI323`, 2323) never came; the entry checks and casts 2323 now.
+  (`SPWI323`, 2323) never came; the entry checks and casts `SPWI323` directly now.
   A fallen spectral hero now brings its replacement: the area script spawns one of six
   (`TRSPH4`–`9`) while `AR9711_HERO` is above 0, and nothing raised it (the engine only
   counts `SPRITE_IS_DEADAR9711_HERO`, the heroes' shared death variable); a block on top of

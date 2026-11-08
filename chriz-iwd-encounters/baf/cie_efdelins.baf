@@ -1,0 +1,17 @@
+IF
+  !Global("EFDELINS_inactive","LOCALS",1)
+  DifficultyLT(HARDEST)
+  !See([PC])
+THEN
+  RESPONSE #100
+    DestroySelf()
+END
+
+IF
+  !Global("EFDELINS_inactive","LOCALS",1)
+  True()
+THEN
+  RESPONSE #100
+    SetGlobal("EFDELINS_inactive","LOCALS",1)
+END
+

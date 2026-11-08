@@ -10,7 +10,7 @@ IF
 THEN
   RESPONSE #100
     SetGlobal("CIE_YXU_ELITES","MYAREA",1)
-    SetGlobalTimer("CIE_YXU_ELITE_TIMER","MYAREA",ONE_ROUND)
+    SetGlobalTimer("CIE_YXU_ELITE_TIMER","MYAREA",6)
     Continue()
 END
 
