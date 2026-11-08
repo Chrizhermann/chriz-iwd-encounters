@@ -1,11 +1,14 @@
 # Changelog
 
-## Unreleased
+## v0.2.2 (2026-11-08)
 
-- Write decided encounter fields and blocks over edited input, including missing
-  placements and occupied script slots, without warnings or compatibility refusals.
-- Add data-only WeiDU fixtures for changed values, missing behaviour and embedded
-  creatures, including a second install. This is not live-game acceptance.
+- Every component writes its decided encounter, whatever the game files hold: edited
+  values, missing placements and occupied script slots no longer stop it, warn or skip
+  it. The Idol always gets its three spells.
+- Tests: data-only WeiDU fixtures for changed values, missing behaviour and embedded
+  creatures, including a second install. A full Chriz Easy IWD lab install (139 of 139
+  components) and a start test passed on 2026-11-08; the changed fights were not
+  played.
 
 ## v0.2.1 (2026-11-07)
 
