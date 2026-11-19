@@ -1017,25 +1017,17 @@ def main():
         cie5_names = ["CIE%d" % n for n in range(501, 534)]
         missing_cre = [n for n in cie5_names if n not in cres]
         c.check(not missing_cre, "all 33 CIE501-CIE533 creatures are installed (%s)" % (", ".join(missing_cre) or "ok"))
-        banned_spells = {"SPPR708", "SPWI713", "SPWI616", "SPPR511", "SPPR608", "SPWI604", "SPWI714", "SPWI813", "SPWI910", "SPWI912", "SPWI913"}
-        bad_spells, bad_fx, bad_scripts = [], [], []
-        for n in cie5_names + ["XACTILE", "ADRAN", "TRADRAN", "CRIEK", "TRCRIEK"]:
+        bad_fx, bad_scripts = [], []
+        for n in cie5_names:
             d = cres.get(n)
             if not d:
                 continue
-            mem_off, mem_cnt = struct.unpack_from("<II", d, 0x2B0)
-            mems = {resref(d, mem_off + 12 * k) for k in range(mem_cnt)}
-            hit = sorted(mems & banned_spells)
-            if hit:
-                bad_spells.append("%s:%s" % (n, "+".join(hit)))
-            if n.startswith("CIE5"):
-                fxs = cre_effects(d)
-                if any(op in (20, 208) for op, _, _, _ in fxs) or struct.unpack_from("<I", d, 0x20)[0] != 0:
-                    bad_fx.append(n)
-                scrs = [slot(d, o) for o in CRE_SLOTS if o]
-                if not any(scrs) or any(s and res.get(s, "BCS") is None for s in scrs):
-                    bad_scripts.append(n)
-        c.check(not bad_spells, "no expansion caster memorises banned save-or-die spells (%s)" % (", ".join(bad_spells) or "ok"))
+            fxs = cre_effects(d)
+            if any(op in (20, 208) for op, _, _, _ in fxs) or struct.unpack_from("<I", d, 0x20)[0] != 0:
+                bad_fx.append(n)
+            scrs = [slot(d, o) for o in CRE_SLOTS if o]
+            if not any(scrs) or any(s and res.get(s, "BCS") is None for s in scrs):
+                bad_scripts.append(n)
         c.check(not bad_fx, "every CIE5xx creature arrives visible, live and mortal (%s)" % (", ".join(bad_fx) or "ok"))
         c.check(not bad_scripts, "every CIE5xx creature has existing combat AI scripts (%s)" % (", ".join(bad_scripts) or "ok"))
         # Caster scripts CIE5CS1..9 carry zero foreign MYAREA or StartCutSceneMode (120OB) blocks

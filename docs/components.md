@@ -947,12 +947,9 @@ Watchknight Crypts, Dungeon Trial Arenas, and Jackal Caverns (`AR9500`–`AR9801
   row is restored by coordinate to its Ice Temple creature (`DLSCRAG`, `DLSNOTR`,
   `DLICETR`, `DLBONEC`, `DLCLD*`, `DLFZNBNE`, `DLICE*`, `DLBNEGRD`, `DLWATER`) and combat
   script, while row 60 (`[1078.2266]`) keeps `XACTILE` and `ILXACTIL`.
-- **No-Reload save-or-die spell replacements:** `XACTILE`, `ADRAN`, `TRADRAN`, `CRIEK`
-  and `TRCRIEK`, as well as all expansion caster clones (`CIE501`–`CIE533`), replace
-  outright instant-death and 1-HP spells (`SPPR708`, `SPWI713`, `SPWI616`, `SPPR511`,
-  `SPPR608`, `SPWI604`, `SPWI714`, `SPWI813`, `SPWI910`, `SPWI912`) with high-level combat
-  spells already supported by their scripts (`SPPR603`, `SPPR615`, `SPPR520`, `SPWI812`,
-  `SPWI615`, `SPWI611`, `SPWI810`).
+- **Full spellbooks preserved:** both existing expansion casters and all bespoke caster
+  clones (`CIE501`–`CIE533`) keep their complete unstripped spellbooks (including high-level
+  save-or-die, banishment and power-word magic).
 - **Horde compression and spawn pacing:** 359 generic placed filler actors across 16 areas
   (`AR9500`–`AR9603`, `AR9700`, `AR9702`, `AR9712`, `AR9714`, `AR9716`–`AR9718`, `AR9800`,
   `AR9801`) have their appearance schedule set to `0`, leaving every quest NPC, dialogue

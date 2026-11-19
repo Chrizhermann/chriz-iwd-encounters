@@ -1,9 +1,9 @@
 // Component 500: Heart of Winter & Trials of the Luremaster expansion overhaul
-// (AR9500-AR9801). Repairs SCS 6040's AR9602 64x Xactile actor clobber, removes
-// unfair save-or-die instant kills on expansion rival casters, thins ~45-50% of
-// generic expansion filler mobs via schedule=0, upgrades spongy regulars, and
-// places bespoke lore-accurate expansion champions and spellcasters with net XP
-// preserved. Works with and without SCS.
+// (AR9500-AR9801). Repairs SCS 6040's AR9602 64x Xactile actor clobber, thins
+// ~45-50% of generic expansion filler mobs via schedule=0, upgrades spongy
+// regulars, and places bespoke lore-accurate expansion champions and
+// spellcasters with full SCS spellbooks and net XP preserved. Works with and
+// without SCS.
 
 // Strip non-generic MYAREA, Malavon warp, StartCutSceneMode, and NumTimesTalkedTo
 // blocks directly on a compiled SCS caster BCS without decompiling (preserves
@@ -59,43 +59,6 @@ BEGIN
     COPY ~chriz-iwd-encounters/baf/%fallback_baf%.baf~ ~override/%target%.bcs~
       COMPILE_BAF_TO_BCS
   END
-END
-
-// Swap banned No-Reload instant-kill / 1-HP spells in a creature's known and
-// memorized spell arrays in-place (8-byte resref at known +0x00, mem +0x00).
-DEFINE_PATCH_FUNCTION cie500_swap_spell
-  STR_VAR old_res = ~~ new_res = ~~
-BEGIN
-  READ_LONG 0x2a0 known_off
-  READ_LONG 0x2a4 known_cnt
-  FOR (i = 0; i < known_cnt; ++i) BEGIN
-    READ_ASCII (known_off + 12 * i) sp (8) NULL
-    PATCH_IF (~%sp%~ STRING_EQUAL_CASE ~%old_res%~) BEGIN
-      WRITE_ASCIIE (known_off + 12 * i) ~%new_res%~ #8
-    END
-  END
-  READ_LONG 0x2b0 mem_off
-  READ_LONG 0x2b4 mem_cnt
-  FOR (j = 0; j < mem_cnt; ++j) BEGIN
-    READ_ASCII (mem_off + 12 * j) sp (8) NULL
-    PATCH_IF (~%sp%~ STRING_EQUAL_CASE ~%old_res%~) BEGIN
-      WRITE_ASCIIE (mem_off + 12 * j) ~%new_res%~ #8
-    END
-  END
-END
-
-DEFINE_PATCH_FUNCTION cie500_sanitize_spellbook BEGIN
-  LPF cie500_swap_spell STR_VAR old_res = ~SPPR511~ new_res = ~SPPR520~ END
-  LPF cie500_swap_spell STR_VAR old_res = ~SPPR608~ new_res = ~SPPR615~ END
-  LPF cie500_swap_spell STR_VAR old_res = ~SPPR708~ new_res = ~SPPR715~ END
-  LPF cie500_swap_spell STR_VAR old_res = ~SPWI604~ new_res = ~SPWI611~ END
-  LPF cie500_swap_spell STR_VAR old_res = ~SPWI616~ new_res = ~SPWI611~ END
-  LPF cie500_swap_spell STR_VAR old_res = ~SPWI713~ new_res = ~SPWI704~ END
-  LPF cie500_swap_spell STR_VAR old_res = ~SPWI714~ new_res = ~SPWI708~ END
-  LPF cie500_swap_spell STR_VAR old_res = ~SPWI813~ new_res = ~SPWI812~ END
-  LPF cie500_swap_spell STR_VAR old_res = ~SPWI910~ new_res = ~SPWI904~ END
-  LPF cie500_swap_spell STR_VAR old_res = ~SPWI912~ new_res = ~SPWI904~ END
-  LPF cie500_swap_spell STR_VAR old_res = ~SPWI913~ new_res = ~SPWI904~ END
 END
 
 // Copy 400-byte soundset (0xA4..0x233) and animation ID (0x28) from a visual donor.
@@ -190,7 +153,6 @@ BEGIN
   WRITE_ASCII 0x2cc ~~ #8  // no dialog
   LPF DELETE_CRE_EFFECT INT_VAR opcode_to_delete = 20 END  // no baked invisibility
   LPF DELETE_CRE_EFFECT INT_VAR opcode_to_delete = 208 END // no immortal MINHP
-  LPF cie500_sanitize_spellbook END
   LPF cie500_clear_all_items END
 END
 
@@ -345,16 +307,7 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
   LAF cie500_build_caster_script STR_VAR donor = ~LDMALVON~ fallback_baf = ~cie5_mage_fb~   target = ~CIE5CS8~ END
   LAF cie500_build_caster_script STR_VAR donor = ~UDBANDOF~ fallback_baf = ~cie5_mage_fb~   target = ~CIE5CS9~ END
 
-  // 3. Sanitize unfair No-Reload instant-kill / 1-HP spells on existing expansion casters
-  ACTION_FOR_EACH existing_caster IN ~xactile~ ~adran~ ~tradran~ ~criek~ ~trcriek~ BEGIN
-    ACTION_IF FILE_EXISTS_IN_GAME ~%existing_caster%.cre~ BEGIN
-      COPY_EXISTING ~%existing_caster%.cre~ ~override~
-        LPF cie500_sanitize_spellbook END
-      BUT_ONLY
-    END
-  END
-
-  // 4. Repair AR9602.ARE (SCS 6040 clobbered all 64 actors' CRE fields to XACTILE) & thin filler
+  // 3. Repair AR9602.ARE (SCS 6040 clobbered all 64 actors' CRE fields to XACTILE) & thin filler
   ACTION_IF FILE_EXISTS_IN_GAME ~ar9602.are~ BEGIN
     COPY_EXISTING ~ar9602.are~ ~override~
       LPF cie500_restore_9602_row INT_VAR rx = 517 ry = 1253 keep = 0 STR_VAR rcre = ~DLSCRAG~ sovr = ~~ sgen = ~GNT6MOVE~ scls = ~GNTEAM6S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~~ END
