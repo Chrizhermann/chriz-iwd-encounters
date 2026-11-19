@@ -20,7 +20,7 @@ spec.loader.exec_module(fixture)
 check = fixture.check
 WEIDU, REFERENCE, SCENARIO = sys.argv[1], Path(sys.argv[2]), sys.argv[3] if len(sys.argv) > 3 else "base"
 sys.argv[1:] = []
-COMPONENTS = [100, 110, 200, *range(300, 411, 10)]
+COMPONENTS = [100, 110, 200, *range(300, 411, 10), 500]
 
 
 def word(data, offset):
@@ -92,7 +92,7 @@ class Overwrite(unittest.TestCase):
     def mutate(cls):
         # Different values, strings, extra/missing effects, missing placements,
         # empty slots and a changed script layout in one hostile input fixture.
-        for name in ["joril", "ilmadia", "idol", "icasa", "dlsgem", "lordm", "kaorog", "kaoroge", "belhif"]:
+        for name in ["joril", "ilmadia", "idol", "icasa", "dlsgem", "lordm", "kaorog", "kaoroge", "belhif", "harald", "cpmumg"]:
             p = cls.ov / (name + ".cre")
             d = bytearray(p.read_bytes())
             struct.pack_into("<HH", d, 0x24, 999, 999)
@@ -102,6 +102,16 @@ class Overwrite(unittest.TestCase):
                 # Delete the old effect table. The owned movement effect must return.
                 struct.pack_into("<I", d, 0x2c8, 0)
             p.write_bytes(d)
+        p = cls.ov / "ar9602.are"
+        d = bytearray(p.read_bytes())
+        actors_9602 = long(d, 0x54)
+        for idx in range(word(d, 0x58)):
+            row_off = actors_9602 + idx * 0x110
+            d[row_off + 0x80:row_off + 0x88] = b"XACTILE\0"
+            d[row_off + 0x70:row_off + 0x78] = b"EFATKMEL"
+            if idx == 60:
+                d[row_off + 0x78:row_off + 0x80] = b"ILXACTIL"
+        p.write_bytes(d)
         for name in ["sarunpr", "dwsaru0"]:
             p = cls.ov / (name + ".cre")
             if p.exists():
@@ -120,7 +130,7 @@ class Overwrite(unittest.TestCase):
         for name, field, fmt in [("ar4005", 0x5a, "H"), ("ar8012", 0xa4, "I")]:
             p = cls.ov / (name + ".are"); d = bytearray(p.read_bytes())
             struct.pack_into("<" + fmt, d, field, 0); p.write_bytes(d)
-        for name in ["ar2100", "ar4005", "ar8012", "ar1103", "bamemba", "bawail0", "ldidol", "eebelkil", "ildrgded", "eelpomab"]:
+        for name in ["ar2100", "ar4005", "ar8012", "ar1103", "ar9704", "bamemba", "bawail0", "ldidol", "eebelkil", "ildrgded", "eelpomab"]:
             p = cls.ov / (name + ".bcs")
             if p.exists():
                 p.write_bytes(b"SC\nSC\n")
@@ -337,7 +347,7 @@ END
         code, text = self.results[-1]
         self.assertEqual(code, 0, text[-6000:])
         self.assertNotRegex(text, r"(?i)\b(?:ERROR|WARNING)\b")
-        self.assertEqual(text.count("SUCCESSFULLY INSTALLED"), 15)
+        self.assertEqual(text.count("SUCCESSFULLY INSTALLED"), 16)
         if SCENARIO in {"base","stack"}:
             checked=subprocess.run([sys.executable,"-I",str(ROOT/"tests/check_install.py"),str(self.game)],capture_output=True,text=True)
             (self.folder/("check-%d.log"%len(self.results))).write_text(checked.stdout,encoding="utf-8")
@@ -349,7 +359,8 @@ END
 
     def test_02_decided_creature_fields(self):
         for name, hp in [("JORIL",185),("ILMADIA",135),("IDOL",225),("ICASA",650),
-                         ("DLSGEM",250),("LORDM",350),("KAOROG",45),("KAOROGE",70),("CIEPOQ",420),("CIESENTR",240)]:
+                         ("DLSGEM",250),("LORDM",350),("KAOROG",45),("KAOROGE",70),
+                         ("HARALD",185),("CPMUMG",215),("CIEPOQ",420),("CIESENTR",240)]:
             with self.subTest(name=name):
                 d = self.res.get(name,"CRE")
                 self.assertEqual((word(d,0x24), word(d,0x26)), (hp,hp))
@@ -387,7 +398,7 @@ END
         for area, markers in [("AR2100",[b"kaorog",b"kaoroge",b"cie_kul_wave"]),
              ("AR4005",[b"cieyxm1",b"cieyxm2",b"cieyxm3",b"yxun_attack"]),
              ("AR9400",[b"cie_meb_guard",b"barrowwight",b"drowneddead"]),
-             ("AR8012",[b"cie_idol_rally"]), ("AR9712",[])]:
+             ("AR8012",[b"cie_idol_rally"]), ("AR9704",[b"cie5_harald_shades"]), ("AR9712",[])]:
             for marker in markers:
                 self.assertIn(marker,self.area_script(area),(area,marker))
         idol=next(p for p in check.are_actors(self.res.get("AR8012","ARE")).values() if p["cre"]=="IDOL")
@@ -406,6 +417,13 @@ END
                         name = "TEST_RENAMED_PRIEST"
                     self.assertIn(name,actors)
             if SCENARIO=="edited": self.assertEqual(d[0xe4:0xe4+len(self.sentinel)],self.sentinel)
+        for folder in (ROOT/"chriz-iwd-encounters/actors_500").iterdir():
+            d=self.res.get(folder.name,"ARE"); actors=check.are_actors(d)
+            for p in folder.glob("*.actor"):
+                name=p.read_bytes()[:32].split(b"\0")[0].decode().upper()
+                self.assertIn(name,actors)
+        rows_9602=actor_rows(self.res.get("AR9602","ARE"))
+        self.assertEqual(sum(check.resref(r,0x80)=="XACTILE" for r in rows_9602),1)
         for area,off,cnt,size in [("AR4005",0x5c,0x5a,0xc4),("AR8012",0xa8,0xa4,0xc8)]:
             d=self.res.get(area,"ARE"); o=long(d,off); n=word(d,cnt) if cnt==0x5a else long(d,cnt)
             self.assertGreaterEqual(n,3 if cnt==0x5a else 7)
@@ -496,10 +514,17 @@ END
     def actor_script_snapshot(self):
         areas = {}
         scripts = set()
-        for folder in (ROOT / "chriz-iwd-encounters/actors").iterdir():
+        for folder in [*(ROOT / "chriz-iwd-encounters/actors").iterdir(),
+                       *(ROOT / "chriz-iwd-encounters/actors_500").iterdir()]:
             rows = actor_rows(self.res.get(folder.name, "ARE"))
             areas[folder.name] = rows
             scripts.update(check.slot(row, at) for row in rows for at in range(0x50, 0x80, 8))
+        for extra_area in ("ar9602", "ar9704"):
+            rows = actor_rows(self.res.get(extra_area, "ARE"))
+            areas[extra_area] = rows
+            scripts.update(check.slot(row, at) for row in rows for at in range(0x50, 0x80, 8))
+        scripts.update(f"CIE5CS{i}" for i in range(1, 10))
+        scripts.add("AR9704")
         for name in ("KEANIMPH", "KEANIMP2", "EEPOMAB"):
             data = self.res.get(name, "CRE")
             scripts.update(check.slot(data, at) for at in range(0x248, 0x270, 8))

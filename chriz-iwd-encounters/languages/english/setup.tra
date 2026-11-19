@@ -13,6 +13,41 @@
 @390 = ~Icasaracht's lair: more hit points for her and her soul gem, no second gem, the second underpriestess repaired~
 @400 = ~Lord Maluradek: his banishment rooms fill with animated plates that fight, more hit points, all rooms awake below half~
 @410 = ~The Luremaster: he opens with Improved Invisibility, hops away when an enemy reaches him, his Dispel Magic works~
+@500 = ~Heart of Winter & Trials of the Luremaster: curated encounters, thinned hordes, and AR9602 repair~
+
+@501 = ~Rimehorn Runecaster~
+@502 = ~Rimehorn Huskarl~
+@503 = ~Hoarfrost Alpha~
+@504 = ~Broodmother Remorhaz~
+@505 = ~Kossuthan Flame-Seeker~
+@506 = ~Hand of the Frostmaiden~
+@507 = ~Black-Ice Juggernaut~
+@508 = ~Rime-Bound Witch-Doctor~
+@509 = ~Frost-Scarred Reaver~
+@510 = ~Gorgoroth the Unmelting~
+@511 = ~Frost-Fletcher Marksman~
+@512 = ~Abyssal Tide-Caller~
+@513 = ~Sekolah Abyssal Guard~
+@514 = ~Kraken Society Envoy~
+@515 = ~Fallen Wyvern-Knight~
+@516 = ~Maluradek's Grand Seneschal~
+@517 = ~Phantom Blademaster~
+@518 = ~Ossuary Arch-Necromancer~
+@519 = ~Dread Bone-Fiend~
+@520 = ~Oathbreaker Watch-Captain~
+@521 = ~Sepulchral Arbalest~
+@522 = ~Anubite Tomb-Warden~
+@523 = ~Kargath the Pit-Tyrant~
+@524 = ~Bound Arena Conjurer~
+@525 = ~Plague-Alchemist Shade~
+@526 = ~Fetid Mound-Horror~
+@527 = ~Shade of the Fallen Chaplain~
+@528 = ~Shade of the Fallen Knight~
+@529 = ~Shade of the Fallen Scout~
+@530 = ~Blood-Moon Alpha~
+@531 = ~Shadow-Pelt Stalker~
+@532 = ~Primordial Earth-Titan~
+@533 = ~Malarite Fang-Hierophant~
 
 @9000 = ~This mod is for Icewind Dale: Enhanced Edition.~
 @9001 = ~This component needs Sword Coast Stratagems' smarter mages or smarter priests.~
@@ -29,3 +64,4 @@
 @9012 = ~This component needs Icasaracht (icasa.cre) and her lair (ar9604.are).~
 @9013 = ~This component needs Lord Maluradek (lordm.cre) and his floor (ar9712.are).~
 @9014 = ~This component needs the Luremaster (trgbard.cre) and his hall (ar9711.are).~
+@9015 = ~This component needs Heart of Winter and Trials of the Luremaster (ar9500.are, ar9714.are).~

@@ -1,0 +1,13 @@
+IF
+  Global("CIE5_HARALD_SHADES","MYAREA",0)
+  Exists("Harald")
+  !StateCheck("Harald",STATE_REALLY_DEAD)
+  Allegiance("Harald",ENEMY)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE5_HARALD_SHADES","MYAREA",1)
+    CreateCreature("CIE527",[435.490],0)
+    CreateCreature("CIE528",[775.490],4)
+    CreateCreature("CIE529",[680.565],8)
+    Continue()
+END

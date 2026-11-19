@@ -1012,6 +1012,48 @@ def main():
         c.check(b'"cie_lur_heroes"' in text and b'"sprite_is_deadar9711_hero"' in text,
                 "each fallen spectral hero brings its replacement")
 
+    # 500: Heart of Winter & Trials of the Luremaster expansion overhaul
+    if expect(500, cres.get("CIE501") is not None):
+        cie5_names = ["CIE%d" % n for n in range(501, 534)]
+        missing_cre = [n for n in cie5_names if n not in cres]
+        c.check(not missing_cre, "all 33 CIE501-CIE533 creatures are installed (%s)" % (", ".join(missing_cre) or "ok"))
+        banned_spells = {"SPPR708", "SPWI713", "SPWI616", "SPPR511", "SPPR608", "SPWI604", "SPWI714", "SPWI813", "SPWI910", "SPWI912", "SPWI913"}
+        bad_spells, bad_fx, bad_scripts = [], [], []
+        for n in cie5_names + ["XACTILE", "ADRAN", "TRADRAN", "CRIEK", "TRCRIEK"]:
+            d = cres.get(n)
+            if not d:
+                continue
+            mem_off, mem_cnt = struct.unpack_from("<II", d, 0x2B0)
+            mems = {resref(d, mem_off + 12 * k) for k in range(mem_cnt)}
+            hit = sorted(mems & banned_spells)
+            if hit:
+                bad_spells.append("%s:%s" % (n, "+".join(hit)))
+            if n.startswith("CIE5"):
+                fxs = cre_effects(d)
+                if any(op in (20, 208) for op, _, _, _ in fxs) or struct.unpack_from("<I", d, 0x20)[0] != 0:
+                    bad_fx.append(n)
+                scrs = [slot(d, o) for o in CRE_SLOTS if o]
+                if not any(scrs) or any(s and res.get(s, "BCS") is None for s in scrs):
+                    bad_scripts.append(n)
+        c.check(not bad_spells, "no expansion caster memorises banned save-or-die spells (%s)" % (", ".join(bad_spells) or "ok"))
+        c.check(not bad_fx, "every CIE5xx creature arrives visible, live and mortal (%s)" % (", ".join(bad_fx) or "ok"))
+        c.check(not bad_scripts, "every CIE5xx creature has existing combat AI scripts (%s)" % (", ".join(bad_scripts) or "ok"))
+        # Caster scripts CIE5CS1..9 carry zero foreign MYAREA or StartCutSceneMode (120OB) blocks
+        dirty_cs = []
+        for idx in range(1, 10):
+            cs = "CIE5CS%d" % idx
+            t = c.script(cs)
+            if not t or b'"myarea' in t or b"ac\n120ob" in t or b"ac\n121ob" in t or b"ac\n198ob" in t or b"tr\n16441 " in t or b"malavon" in t:
+                dirty_cs.append(cs)
+        c.check(not dirty_cs, "CIE5CS1-CIE5CS9 are clean of plot/cutscene/MYAREA blocks (%s)" % (", ".join(dirty_cs) or "ok"))
+        c.check(cres["CIE501"][0x271] != 4 and cres["CIE508"][0x271] != 4, "CIE501 and CIE508 are living humanoids, not undead")
+        # AR9602 repair: only 1 XACTILE remains when AR9602 has its full table
+        a9602 = res.get("AR9602", "ARE")
+        if a9602:
+            off, cnt = struct.unpack_from("<IH", a9602, 0x54)[0], struct.unpack_from("<H", a9602, 0x58)[0]
+            xactiles = [i for i in range(cnt) if resref(a9602, off + i * 0x110 + 0x80) == "XACTILE"]
+            c.check(len(xactiles) <= 1, "AR9602 has at most one XACTILE actor (%d)" % len(xactiles))
+
     print("%d check(s) failed" % c.failed if c.failed else "all checks passed")
     return 1 if c.failed else 0
 

@@ -133,3 +133,10 @@ REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
 REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar9711.are~) AND (FILE_EXISTS_IN_GAME ~trgbard.cre~) @9014
 INCLUDE ~chriz-iwd-encounters/lib/cie_luremaster.tpa~
 LAF cie_luremaster END
+
+BEGIN @500 DESIGNATED 500
+LABEL ~chriz-iwd-encounters-expansions~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar9500.are~) AND (FILE_EXISTS_IN_GAME ~ar9714.are~) @9015
+INCLUDE ~chriz-iwd-encounters/lib/cie_expansions.tpa~
+LAF cie_expansions END

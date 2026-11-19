@@ -936,3 +936,34 @@ Dimension Door and landed at one of his points ([604.826]). Before the hero fix,
 `TRSPH1` raised only `SPRITE_IS_DEADAR9711_HERO` and no replacement came; with it,
 `TRSPH4` appeared 1.5 seconds after `TRSPH1` died and `TRSPH5` after `TRSPH2`. Not tested
 in the game: his Dispel Magic (the install checks cover it), without SCS, with a real party.
+
+## 500: Heart of Winter and Trials of the Luremaster expansion overhaul
+
+Works with and without SCS. Covers the Gloomfrost, Sea of Moving Ice, Castle Maluradek,
+Watchknight Crypts, Dungeon Trial Arenas, and Jackal Caverns (`AR9500`–`AR9801`).
+
+- **Repair of `AR9602` (SCS 35.21 Smarter Priests):** SCS component 6040 overwrites the
+  creature resref of all 64 placed actors in `AR9602.ARE` with `XACTILE`. Every non-Xactile
+  row is restored by coordinate to its Ice Temple creature (`DLSCRAG`, `DLSNOTR`,
+  `DLICETR`, `DLBONEC`, `DLCLD*`, `DLFZNBNE`, `DLICE*`, `DLBNEGRD`, `DLWATER`) and combat
+  script, while row 60 (`[1078.2266]`) keeps `XACTILE` and `ILXACTIL`.
+- **No-Reload save-or-die spell replacements:** `XACTILE`, `ADRAN`, `TRADRAN`, `CRIEK`
+  and `TRCRIEK`, as well as all expansion caster clones (`CIE501`–`CIE533`), replace
+  outright instant-death and 1-HP spells (`SPPR708`, `SPWI713`, `SPWI616`, `SPPR511`,
+  `SPPR608`, `SPWI604`, `SPWI714`, `SPWI813`, `SPWI910`, `SPWI912`) with high-level combat
+  spells already supported by their scripts (`SPPR603`, `SPPR615`, `SPPR520`, `SPWI812`,
+  `SPWI615`, `SPWI611`, `SPWI810`).
+- **Horde compression and spawn pacing:** 359 generic placed filler actors across 16 areas
+  (`AR9500`–`AR9603`, `AR9700`, `AR9702`, `AR9712`, `AR9714`, `AR9716`–`AR9718`, `AR9800`,
+  `AR9801`) have their appearance schedule set to `0`, leaving every quest NPC, dialogue
+  actor, duel participant, boss, and quest-item carrier untouched. `AR9700.INI` trims each
+  repeating harpy pack from five to three, and `AR9801.INI` slows Stone Nuisance spawns
+  from 10 minutes to 8 hours with five critters instead of ten.
+- **Regulars and mini-bosses:** Spectral Guards (`CKSPGRD*`, `RNDSPG`) gain 5/2 attacks
+  per round and THAC0 1 at 115 hit points; `SAPRINCE`, `WYVMAT`, `CPMUMG`, `HARALD`,
+  `GIANTFRO`, `FROSTSAL` and `SAEGUARD` receive expansion-tier accuracy, attacks and hit
+  points. In `AR9704`, turning `Harald` hostile raises the shades of his three fallen
+  comrades (`CIE527`–`CIE529`) once (`CIE5_HARALD_SHADES`).
+- **Curated setpiece encounters (`CIE501`–`CIE533`):** 46 placed bespoke champions,
+  skirmishers, assassins, constructs and plot-sanitised casters (`CIE5CS1`–`CIE5CS9`)
+  replace the removed filler XP across `AR9500`–`AR9801` (~1.07M removed vs ~1.11M added).

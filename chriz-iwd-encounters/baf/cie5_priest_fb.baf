@@ -1,0 +1,46 @@
+IF
+  See(NearestEnemyOf(Myself))
+  HaveSpell(CLERIC_ENTROPY_SHIELD)
+THEN
+  RESPONSE #100
+    Spell(Myself,CLERIC_ENTROPY_SHIELD)
+END
+
+IF
+  See(NearestEnemyOf(Myself))
+  HaveSpell(CLERIC_BLADE_BARRIER)
+THEN
+  RESPONSE #100
+    Spell(Myself,CLERIC_BLADE_BARRIER)
+END
+
+IF
+  See(NearestEnemyOf(Myself))
+  HaveSpell(CLERIC_RIGHTEOUS_WRATH_OF_THE_FAITHFUL)
+THEN
+  RESPONSE #100
+    Spell(Myself,CLERIC_RIGHTEOUS_WRATH_OF_THE_FAITHFUL)
+END
+
+IF
+  See(NearestEnemyOf(Myself))
+  HaveSpell(CLERIC_INSECT_PLAGUE)
+THEN
+  RESPONSE #100
+    Spell(NearestEnemyOf(Myself),CLERIC_INSECT_PLAGUE)
+END
+
+IF
+  See(NearestEnemyOf(Myself))
+  HaveSpell(CLERIC_RECITATION)
+THEN
+  RESPONSE #100
+    Spell(Myself,CLERIC_RECITATION)
+END
+
+IF
+  See(NearestEnemyOf(Myself))
+THEN
+  RESPONSE #100
+    AttackReevaluate(NearestEnemyOf(Myself),30)
+END

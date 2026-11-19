@@ -1,0 +1,8 @@
+IF
+  !Global("EAST_BLOCK","GLOBAL",0)
+  !See(NearestEnemyOf(Myself))
+  ActionListEmpty()
+THEN
+  RESPONSE #100
+    MoveToPoint([850.680])
+END
