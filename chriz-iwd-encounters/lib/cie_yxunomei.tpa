@@ -63,6 +63,13 @@ DEFINE_ACTION_FUNCTION cie_yxunomei BEGIN
   LAF cie_yxunomei_elites END
   LAF cie_yxunomei_traps END
   LAF cie_yxunomei_telekinesis END
+  LAF cie_yxunomei_dispel END
+END
+
+// High caster-level Abjuration dispel (L18 CIEYXUDI) vs high-XP parties, blocked by SI: Abjuration.
+DEFINE_ACTION_FUNCTION cie_yxunomei_dispel BEGIN
+  LAF cie_install_boss_dispel INT_VAR caster_level = 18 STR_VAR cre = ~tanarri~ cloned_spl = ~CIEYXUDI~ script_hint = ~D5YXUN~ END
+  PRINT ~chriz-iwd-encounters: Yxunomei uses caster level 18 Abjuration Dispel Magic (CIEYXUDI).~
 END
 
 // The mages: the area's spawn block waits for YXUN_ATTACK (the fight with her)

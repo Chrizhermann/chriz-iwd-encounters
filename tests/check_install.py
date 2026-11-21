@@ -13,7 +13,11 @@ from pathlib import Path
 
 PRIEST_TYPE = 0
 CRE_TYPE, ARE_TYPE, BCS_TYPE, ITM_TYPE, SPL_TYPE, IDS_TYPE = 0x3F1, 0x3F2, 0x3EF, 0x3ED, 0x3EE, 0x3F0
-EXT = {CRE_TYPE: "CRE", ARE_TYPE: "ARE", BCS_TYPE: "BCS", ITM_TYPE: "ITM", SPL_TYPE: "SPL", IDS_TYPE: "IDS"}
+DLG_TYPE, TWO_DA_TYPE, PRO_TYPE, INI_TYPE = 0x3F3, 0x3F4, 0x3FD, 0x802
+EXT = {
+    CRE_TYPE: "CRE", ARE_TYPE: "ARE", BCS_TYPE: "BCS", ITM_TYPE: "ITM", SPL_TYPE: "SPL",
+    IDS_TYPE: "IDS", DLG_TYPE: "DLG", TWO_DA_TYPE: "2DA", PRO_TYPE: "PRO", INI_TYPE: "INI",
+}
 # 300: what Belhifet must be protected from (opcode 101 targets): instant death,
 # removal from the fight, paralysis and hold
 BELHIFET_BLOCKED = (13, 55, 134, 135, 209, 211, 213, 238, 109, 175, 185)
@@ -215,8 +219,10 @@ def spl_effect_rows(data):
             op, _, power = struct.unpack_from("<HBB", data, o)
             p1, p2 = struct.unpack_from("<ii", data, o + 0x4)
             duration, = struct.unpack_from("<I", data, o + 0xE)
-            rows.append({"opcode": op, "power": power, "p1": p1, "p2": p2, "timing": data[o + 0xC],
-                         "dispel": data[o + 0xD], "duration": duration, "resource": resref(data, o + 0x14)})
+            save_type, = struct.unpack_from("<I", data, o + 0x24)
+            rows.append({"opcode": op, "target": data[o + 2], "power": power, "p1": p1, "p2": p2,
+                         "timing": data[o + 0xC], "dispel": data[o + 0xD], "duration": duration,
+                         "save_type": save_type, "resource": resref(data, o + 0x14)})
     return rows
 
 
@@ -414,6 +420,47 @@ def main():
     if pairs and expect(110, not unchecked):
         c.check(True, "every banter pair in baldur.bcs checks both partners (%d)" % len(pairs))
 
+    # 120: BG spell rules and fixes
+    spwi302 = res.get("SPWI302", "SPL")
+    det_120 = bool(spwi302 and any(r["opcode"] == 58 and r["p2"] == 0x00020001 for r in spl_effect_rows(spwi302)))
+    if expect(120, det_120):
+        dispel_wipes = {"BCLAW","CTOUCH","DECASTA","DOBONE","LTOUCH","MOONBLA","MSWORD","SHAMME1","SHAMME2","SHAMME3","SHILLEL","SMCUDGE","FSEEDS","GOODBER"}
+        for spl, mode in (("SPWI302", 0x00020001), ("SPWI323", 0x00020001), ("SPPR303", 0x00020001), ("SPIN214", 0x00020001), ("SPCL231", 0x00020002)):
+            sd = res.get(spl, "SPL")
+            if sd:
+                rows = spl_effect_rows(sd)
+                c.check(any(r["opcode"] == 58 and r["p2"] == mode for r in rows), "%s uses BG dispel mode 0x%x" % (spl, mode))
+                c.check(not [r for r in rows if r["opcode"] in (112, 123) and r["resource"] in dispel_wipes],
+                        "%s has no unconditional created-item wipes" % spl)
+        sppr303 = res.get("SPPR303", "SPL")
+        if sppr303:
+            ab0_res = [r["resource"] for r in spl_effect_rows(sppr303) if r["opcode"] == 146 and r["resource"] == "SPPR303"]
+            c.check(not ab0_res, "SPPR303 collapsed its self-cast wrapper")
+        spwi318 = res.get("SPWI318", "SPL")
+        if spwi318:
+            c.check(not [r for r in spl_effect_rows(spwi318) if r["opcode"] == 201 and r["p2"] > 4],
+                    "Minor Spell Deflection (SPWI318) deflects levels 1-4 only")
+        spwi212 = res.get("SPWI212", "SPL")
+        if spwi212:
+            rows212 = spl_effect_rows(spwi212)
+            c.check(any(r["opcode"] == 321 and r["resource"] == "SPWI120" for r in rows212)
+                    and any(r["opcode"] == 321 and r["resource"] == "SPWI212" for r in rows212)
+                    and any(r["opcode"] == 206 and r["resource"] == "SPWI120" for r in rows212),
+                    "Mirror Image (SPWI212) prevents image stacking and blocks Reflected Image")
+        for spl in ("SPWI414", "SPWI120"):
+            sd = res.get(spl, "SPL")
+            if sd:
+                c.check(any(r["opcode"] == 321 and r["resource"] == spl for r in spl_effect_rows(sd)),
+                        "%s removes prior instance via opcode 321" % spl)
+        spwi125 = res.get("SPWI125", "SPL")
+        if spwi125 and res.get("SPLPROT", "2DA"):
+            c.check(any(r["opcode"] == 324 for r in spl_effect_rows(spwi125)), "Spook (SPWI125) carries op324 immunities")
+        for spl in ("SPWI123", "SPWI420", "SPWI617", "SPWI710", "SPWI809", "SPWI908", "SPWI919"):
+            sd = res.get(spl, "SPL")
+            if sd and len(sd) >= 0x26:
+                excl, = struct.unpack_from("<H", sd, 0x1E)
+                c.check(sd[0x25] == 0 and (excl & 0x3FC0) == 0, "%s is Universal school without specialist exclusions" % spl)
+
     # 200: priest preparation
     prepared = [n for n in res.names("BCS") if b"cie_self" in c.script(n)]
     scs_prepared = [n for n in prepared if c.is_caster(n)]
@@ -437,6 +484,16 @@ def main():
         c.check(not [e for e in equipped + own if e[0] == 102], "Belhifet has no spell-level immunity")
         c.check(not [e for e in equipped + own if e[0] == 120 and e[2] == 0 and e[1] >= 2],
                 "no item or effect of Belhifet stops +2 weapons")
+        c.check(bel[0x234:0x237] == b"\x1a\x1a\x1a",
+                "Belhifet level bytes are 26/26/26 (%s)" % list(bel[0x234:0x237]))
+        if res.get("SPIN214", "SPL") is not None:
+            bdisp = res.get("CIEBELDI", "SPL")
+            bdisp_rows = spl_effect_rows(bdisp) if bdisp else []
+            c.check(bdisp is not None and bdisp[0x25] == 1
+                    and any(r["opcode"] == 58 and r["p1"] == 26 and r["p2"] == 0x00020002 for r in bdisp_rows),
+                    "CIEBELDI is Abjuration caster-level 26 Dispel Magic")
+            if res.get("EEBELHI1", "BCS") is not None:
+                c.check(b'"ciebeldi"' in c.script("EEBELHI1"), "EEBELHI1 uses CIEBELDI")
         # his protections come from CIEBELPR, which his script applies
         pr = res.get("CIEBELPR", "SPL")
         pr_fx = spl_ability_effects(pr) if pr else []
@@ -691,6 +748,18 @@ def main():
             own = [s for s in (slot(tanarri, o) for o in CRE_SLOTS if o) if s] if tanarri else []
             c.check(own and not [s for s in own if b'"dw#batel"' in c.script(s)],
                     "Yxunomei's scripts do not cast the missing DW#BATEL (%s)" % ", ".join(own))
+        tanarri = cres.get("TANARRI")
+        if tanarri is not None:
+            c.check(tanarri[0x234:0x237] == b"\x12\x12\x12",
+                    "Yxunomei level bytes are 18/18/18 (%s)" % list(tanarri[0x234:0x237]))
+            if res.get("SPIN214", "SPL") is not None:
+                ydisp = res.get("CIEYXUDI", "SPL")
+                ydisp_rows = spl_effect_rows(ydisp) if ydisp else []
+                c.check(ydisp is not None and ydisp[0x25] == 1
+                        and any(r["opcode"] == 58 and r["p1"] == 18 and r["p2"] == 0x00020002 for r in ydisp_rows),
+                        "CIEYXUDI is Abjuration caster-level 18 Dispel Magic")
+                if res.get("D5YXUN", "BCS") is not None:
+                    c.check(b'"cieyxudi"' in c.script("D5YXUN"), "D5YXUN uses CIEYXUDI")
 
     # 320: the orog raid on Kuldahar (only when installed: it brings CIEKULMA)
     area = res.get("AR2100", "ARE")
@@ -838,7 +907,7 @@ def main():
         c.check(poq is not None, "Poquelin's placement in the cave uses CIEPOQ")
         cre = res.get("CIEPOQ", "CRE")
         blocked = sorted({e[2] for e in cre_effects(cre) if e[0] == 101})
-        c.check(struct.unpack_from("<H", cre, 0x26)[0] == 420 and all(op in blocked for op in (13, 55, 134, 209, 211, 238)),
+        c.check(struct.unpack_from("<H", cre, 0x26)[0] == 310 and all(op in blocked for op in (13, 55, 134, 209, 211, 238)),
                 "CIEPOQ has %d hit points and protections %s" % (struct.unpack_from("<H", cre, 0x26)[0], blocked))
         original = res.get("POQUELIN", "CRE")
         c.check(original is not None and not [e for e in cre_effects(original) if e[0] == 101 and e[2] == 238],
@@ -1011,6 +1080,99 @@ def main():
         text = c.script(slot(area, 0x94))
         c.check(b'"cie_lur_heroes"' in text and b'"sprite_is_deadar9711_hero"' in text,
                 "each fallen spectral hero brings its replacement")
+
+    # 420: Main campaign overhaul (Chapters 2-6)
+    if expect(420, cres.get("CIE401") is not None):
+        cie4_expected = [401, 402, 403, 404, 410, 411, 412, 413, 414, 415, 416, 417, 418, 420, 421, 422, 425, 426, 427, 428, 429]
+        missing4 = ["CIE%d" % n for n in cie4_expected if "CIE%d" % n not in cres]
+        c.check(not missing4, "all 21 CIE4xx squad elites exist (%s)" % (", ".join(missing4) or "ok"))
+        for n in (420, 421, 422):
+            cd = cres.get("CIE%d" % n)
+            c.check(cd is not None and cd[0x270] == 128, "CIE%d starts NEUTRAL (128) for Kontik's talk" % n)
+        tarnsen = cres.get("TARNSEN")
+        if tarnsen:
+            ts_scripts = [slot(tarnsen, o) for o in CRE_SLOTS if o]
+            ts_items = cre_items(tarnsen)
+            c.check("GNMBG9GH" not in ts_scripts and "AX1H04" not in ts_items and "AX1H01" in ts_items,
+                    "TARNSEN switched from GNMBG9GH/AX1H04 to melee AX1H01 (%s)" % ts_scripts)
+        lich = cres.get("LICH")
+        lich2 = cres.get("LICH2")
+        c.check(lich is not None and struct.unpack_from("<H", lich, 0x26)[0] == 115
+                and struct.unpack_from("<I", lich, 0x14)[0] == 0, "LICH has 115 HP and 0 XP")
+        c.check(lich2 is not None and struct.unpack_from("<H", lich2, 0x26)[0] == 115,
+                "LICH2 has 115 HP")
+        clicim = res.get("CIELICIM", "SPL")
+        clv = sorted(r["p1"] for r in spl_effect_rows(clicim or b"") if r["opcode"] == 102)
+        c.check(clv == [1, 2, 3], "CIELICIM blocks spell levels 1-3 only (%s)" % clv)
+        if res.get("UDLICH1", "BCS") is not None:
+            utxt = c.script("UDLICH1")
+            c.check(b'"cielicim"' in utxt and b'"localscie_terikan_init"' in utxt,
+                    "UDLICH1 applies CIELICIM and initiates LICH_MINIONS_FOLLOW")
+        a3503 = res.get("AR3503", "ARE")
+        if a3503:
+            off35, = struct.unpack_from("<I", a3503, 0x54)
+            cnt35, = struct.unpack_from("<H", a3503, 0x58)
+            w_cnt = sum(1 for i in range(cnt35) if slot(a3503, off35 + i * 0x110 + 0x50) in ("CIE35W2", "CIE35W3"))
+            c.check(cnt35 == 52 and w_cnt > 0 and b"cie_3503_start" in c.script(slot(a3503, 0x94)),
+                    "AR3503 keeps all 52 actors and stages %d wave-2/3 actors" % w_cnt)
+        a6006 = res.get("AR6006", "ARE")
+        if a6006:
+            genek_ok = any(slot(a6006, struct.unpack_from("<I", a6006, 0x54)[0] + i * 0x110 + 0x80) == "GENEK"
+                           for i in range(struct.unpack_from("<H", a6006, 0x58)[0]))
+            c.check(genek_ok and b"cie_6006_rally" in c.script(slot(a6006, 0x94)),
+                    "AR6006 rallies greater mummies while preserving GENEK")
+        a8006, a8007 = res.get("AR8006", "ARE"), res.get("AR8007", "ARE")
+        if a8006 and a8007:
+            c8006 = sum(1 for i in range(struct.unpack_from("<H", a8006, 0x58)[0])
+                        if slot(a8006, struct.unpack_from("<I", a8006, 0x54)[0] + i * 0x110 + 0x80) == "LDDTHIE2"
+                        and struct.unpack_from("<I", a8006, struct.unpack_from("<I", a8006, 0x54)[0] + i * 0x110 + 0x40)[0] != 0)
+            c8007 = sum(1 for i in range(struct.unpack_from("<H", a8007, 0x58)[0])
+                        if slot(a8007, struct.unpack_from("<I", a8007, 0x54)[0] + i * 0x110 + 0x80) == "LDDTHIE3"
+                        and struct.unpack_from("<I", a8007, struct.unpack_from("<I", a8007, 0x54)[0] + i * 0x110 + 0x40)[0] != 0)
+            c.check(c8006 == 2 and c8007 == 3, "Marketh palace thieves trimmed cleanly (AR8006=%d, AR8007=%d)" % (c8006, c8007))
+        a5104 = res.get("AR5104", "ARE")
+        if a5104:
+            off51, cnt51 = struct.unpack_from("<I", a5104, 0x54)[0], struct.unpack_from("<H", a5104, 0x58)[0]
+            dv_cnt = sum(1 for i in range(cnt51)
+                         if struct.unpack_from("<I", a5104, off51 + i * 0x110 + 0x40)[0] != 0
+                         and slot(a5104, off51 + i * 0x110 + 0x50) == "#5104_DV")
+            c.check(dv_cnt == 2, "AR5104 preserves 2 active #5104_DV guards (%d)" % dv_cnt)
+        gfn = cres.get("GIANTFN")
+        c.check(gfn is None or gfn[0x53] == 2, "GIANTFN upgraded to 2 APR")
+
+    # 500: Heart of Winter & Trials of the Luremaster expansion overhaul
+    if expect(500, cres.get("CIE501") is not None):
+        cie5_names = ["CIE%d" % n for n in range(501, 534)]
+        missing_cre = [n for n in cie5_names if n not in cres]
+        c.check(not missing_cre, "all 33 CIE501-CIE533 creatures are installed (%s)" % (", ".join(missing_cre) or "ok"))
+        bad_fx, bad_scripts = [], []
+        for n in cie5_names:
+            d = cres.get(n)
+            if not d:
+                continue
+            fxs = cre_effects(d)
+            if any(op in (20, 208) for op, _, _, _ in fxs) or struct.unpack_from("<I", d, 0x20)[0] != 0:
+                bad_fx.append(n)
+            scrs = [slot(d, o) for o in CRE_SLOTS if o]
+            if not any(scrs) or any(s and res.get(s, "BCS") is None for s in scrs):
+                bad_scripts.append(n)
+        c.check(not bad_fx, "every CIE5xx creature arrives visible, live and mortal (%s)" % (", ".join(bad_fx) or "ok"))
+        c.check(not bad_scripts, "every CIE5xx creature has existing combat AI scripts (%s)" % (", ".join(bad_scripts) or "ok"))
+        # Caster scripts CIE5CS1..9 carry zero foreign MYAREA or StartCutSceneMode (120OB) blocks
+        dirty_cs = []
+        for idx in range(1, 10):
+            cs = "CIE5CS%d" % idx
+            t = c.script(cs)
+            if not t or b'"myarea' in t or b"ac\n120ob" in t or b"ac\n121ob" in t or b"ac\n198ob" in t or b"tr\n16441 " in t or b"malavon" in t:
+                dirty_cs.append(cs)
+        c.check(not dirty_cs, "CIE5CS1-CIE5CS9 are clean of plot/cutscene/MYAREA blocks (%s)" % (", ".join(dirty_cs) or "ok"))
+        c.check(cres["CIE501"][0x271] != 4 and cres["CIE508"][0x271] != 4, "CIE501 and CIE508 are living humanoids, not undead")
+        # AR9602 repair: only 1 XACTILE remains when AR9602 has its full table
+        a9602 = res.get("AR9602", "ARE")
+        if a9602:
+            off, cnt = struct.unpack_from("<IH", a9602, 0x54)[0], struct.unpack_from("<H", a9602, 0x58)[0]
+            xactiles = [i for i in range(cnt) if resref(a9602, off + i * 0x110 + 0x80) == "XACTILE"]
+            c.check(len(xactiles) <= 1, "AR9602 has at most one XACTILE actor (%d)" % len(xactiles))
 
     print("%d check(s) failed" % c.failed if c.failed else "all checks passed")
     return 1 if c.failed else 0

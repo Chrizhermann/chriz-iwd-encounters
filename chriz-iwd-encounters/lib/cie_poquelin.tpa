@@ -1,7 +1,7 @@
 // Component 360: Poquelin in the Ascension Cave (AR8013, Lower Dorn's Deep),
 // designed with Christopher on 2026-11-03 and 2026-11-04. Works with and without SCS.
-//   - 420 hit points (base game 250): he escapes at half, so the fight lasts long
-//     enough for his waves to matter.
+//   - 310 hit points (base game 250): he escapes at half (155 damage), so the fight stays
+//     fairer than 420 while still giving his waves room to engage.
 //   - Below three quarters he jumps away (Dimension Door), calls Fire Storm around
 //     himself, and the next wave comes at once.
 //   - Repairs: no instant death, petrification, disintegration or imprisonment
@@ -78,7 +78,7 @@ DEFINE_ACTION_FUNCTION cie_poquelin_creature BEGIN
     END
   BUT_ONLY
   COPY_EXISTING ~CIEPOQ.cre~ ~override~
-    LPF cie_raise_creature INT_VAR hp = 420 RET old_hp old_apr old_thac0 END
+    LPF cie_raise_creature INT_VAR hp = 310 RET old_hp old_apr old_thac0 END
     PATCH_FOR_EACH op IN 13 55 134 209 211 238 BEGIN
       LPF cie_remove_cre_protection INT_VAR protected_opcode = op END
       LPF ADD_CRE_EFFECT INT_VAR opcode = 101 target = 1 timing = 9 parameter2 = op END

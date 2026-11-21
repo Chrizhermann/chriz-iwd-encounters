@@ -1,0 +1,1023 @@
+// Component 500: Heart of Winter & Trials of the Luremaster expansion overhaul
+// (AR9500-AR9801). Repairs SCS 6040's AR9602 64x Xactile actor clobber, thins
+// ~45-50% of generic expansion filler mobs via schedule=0, upgrades spongy
+// regulars, and places bespoke lore-accurate expansion champions and
+// spellcasters with full SCS spellbooks and net XP preserved. Works with and
+// without SCS.
+
+// Shared helper wrappers (implementations live in cie_shared.tpa).
+DEFINE_ACTION_FUNCTION cie500_build_caster_script
+  STR_VAR donor = ~~ fallback_baf = ~~ target = ~~
+BEGIN
+  LAF cie_build_caster_script STR_VAR donor fallback_baf target END
+END
+
+DEFINE_ACTION_FUNCTION cie500_apply_look_and_voice
+  INT_VAR anim_override = 0 - 1
+  STR_VAR cre = ~~ visual_donor = ~~
+BEGIN
+  LAF cie_apply_look_and_voice INT_VAR anim_override STR_VAR cre visual_donor END
+END
+
+DEFINE_PATCH_FUNCTION cie500_set_core
+  INT_VAR name_tra = 0 xp = 0 hp = 100 ac = 0 thac0 = 5 apr = 2
+          sv1 = 5 sv2 = 6 sv3 = 6 sv4 = 7 sv5 = 6
+          rfir = 0 rcld = 0 rele = 0 racd = 0 mr = 0 rsl = 0 rcr = 0 rpi = 0 rmi = 0
+          lvl1 = 15 lvl2 = 1
+  STR_VAR s_ovr = ~~ s_cls = ~~ s_rac = ~~ s_gen = ~~ s_def = ~~
+BEGIN
+  LPF cie_set_core INT_VAR xp hp ac thac0 apr sv1 sv2 sv3 sv4 sv5 rfir rcld rele racd mr rsl rcr rpi rmi lvl1 lvl2
+    STR_VAR s_ovr s_cls s_rac s_gen s_def END
+END
+
+DEFINE_PATCH_FUNCTION cie500_disable_actor_at
+  INT_VAR tx = 0 ty = 0
+BEGIN
+  LPF cie_disable_actor_at INT_VAR tx ty STR_VAR guard_prefix = ~CIE5_~ END
+END
+
+// Restore one AR9602.ARE placed actor row (fixes SCS 6040's 64x XACTILE overwrite)
+// and apply schedule thinning in the same authoritative pass.
+DEFINE_PATCH_FUNCTION cie500_restore_9602_row
+  INT_VAR rx = 0 ry = 0 keep = 1
+  STR_VAR rcre = ~~ sovr = ~~ sgen = ~~ scls = ~~ srac = ~~ sdef = ~~ sspc = ~~
+BEGIN
+  READ_LONG  0x54 aoff
+  READ_SHORT 0x58 acnt
+  FOR (i = 0; i < acnt; ++i) BEGIN
+    SET here = aoff + 0x110 * i
+    READ_SHORT (here + 0x20) ax
+    READ_SHORT (here + 0x22) ay
+    READ_ASCII here anm (5) NULL
+    PATCH_IF (ax = rx) AND (ay = ry) AND (~%anm%~ STRING_COMPARE_CASE ~CIE5_~) BEGIN
+      WRITE_ASCIIE (here + 0x80) ~%rcre%~ #8
+      WRITE_LONG   (here + 0x40) (keep ? 0xffffffff : 0)
+      PATCH_IF (~%rcre%~ STRING_EQUAL_CASE ~XACTILE~) BEGIN
+        LPF cie_read_script_slot INT_VAR offset = (here + 0x58) RET cur_gen = script END
+        LPF cie_read_script_slot INT_VAR offset = (here + 0x60) RET cur_cls = script END
+        LPF cie_read_script_slot INT_VAR offset = (here + 0x78) RET cur_spc = script END
+        PATCH_IF (~%cur_gen%~ STRING_COMPARE_CASE ~ILXACTIL~)
+            AND (~%cur_cls%~ STRING_COMPARE_CASE ~ILXACTIL~)
+            AND (~%cur_spc%~ STRING_COMPARE_CASE ~ILXACTIL~) BEGIN
+          WRITE_ASCIIE (here + 0x60) ~ILXACTIL~ #8
+        END
+      END ELSE BEGIN
+        PATCH_IF (~%sovr%~ STRING_EQUAL_CASE ~EFATKMEL~) BEGIN SPRINT sovr ~%cie500_melee_ai%~ END
+        PATCH_IF (~%sgen%~ STRING_EQUAL_CASE ~EFATKMEL~) BEGIN SPRINT sgen ~%cie500_melee_ai%~ END
+        PATCH_IF (~%scls%~ STRING_EQUAL_CASE ~EFATKMEL~) BEGIN SPRINT scls ~%cie500_melee_ai%~ END
+        PATCH_IF (~%srac%~ STRING_EQUAL_CASE ~EFATKMEL~) BEGIN SPRINT srac ~%cie500_melee_ai%~ END
+        PATCH_IF (~%sdef%~ STRING_EQUAL_CASE ~EFATKMEL~) BEGIN SPRINT sdef ~%cie500_melee_ai%~ END
+        PATCH_IF (~%sspc%~ STRING_EQUAL_CASE ~EFATKMEL~) BEGIN SPRINT sspc ~%cie500_melee_ai%~ END
+        WRITE_ASCIIE (here + 0x50) ~%sovr%~ #8
+        WRITE_ASCIIE (here + 0x58) ~%sgen%~ #8
+        WRITE_ASCIIE (here + 0x60) ~%scls%~ #8
+        WRITE_ASCIIE (here + 0x68) ~%srac%~ #8
+        WRITE_ASCIIE (here + 0x70) ~%sdef%~ #8
+        WRITE_ASCIIE (here + 0x78) ~%sspc%~ #8
+      END
+    END
+  END
+END
+
+// Authoritative placement of a CIE5_* bespoke actor from actors_500/<area>/*.actor.
+DEFINE_PATCH_FUNCTION cie500_place_actor
+  STR_VAR template = ~~
+BEGIN
+  LPF cie_place_actor STR_VAR template END
+END
+
+DEFINE_ACTION_FUNCTION cie500_place_area_actors
+  STR_VAR area = ~~
+BEGIN
+  LAF cie_place_area_actors STR_VAR folder = ~actors_500~ area END
+END
+
+DEFINE_ACTION_FUNCTION cie_expansions BEGIN
+  // 1. Resolve installed SCS GenAI melee/berserker/ranged/thief scripts (with base-game fallbacks)
+  OUTER_SPRINT cie500_melee_ai  ~EFATKMEL~
+  OUTER_SPRINT cie500_bersk_ai  ~EFATKMEL~
+  OUTER_SPRINT cie500_ranged_ai ~EFATKMEL~
+  OUTER_SPRINT cie500_thief_ai  ~EFATKMEL~
+  ACTION_IF FILE_EXISTS_IN_GAME ~dwmessge.bcs~ BEGIN OUTER_SPRINT cie500_melee_ai  ~DWMESSGE~ END
+  ELSE ACTION_IF FILE_EXISTS_IN_GAME ~dwmesvge.bcs~ BEGIN OUTER_SPRINT cie500_melee_ai ~DWMESVGE~ END
+  ACTION_IF FILE_EXISTS_IN_GAME ~dwmebrbe.bcs~ BEGIN OUTER_SPRINT cie500_bersk_ai  ~DWMEBRBE~ END
+  ELSE ACTION_IF FILE_EXISTS_IN_GAME ~dwmebrge.bcs~ BEGIN OUTER_SPRINT cie500_bersk_ai ~DWMEBRGE~ END
+  ACTION_IF FILE_EXISTS_IN_GAME ~dwrrssge.bcs~ BEGIN OUTER_SPRINT cie500_ranged_ai ~DWRRSSGE~ END
+  ACTION_IF FILE_EXISTS_IN_GAME ~dwmethas.bcs~ BEGIN OUTER_SPRINT cie500_thief_ai  ~DWMETHAS~ END
+  OUTER_SPRINT cie500_ptn_spd ~POTN14~
+  OUTER_SPRINT cie500_ptn_inv ~POTN10~
+  OUTER_SPRINT cie500_ptn_st1 ~POTN04~
+  OUTER_SPRINT cie500_ptn_st2 ~POTN06~
+  ACTION_IF FILE_EXISTS_IN_GAME ~dw#ptn14.itm~ BEGIN OUTER_SPRINT cie500_ptn_spd ~DW#PTN14~ END
+  ACTION_IF FILE_EXISTS_IN_GAME ~dw#ptn10.itm~ BEGIN OUTER_SPRINT cie500_ptn_inv ~DW#PTN10~ END
+  ACTION_IF FILE_EXISTS_IN_GAME ~dw#ptn04.itm~ BEGIN OUTER_SPRINT cie500_ptn_st1 ~DW#PTN04~ END
+  ACTION_IF FILE_EXISTS_IN_GAME ~dw#ptn06.itm~ BEGIN OUTER_SPRINT cie500_ptn_st2 ~DW#PTN06~ END
+
+  // 2. Compile cell-release helper scripts & build portable plot-free caster AI scripts
+  COPY ~chriz-iwd-encounters/baf/cie5wblk.baf~ ~override/cie5wblk.bcs~ COMPILE_BAF_TO_BCS
+  COPY ~chriz-iwd-encounters/baf/cie5eblk.baf~ ~override/cie5eblk.bcs~ COMPILE_BAF_TO_BCS
+  LAF cie500_build_caster_script STR_VAR donor = ~CAJSHA1~  fallback_baf = ~cie5_priest_fb~ target = ~CIE5CS1~ END
+  LAF cie500_build_caster_script STR_VAR donor = ~LDILAIR~  fallback_baf = ~cie5_mage_fb~   target = ~CIE5CS2~ END
+  LAF cie500_build_caster_script STR_VAR donor = ~WTKONTIK~ fallback_baf = ~cie5_mage_fb~   target = ~CIE5CS3~ END
+  LAF cie500_build_caster_script STR_VAR donor = ~DUHERO5~  fallback_baf = ~cie5_priest_fb~ target = ~CIE5CS4~ END
+  LAF cie500_build_caster_script STR_VAR donor = ~DW#LDDR2~ fallback_baf = ~cie5_mage_fb~   target = ~CIE5CS5~ END
+  LAF cie500_build_caster_script STR_VAR donor = ~LDKRAMGE~ fallback_baf = ~cie5_mage_fb~   target = ~CIE5CS6~ END
+  LAF cie500_build_caster_script STR_VAR donor = ~D3PRES~   fallback_baf = ~cie5_mage_fb~   target = ~CIE5CS7~ END
+  LAF cie500_build_caster_script STR_VAR donor = ~LDMALVON~ fallback_baf = ~cie5_mage_fb~   target = ~CIE5CS8~ END
+  LAF cie500_build_caster_script STR_VAR donor = ~UDBANDOF~ fallback_baf = ~cie5_mage_fb~   target = ~CIE5CS9~ END
+
+  // 3. Repair AR9602.ARE (SCS 6040 clobbered all 64 actors' CRE fields to XACTILE) & thin filler
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar9602.are~ BEGIN
+    COPY_EXISTING ~ar9602.are~ ~override~
+      LPF cie500_restore_9602_row INT_VAR rx = 517 ry = 1253 keep = 0 STR_VAR rcre = ~DLSCRAG~ sovr = ~~ sgen = ~GNT6MOVE~ scls = ~GNTEAM6S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 409 ry = 1518 keep = 1 STR_VAR rcre = ~DLSCRAG~ sovr = ~~ sgen = ~GNT6MOVE~ scls = ~GNTEAM6S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 444 ry = 1376 keep = 0 STR_VAR rcre = ~DLSCRAG~ sovr = ~~ sgen = ~GNT6MOVE~ scls = ~GNTEAM6S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 771 ry = 1627 keep = 1 STR_VAR rcre = ~DLSCRAG~ sovr = ~~ sgen = ~GNT6MOVE~ scls = ~GNTEAM6S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 650 ry = 1296 keep = 0 STR_VAR rcre = ~DLSCRAG~ sovr = ~~ sgen = ~GNT6MOVE~ scls = ~GNTEAM6S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1049 ry = 545 keep = 1 STR_VAR rcre = ~DLSCRAG~ sovr = ~~ sgen = ~GNT5MOVE~ scls = ~GNTEAM5S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 693 ry = 726 keep = 0 STR_VAR rcre = ~DLSCRAG~ sovr = ~~ sgen = ~GNT5MOVE~ scls = ~GNTEAM5S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1042 ry = 811 keep = 1 STR_VAR rcre = ~DLSCRAG~ sovr = ~~ sgen = ~GNT5MOVE~ scls = ~GNTEAM5S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 780 ry = 982 keep = 0 STR_VAR rcre = ~DLSNOTR~ sovr = ~~ sgen = ~GNT5MOVE~ scls = ~GNTEAM5S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~EFTROLG~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 864 ry = 1747 keep = 1 STR_VAR rcre = ~DLSNOTR~ sovr = ~~ sgen = ~GNT5MOVE~ scls = ~GNTEAM7S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~EFTROLG~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1267 ry = 1205 keep = 0 STR_VAR rcre = ~DLSNOTR~ sovr = ~~ sgen = ~GNT8MOVE~ scls = ~GNTEAM8S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~EFTROLG~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1688 ry = 925 keep = 1 STR_VAR rcre = ~DLSNOTR~ sovr = ~~ sgen = ~GNT8MOVE~ scls = ~GNTEAM8S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~EFTROLG~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1785 ry = 1245 keep = 0 STR_VAR rcre = ~DLSNOTR~ sovr = ~~ sgen = ~GNT8MOVE~ scls = ~GNTEAM8S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~EFTROLG~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 2245 ry = 1488 keep = 1 STR_VAR rcre = ~DLSNOTR~ sovr = ~~ sgen = ~GNT9MOVE~ scls = ~GNTEAM9S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~EFTROLG~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1298 ry = 500 keep = 0 STR_VAR rcre = ~DLSNOTR~ sovr = ~~ sgen = ~GNT5MOVE~ scls = ~GNTEAM5S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~EFTROLG~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1371 ry = 1572 keep = 1 STR_VAR rcre = ~DLSNOTR~ sovr = ~~ sgen = ~GNT7MOVE~ scls = ~GNTEAM7S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~EFTROLG~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1064 ry = 1612 keep = 0 STR_VAR rcre = ~DLICETR~ sovr = ~~ sgen = ~GNT5MOVE~ scls = ~GNTEAM5S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1180 ry = 1821 keep = 1 STR_VAR rcre = ~DLICETR~ sovr = ~~ sgen = ~GNT7MOVE~ scls = ~GNTEAM7S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1543 ry = 1446 keep = 0 STR_VAR rcre = ~DLICETR~ sovr = ~~ sgen = ~GNT7MOVE~ scls = ~GNTEAM7S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1223 ry = 989 keep = 1 STR_VAR rcre = ~DLICETR~ sovr = ~~ sgen = ~GNT8MOVE~ scls = ~GNTEAM8S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 516 ry = 826 keep = 0 STR_VAR rcre = ~DLICETR~ sovr = ~~ sgen = ~GNT5MOVE~ scls = ~GNTEAM5S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1954 ry = 1020 keep = 1 STR_VAR rcre = ~DLICETR~ sovr = ~~ sgen = ~GNT8MOVE~ scls = ~GNTEAM8S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 2105 ry = 1324 keep = 0 STR_VAR rcre = ~DLICETR~ sovr = ~~ sgen = ~GNT9MOVE~ scls = ~GNTEAM9S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 2061 ry = 1463 keep = 1 STR_VAR rcre = ~DLICETR~ sovr = ~~ sgen = ~GNT9MOVE~ scls = ~GNTEAM9S~ srac = ~EFATKMEL~ sdef = ~~ sspc = ~~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 2657 ry = 760 keep = 0 STR_VAR rcre = ~DLBONEC~ sovr = ~~ sgen = ~~ scls = ~~ srac = ~~ sdef = ~~ sspc = ~EFATKMEL~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 3384 ry = 960 keep = 1 STR_VAR rcre = ~DLBONEC~ sovr = ~~ sgen = ~~ scls = ~~ srac = ~~ sdef = ~~ sspc = ~EFATKMEL~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 3002 ry = 1090 keep = 0 STR_VAR rcre = ~DLBONEC~ sovr = ~~ sgen = ~~ scls = ~~ srac = ~~ sdef = ~~ sspc = ~EFATKMEL~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 2792 ry = 1621 keep = 1 STR_VAR rcre = ~DLBONEC~ sovr = ~~ sgen = ~~ scls = ~~ srac = ~~ sdef = ~~ sspc = ~EFATKMEL~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 3347 ry = 1477 keep = 0 STR_VAR rcre = ~DLBONEC~ sovr = ~~ sgen = ~~ scls = ~~ srac = ~~ sdef = ~~ sspc = ~EFATKMEL~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1950 ry = 1652 keep = 1 STR_VAR rcre = ~DLBONEC~ sovr = ~~ sgen = ~~ scls = ~~ srac = ~~ sdef = ~~ sspc = ~EFATKMEL~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1832 ry = 1909 keep = 0 STR_VAR rcre = ~DLBONEC~ sovr = ~~ sgen = ~~ scls = ~~ srac = ~~ sdef = ~~ sspc = ~EFATKMEL~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1716 ry = 1767 keep = 1 STR_VAR rcre = ~DLBONEC~ sovr = ~~ sgen = ~~ scls = ~~ srac = ~~ sdef = ~~ sspc = ~EFATKMEL~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 2747 ry = 1052 keep = 0 STR_VAR rcre = ~DLCLDAXE~ sovr = ~~ sgen = ~~ scls = ~EFATKMEL~ srac = ~GNT4MOVE~ sdef = ~~ sspc = ~GNTEAM4S~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 2743 ry = 1331 keep = 0 STR_VAR rcre = ~DLCLDHND~ sovr = ~~ sgen = ~~ scls = ~EFATKMEL~ srac = ~GNT4MOVE~ sdef = ~~ sspc = ~GNTEAM4S~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 2953 ry = 1224 keep = 0 STR_VAR rcre = ~DLCLDMCE~ sovr = ~~ sgen = ~~ scls = ~EFATKMEL~ srac = ~GNT4MOVE~ sdef = ~~ sspc = ~GNTEAM4S~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 3293 ry = 1273 keep = 0 STR_VAR rcre = ~DLCLDSWD~ sovr = ~~ sgen = ~~ scls = ~EFATKMEL~ srac = ~GNT4MOVE~ sdef = ~~ sspc = ~GNTEAM4S~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 2685 ry = 865 keep = 0 STR_VAR rcre = ~DLFZNBNE~ sovr = ~~ sgen = ~EFATKMEL~ scls = ~GNTEAM4S~ srac = ~ILFROBON~ sdef = ~GNT4MOVE~ sspc = ~ILICEAUR~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 2981 ry = 872 keep = 0 STR_VAR rcre = ~DLICEAXE~ sovr = ~~ sgen = ~EFATKMEL~ scls = ~GNTEAM4S~ srac = ~ILICEBON~ sdef = ~GNT4MOVE~ sspc = ~ILICEAUR~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 3297 ry = 1105 keep = 0 STR_VAR rcre = ~DLICEHND~ sovr = ~~ sgen = ~EFATKMEL~ scls = ~GNTEAM4S~ srac = ~ILICEBON~ sdef = ~GNT4MOVE~ sspc = ~ILICEAUR~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 3029 ry = 1467 keep = 0 STR_VAR rcre = ~DLICESWD~ sovr = ~~ sgen = ~EFATKMEL~ scls = ~GNTEAM4S~ srac = ~ILICEBON~ sdef = ~GNT4MOVE~ sspc = ~ILICEAUR~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 3307 ry = 1899 keep = 1 STR_VAR rcre = ~DLCLDAXE~ sovr = ~~ sgen = ~~ scls = ~EFATKMEL~ srac = ~GNT3MOVE~ sdef = ~~ sspc = ~GNTEAM3S~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 3068 ry = 2021 keep = 1 STR_VAR rcre = ~DLCLDHND~ sovr = ~~ sgen = ~~ scls = ~EFATKMEL~ srac = ~GNT3MOVE~ sdef = ~~ sspc = ~GNTEAM3S~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 2968 ry = 1813 keep = 1 STR_VAR rcre = ~DLCLDMCE~ sovr = ~~ sgen = ~~ scls = ~EFATKMEL~ srac = ~GNT3MOVE~ sdef = ~~ sspc = ~GNTEAM3S~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 2853 ry = 1717 keep = 1 STR_VAR rcre = ~DLCLDSWD~ sovr = ~~ sgen = ~~ scls = ~EFATKMEL~ srac = ~GNT3MOVE~ sdef = ~~ sspc = ~GNTEAM3S~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 2538 ry = 2083 keep = 1 STR_VAR rcre = ~DLFZNBNE~ sovr = ~~ sgen = ~EFATKMEL~ scls = ~GNTEAM3S~ srac = ~ILFROBON~ sdef = ~GNT3MOVE~ sspc = ~ILICEAUR~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 2996 ry = 2287 keep = 1 STR_VAR rcre = ~DLICEAXE~ sovr = ~~ sgen = ~EFATKMEL~ scls = ~GNTEAM3S~ srac = ~ILICEBON~ sdef = ~GNT3MOVE~ sspc = ~ILICEAUR~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 2664 ry = 1943 keep = 1 STR_VAR rcre = ~DLICEHND~ sovr = ~~ sgen = ~EFATKMEL~ scls = ~GNTEAM3S~ srac = ~ILICEBON~ sdef = ~GNT3MOVE~ sspc = ~ILICEAUR~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 2781 ry = 2186 keep = 1 STR_VAR rcre = ~DLICESWD~ sovr = ~~ sgen = ~EFATKMEL~ scls = ~GNTEAM3S~ srac = ~ILICEBON~ sdef = ~GNT3MOVE~ sspc = ~ILICEAUR~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1532 ry = 2114 keep = 1 STR_VAR rcre = ~DLCLDAXE~ sovr = ~~ sgen = ~~ scls = ~EFATKMEL~ srac = ~GNT2MOVE~ sdef = ~~ sspc = ~GNTEAM2S~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1746 ry = 2079 keep = 1 STR_VAR rcre = ~DLCLDHND~ sovr = ~~ sgen = ~~ scls = ~EFATKMEL~ srac = ~GNT2MOVE~ sdef = ~~ sspc = ~GNTEAM2S~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1559 ry = 1934 keep = 1 STR_VAR rcre = ~DLCLDMCE~ sovr = ~~ sgen = ~~ scls = ~EFATKMEL~ srac = ~GNT2MOVE~ sdef = ~~ sspc = ~GNTEAM2S~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1659 ry = 2296 keep = 1 STR_VAR rcre = ~DLCLDSWD~ sovr = ~~ sgen = ~~ scls = ~EFATKMEL~ srac = ~GNT2MOVE~ sdef = ~~ sspc = ~GNTEAM2S~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 2217 ry = 1930 keep = 1 STR_VAR rcre = ~DLFZNBNE~ sovr = ~~ sgen = ~EFATKMEL~ scls = ~GNTEAM2S~ srac = ~ILFROBON~ sdef = ~GNT2MOVE~ sspc = ~ILICEAUR~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1819 ry = 1709 keep = 1 STR_VAR rcre = ~DLICEAXE~ sovr = ~~ sgen = ~EFATKMEL~ scls = ~GNTEAM2S~ srac = ~ILICEBON~ sdef = ~GNT2MOVE~ sspc = ~ILICEAUR~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 2137 ry = 1687 keep = 1 STR_VAR rcre = ~DLICEHND~ sovr = ~~ sgen = ~EFATKMEL~ scls = ~GNTEAM2S~ srac = ~ILICEBON~ sdef = ~GNT2MOVE~ sspc = ~ILICEAUR~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 2023 ry = 1843 keep = 1 STR_VAR rcre = ~DLICESWD~ sovr = ~~ sgen = ~EFATKMEL~ scls = ~GNTEAM2S~ srac = ~ILICEBON~ sdef = ~GNT2MOVE~ sspc = ~ILICEAUR~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1205 ry = 2163 keep = 1 STR_VAR rcre = ~DLBNEGRD~ sovr = ~~ sgen = ~~ scls = ~EFATKMEL~ srac = ~GNT1MOVE~ sdef = ~~ sspc = ~GNTEAM1V~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1029 ry = 2440 keep = 1 STR_VAR rcre = ~DLBNEGRD~ sovr = ~~ sgen = ~~ scls = ~EFATKMEL~ srac = ~GNT1MOVE~ sdef = ~~ sspc = ~GNTEAM1V~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 979 ry = 2183 keep = 1 STR_VAR rcre = ~DLBNEGRD~ sovr = ~~ sgen = ~~ scls = ~EFATKMEL~ srac = ~GNT1MOVE~ sdef = ~~ sspc = ~GNTEAM1V~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 756 ry = 2403 keep = 1 STR_VAR rcre = ~DLBNEGRD~ sovr = ~~ sgen = ~~ scls = ~EFATKMEL~ srac = ~GNT1MOVE~ sdef = ~~ sspc = ~GNTEAM1V~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 1078 ry = 2266 keep = 1 STR_VAR rcre = ~XACTILE~ sovr = ~~ sgen = ~GNT1MOVE~ scls = ~ILXACTIL~ srac = ~EFATKMEL~ sdef = ~EFRNDW10~ sspc = ~GNTEAM1V~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 873 ry = 671 keep = 0 STR_VAR rcre = ~DLWATER~ sovr = ~~ sgen = ~~ scls = ~GNELEWTG~ srac = ~~ sdef = ~~ sspc = ~ILWKIN~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 3111 ry = 2204 keep = 1 STR_VAR rcre = ~DLWATER~ sovr = ~~ sgen = ~~ scls = ~GNELEWTG~ srac = ~~ sdef = ~~ sspc = ~ILWKIN~ END
+      LPF cie500_restore_9602_row INT_VAR rx = 718 ry = 1469 keep = 1 STR_VAR rcre = ~DLWATER~ sovr = ~~ sgen = ~~ scls = ~GNELEWTG~ srac = ~~ sdef = ~~ sspc = ~ILWKIN~ END
+    BUT_ONLY
+  END
+
+  // 5. Build bespoke expansion champions, casters & monsters (CIE501..CIE533)
+  // CIE501: Rimehorn Runecaster (Frost Shaman L15)
+  COPY_EXISTING ~jklshm.cre~ ~override/cie501.cre~
+    LPF cie500_set_core INT_VAR name_tra = 501 xp = 26000 hp = 155 ac = 0 - 6 thac0 = 2 apr = 2 rcld = 100 mr = 20 lvl1 = 15 STR_VAR s_cls = ~CIE5CS1~ END
+    SAY NAME1 @501
+    SAY NAME2 @501
+    ADD_CRE_ITEM ~STAF02~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+    ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM1~
+    ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM2~
+  LAF cie500_apply_look_and_voice INT_VAR anim_override = 0xe248 STR_VAR cre = ~cie501~ visual_donor = ~dlbar1a~ END
+
+  // CIE502: Rimehorn Huskarl (Frost Giant Veteran)
+  COPY_EXISTING ~giantfro.cre~ ~override/cie502.cre~
+    LPF cie500_set_core INT_VAR name_tra = 502 xp = 22000 hp = 185 ac = 0 - 6 thac0 = 0 - 1 apr = 8 rcld = 100 rcr = 20 lvl1 = 17 STR_VAR s_cls = EVAL ~%cie500_bersk_ai%~ END
+    SAY NAME1 @502
+    SAY NAME2 @502
+    ADD_CRE_ITEM ~WEPGIAN~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+    ADD_CRE_ITEM ~EXTHEAL~ #1 #0 #0 ~IDENTIFIED~ ~QITEM1~
+    ADD_CRE_ITEM ~EXTHEAL~ #1 #0 #0 ~IDENTIFIED~ ~QITEM2~
+    ADD_CRE_ITEM ~%cie500_ptn_spd%~ #1 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~QITEM3~
+
+  // CIE503: Hoarfrost Alpha (Ancient Winter Dire-Wolf)
+  COPY_EXISTING ~winwolf.cre~ ~override/cie503.cre~
+    LPF cie500_set_core INT_VAR name_tra = 503 xp = 18000 hp = 145 ac = 0 - 6 thac0 = 0 apr = 3 rcld = 100 lvl1 = 14 STR_VAR s_cls = ~EFWINWLF~ s_gen = EVAL ~%cie500_melee_ai%~ END
+    SAY NAME1 @503
+    SAY NAME2 @503
+    ADD_CRE_ITEM ~S1-20M3~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+
+  // CIE504: Broodmother Remorhaz
+  COPY_EXISTING ~remorha.cre~ ~override/cie504.cre~
+    LPF cie500_set_core INT_VAR name_tra = 504 xp = 36000 hp = 230 ac = 0 - 6 thac0 = 0 - 2 apr = 2 rfir = 100 rcld = 75 mr = 75 lvl1 = 18 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
+    SAY NAME1 @504
+    SAY NAME2 @504
+    ADD_CRE_ITEM ~REMORHA~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+    ADD_CRE_ITEM ~CDREM~   #1 #0 #0 ~IDENTIFIED~ ~INV1~
+
+  // CIE505: Kossuthan Flame-Seeker (Pyromancer L16)
+  COPY_EXISTING ~ilair.cre~ ~override/cie505.cre~
+    LPF cie500_set_core INT_VAR name_tra = 505 xp = 32000 hp = 110 ac = 0 - 4 thac0 = 6 apr = 1 rfir = 100 mr = 25 lvl1 = 16 STR_VAR s_cls = ~CIE5CS2~ END
+    SAY NAME1 @505
+    SAY NAME2 @505
+    ADD_CRE_ITEM ~STAF02~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+    ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM1~
+    ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM2~
+
+  // CIE506: Hand of the Frostmaiden (Aurilite Cryomancer L16)
+  COPY_EXISTING ~kontik.cre~ ~override/cie506.cre~
+    LPF cie500_set_core INT_VAR name_tra = 506 xp = 36000 hp = 115 ac = 0 - 5 thac0 = 5 apr = 1 rcld = 100 mr = 25 lvl1 = 16 STR_VAR s_cls = ~CIE5CS3~ END
+    SAY NAME1 @506
+    SAY NAME2 @506
+    ADD_CRE_ITEM ~STAF02~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+    ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM1~
+    ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM2~
+
+  // CIE507: Black-Ice Juggernaut
+  COPY_EXISTING ~biknight.cre~ ~override/cie507.cre~
+    LPF cie500_set_core INT_VAR name_tra = 507 xp = 28000 hp = 175 ac = 0 - 7 thac0 = 0 - 1 apr = 3 rcld = 100 mr = 30 rsl = 25 rcr = 25 rpi = 25 rmi = 40 lvl1 = 16 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
+    SAY NAME1 @507
+    SAY NAME2 @507
+    ADD_CRE_ITEM ~RING95~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
+    ADD_CRE_ITEM ~S1-20M3~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+
+  // CIE508: Rime-Bound Witch-Doctor (Druid L14)
+  COPY_EXISTING ~trsph5.cre~ ~override/cie508.cre~
+    LPF cie500_set_core INT_VAR name_tra = 508 xp = 24000 hp = 120 ac = 0 - 5 thac0 = 4 apr = 2 rcld = 100 lvl1 = 14 STR_VAR s_cls = ~CIE5CS4~ END
+    SAY NAME1 @508
+    SAY NAME2 @508
+    LPF DELETE_CRE_EFFECT INT_VAR opcode_to_delete = 342 END
+    ADD_CRE_ITEM ~STAF02~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+    ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM1~
+    ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM2~
+  LAF cie500_apply_look_and_voice INT_VAR anim_override = 0xe248 STR_VAR cre = ~cie508~ visual_donor = ~dlbar1a~ END
+
+  // CIE509: Frost-Scarred Reaver (Corrupted Berserker)
+  COPY_EXISTING ~dlbar1a.cre~ ~override/cie509.cre~
+    LPF cie500_set_core INT_VAR name_tra = 509 xp = 18000 hp = 160 ac = 0 - 6 thac0 = 0 - 1 apr = 3 rcld = 75 lvl1 = 15 STR_VAR s_cls = EVAL ~%cie500_bersk_ai%~ END
+    SAY NAME1 @509
+    SAY NAME2 @509
+    ADD_CRE_ITEM ~AX1H03~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+    ADD_CRE_ITEM ~EXTHEAL~ #1 #0 #0 ~IDENTIFIED~ ~QITEM1~
+    ADD_CRE_ITEM ~%cie500_ptn_st1%~ #1 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~QITEM2~
+    ADD_CRE_ITEM ~%cie500_ptn_spd%~ #1 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~QITEM3~
+
+  // CIE510: Gorgoroth the Unmelting (Troll Warlord)
+  COPY_EXISTING ~dlicetr.cre~ ~override/cie510.cre~
+    LPF cie500_set_core INT_VAR name_tra = 510 xp = 26000 hp = 190 ac = 0 - 5 thac0 = 0 - 1 apr = 9 rcld = 100 lvl1 = 16 STR_VAR s_ovr = ~EFTROLG~ s_cls = EVAL ~%cie500_bersk_ai%~ END
+    SAY NAME1 @510
+    SAY NAME2 @510
+    ADD_CRE_ITEM ~REG1HP2~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
+    ADD_CRE_ITEM ~S1-12M2~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+    ADD_CRE_ITEM ~%cie500_ptn_spd%~ #1 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~QITEM1~
+
+  // CIE511: Frost-Fletcher Marksman (Ranged Skirmisher w/ 2x Dispelling Arrows)
+  COPY_EXISTING ~mercwar1.cre~ ~override/cie511.cre~
+    LPF cie500_set_core INT_VAR name_tra = 511 xp = 16000 hp = 120 ac = 0 - 4 thac0 = 0 apr = 3 rcld = 75 lvl1 = 14 STR_VAR s_cls = EVAL ~%cie500_ranged_ai%~ END
+    SAY NAME1 @511
+    SAY NAME2 @511
+    ADD_CRE_ITEM ~BOW01~   #0 #0  #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+    ADD_CRE_ITEM ~SW1H05~  #0 #0  #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON2~
+    ADD_CRE_ITEM ~AROW07~  #2 #0  #0 ~IDENTIFIED&UNDROPPABLE~ ~QUIVER1~
+    ADD_CRE_ITEM ~AROW15~ #40 #0  #0 ~IDENTIFIED&UNDROPPABLE~ ~QUIVER2~
+    ADD_CRE_ITEM ~EXTHEAL~ #1 #0  #0 ~IDENTIFIED~ ~QITEM1~
+    LPF ADD_CRE_EFFECT INT_VAR opcode = 1 target = 1 timing = 9 parameter1 = 1 parameter2 = 0 END
+
+  // CIE512: Abyssal Tide-Caller (Sahuagin Cleric/Mage L13/13)
+  OUTER_SPRINT tide_donor ~drowpm~
+  ACTION_IF FILE_EXISTS_IN_GAME ~dw#drpm2.cre~ BEGIN OUTER_SPRINT tide_donor ~dw#drpm2~ END
+  COPY_EXISTING ~%tide_donor%.cre~ ~override/cie512.cre~
+    LPF cie500_set_core INT_VAR name_tra = 512 xp = 28000 hp = 125 ac = 0 - 5 thac0 = 4 apr = 2 rcld = 100 mr = 25 lvl1 = 13 lvl2 = 13 STR_VAR s_cls = ~CIE5CS5~ END
+    SAY NAME1 @512
+    SAY NAME2 @512
+    ADD_CRE_ITEM ~SPER02~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+    ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM1~
+    ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM2~
+  LAF cie500_apply_look_and_voice INT_VAR anim_override = 0xe261 STR_VAR cre = ~cie512~ visual_donor = ~saking~ END
+
+  // CIE513: Sekolah Abyssal Guard
+  COPY_EXISTING ~saking.cre~ ~override/cie513.cre~
+    LPF cie500_set_core INT_VAR name_tra = 513 xp = 19000 hp = 155 ac = 0 - 6 thac0 = 0 - 1 apr = 3 rcld = 100 lvl1 = 15 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
+    SAY NAME1 @513
+    SAY NAME2 @513
+    ADD_CRE_ITEM ~S1-20M3~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+    ADD_CRE_ITEM ~EXTHEAL~ #1 #0 #0 ~IDENTIFIED~ ~QITEM1~
+    ADD_CRE_ITEM ~%cie500_ptn_spd%~ #1 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~QITEM2~
+
+  // CIE514: Kraken Society Envoy (Archmage L15)
+  OUTER_SPRINT krak_donor ~krakmag~
+  ACTION_IF FILE_EXISTS_IN_GAME ~dwkrmag1.cre~ BEGIN OUTER_SPRINT krak_donor ~dwkrmag1~ END
+  COPY_EXISTING ~%krak_donor%.cre~ ~override/cie514.cre~
+    LPF cie500_set_core INT_VAR name_tra = 514 xp = 26000 hp = 110 ac = 0 - 4 thac0 = 6 apr = 1 rcld = 75 rele = 75 mr = 25 lvl1 = 15 STR_VAR s_cls = ~CIE5CS6~ END
+    SAY NAME1 @514
+    SAY NAME2 @514
+    ADD_CRE_ITEM ~STAF02~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+    ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM1~
+    ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM2~
+
+  // CIE515: Fallen Wyvern-Knight
+  COPY_EXISTING ~biknight.cre~ ~override/cie515.cre~
+    LPF cie500_set_core INT_VAR name_tra = 515 xp = 18000 hp = 165 ac = 0 - 6 thac0 = 0 - 1 apr = 3 rcld = 100 mr = 20 lvl1 = 16 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
+    SAY NAME1 @515
+    SAY NAME2 @515
+    ADD_CRE_ITEM ~RING95~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
+    ADD_CRE_ITEM ~S1-20M3~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+
+  // CIE516: Maluradek's Grand Seneschal (Spectral Cleric/Mage L12/12)
+  OUTER_SPRINT pres_donor ~presio~
+  ACTION_IF FILE_EXISTS_IN_GAME ~cdpresio.cre~ BEGIN OUTER_SPRINT pres_donor ~cdpresio~ END
+  COPY_EXISTING ~%pres_donor%.cre~ ~override/cie516.cre~
+    LPF cie500_set_core INT_VAR name_tra = 516 xp = 26000 hp = 125 ac = 0 - 6 thac0 = 5 apr = 1 rcld = 100 mr = 25 lvl1 = 12 lvl2 = 12 STR_VAR s_ovr = ~KELURDED~ s_cls = ~CIE5CS7~ END
+    SAY NAME1 @516
+    SAY NAME2 @516
+    ADD_CRE_ITEM ~RING95~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
+    ADD_CRE_ITEM ~SHADE~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~RRING~ EQUIP
+    ADD_CRE_ITEM ~STAF02~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+  LAF cie500_apply_look_and_voice INT_VAR anim_override = 0x6221 STR_VAR cre = ~cie516~ visual_donor = ~ckspgrd2~ END
+
+  // CIE517: Phantom Blademaster (Spectral Duelist)
+  COPY_EXISTING ~ckspgrd2.cre~ ~override/cie517.cre~
+    LPF cie500_set_core INT_VAR name_tra = 517 xp = 22000 hp = 165 ac = 0 - 7 thac0 = 0 - 2 apr = 8 rcld = 100 rsl = 25 rpi = 25 rmi = 25 lvl1 = 18 STR_VAR s_ovr = ~KELURDED~ s_cls = EVAL ~%cie500_melee_ai%~ END
+    SAY NAME1 @517
+    SAY NAME2 @517
+    ADD_CRE_ITEM ~RING95~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
+    ADD_CRE_ITEM ~SHADE~   #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~RRING~ EQUIP
+    ADD_CRE_ITEM ~CWSPGRD~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+
+  // CIE518: Ossuary Arch-Necromancer (L18 Archmage)
+  COPY_EXISTING ~malavon.cre~ ~override/cie518.cre~
+    LPF cie500_set_core INT_VAR name_tra = 518 xp = 38000 hp = 135 ac = 0 - 5 thac0 = 5 apr = 1 rcld = 100 mr = 35 lvl1 = 18 STR_VAR s_cls = ~CIE5CS8~ END
+    SAY NAME1 @518
+    SAY NAME2 @518
+    ADD_CRE_ITEM ~RING95~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
+    ADD_CRE_ITEM ~SHADE~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~RRING~ EQUIP
+    ADD_CRE_ITEM ~STAF02~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+  LAF cie500_apply_look_and_voice INT_VAR anim_override = 0x6221 STR_VAR cre = ~cie518~ visual_donor = ~ckspgrd2~ END
+
+  // CIE519: Dread Bone-Fiend
+  COPY_EXISTING ~bonegard.cre~ ~override/cie519.cre~
+    LPF cie500_set_core INT_VAR name_tra = 519 xp = 24000 hp = 150 ac = 0 - 6 thac0 = 0 apr = 3 rfir = 100 rcld = 50 mr = 35 rsl = 35 rpi = 35 rmi = 50 lvl1 = 15 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
+    SAY NAME1 @519
+    SAY NAME2 @519
+    ADD_CRE_ITEM ~RING95~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
+    ADD_CRE_ITEM ~S1-20M3~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+
+  // CIE520: Oathbreaker Watch-Captain
+  COPY_EXISTING ~biknight.cre~ ~override/cie520.cre~
+    LPF cie500_set_core INT_VAR name_tra = 520 xp = 28000 hp = 195 ac = 0 - 8 thac0 = 0 - 2 apr = 3 rcld = 100 mr = 25 rsl = 20 rcr = 20 rpi = 20 lvl1 = 18 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
+    SAY NAME1 @520
+    SAY NAME2 @520
+    ADD_CRE_ITEM ~RING95~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
+    ADD_CRE_ITEM ~S1-20M3~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+    ADD_CRE_ITEM ~EXTHEAL~ #1 #0 #0 ~IDENTIFIED~ ~QITEM1~
+    ADD_CRE_ITEM ~%cie500_ptn_spd%~ #1 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~QITEM2~
+
+  // CIE521: Sepulchral Arbalest (Spectral Crossbowman w/ Tranquil Bolts)
+  COPY_EXISTING ~mercwar1.cre~ ~override/cie521.cre~
+    LPF cie500_set_core INT_VAR name_tra = 521 xp = 18000 hp = 125 ac = 0 - 5 thac0 = 0 apr = 8 rcld = 100 rmi = 30 lvl1 = 15 STR_VAR s_cls = EVAL ~%cie500_ranged_ai%~ END
+    SAY NAME1 @521
+    SAY NAME2 @521
+    WRITE_LONG 0x28 0x6120
+    ADD_CRE_ITEM ~RING95~  #0  #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
+    ADD_CRE_ITEM ~SHADE~   #0  #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~RRING~ EQUIP
+    ADD_CRE_ITEM ~XBOW06~  #0  #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+    ADD_CRE_ITEM ~SW1H05~  #0  #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON2~
+    ADD_CRE_ITEM ~TRNBOLT~ #8  #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~QUIVER1~
+    ADD_CRE_ITEM ~BOLT06~  #40 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~QUIVER2~
+    LPF ADD_CRE_EFFECT INT_VAR opcode = 1 target = 1 timing = 9 parameter1 = 1 parameter2 = 0 END
+
+  // CIE522: Anubite Tomb-Warden
+  COPY_EXISTING ~jklgtr.cre~ ~override/cie522.cre~
+    LPF cie500_set_core INT_VAR name_tra = 522 xp = 24000 hp = 155 ac = 0 - 6 thac0 = 0 - 1 apr = 3 rcld = 100 mr = 25 lvl1 = 16 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
+    SAY NAME1 @522
+    SAY NAME2 @522
+    ADD_CRE_ITEM ~RING95~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
+    ADD_CRE_ITEM ~S1-12M2~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+
+  // CIE523: Kargath the Pit-Tyrant (Prize Gladiator Minotaur)
+  COPY_EXISTING ~minlrd.cre~ ~override/cie523.cre~
+    LPF cie500_set_core INT_VAR name_tra = 523 xp = 26000 hp = 215 ac = 0 - 7 thac0 = 0 - 2 apr = 9 mr = 20 lvl1 = 20 STR_VAR s_cls = EVAL ~%cie500_bersk_ai%~ END
+    SAY NAME1 @523
+    SAY NAME2 @523
+    ADD_CRE_ITEM ~RING09~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
+    ADD_CRE_ITEM ~AXEMINO~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+    ADD_CRE_ITEM ~EXTHEAL~ #1 #0 #0 ~IDENTIFIED~ ~QITEM1~
+    ADD_CRE_ITEM ~%cie500_ptn_st2%~ #1 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~QITEM2~
+    ADD_CRE_ITEM ~%cie500_ptn_spd%~ #1 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~QITEM3~
+
+  // CIE524: Bound Arena Conjurer
+  COPY_EXISTING ~bandoth.cre~ ~override/cie524.cre~
+    LPF cie500_set_core INT_VAR name_tra = 524 xp = 22000 hp = 105 ac = 0 - 4 thac0 = 6 apr = 1 mr = 20 lvl1 = 14 STR_VAR s_cls = ~CIE5CS9~ END
+    SAY NAME1 @524
+    SAY NAME2 @524
+    ADD_CRE_ITEM ~STAF02~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+    ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM1~
+
+  // CIE525: Plague-Alchemist Shade
+  COPY_EXISTING ~ilair.cre~ ~override/cie525.cre~
+    LPF cie500_set_core INT_VAR name_tra = 525 xp = 22000 hp = 115 ac = 0 - 5 thac0 = 6 apr = 1 racd = 100 rcld = 100 mr = 25 lvl1 = 16 STR_VAR s_cls = ~CIE5CS2~ END
+    SAY NAME1 @525
+    SAY NAME2 @525
+    ADD_CRE_ITEM ~RING95~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
+    ADD_CRE_ITEM ~SHADE~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~RRING~ EQUIP
+    ADD_CRE_ITEM ~STAF02~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+  LAF cie500_apply_look_and_voice INT_VAR anim_override = 0x6221 STR_VAR cre = ~cie525~ visual_donor = ~ckspgrd2~ END
+
+  // CIE526: Fetid Mound-Horror
+  COPY_EXISTING ~cyshamb.cre~ ~override/cie526.cre~
+    LPF cie500_set_core INT_VAR name_tra = 526 xp = 16000 hp = 175 ac = 0 - 4 thac0 = 0 - 1 apr = 3 rfir = 100 rele = 100 racd = 100 rcr = 75 lvl1 = 16 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
+    SAY NAME1 @526
+    SAY NAME2 @526
+    ADD_CRE_ITEM ~FREEACT~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
+    ADD_CRE_ITEM ~SHMBLR~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+
+  // CIE527, CIE528, CIE529: Risen Shades of Harald's Comrades (spawned only if Harald turns hostile)
+  COPY_EXISTING ~jklshm.cre~ ~override/cie527.cre~
+    LPF cie500_set_core INT_VAR name_tra = 527 xp = 8000 hp = 110 ac = 0 - 5 thac0 = 4 apr = 2 rcld = 100 lvl1 = 13 STR_VAR s_ovr = ~KELURDED~ s_cls = ~CIE5CS1~ END
+    SAY NAME1 @527
+    SAY NAME2 @527
+    ADD_CRE_ITEM ~RING95~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
+    ADD_CRE_ITEM ~SHADE~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~RRING~ EQUIP
+    ADD_CRE_ITEM ~STAF02~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+  LAF cie500_apply_look_and_voice INT_VAR anim_override = 0x6020 STR_VAR cre = ~cie527~ visual_donor = ~ckspgrd2~ END
+
+  COPY_EXISTING ~ckspgrd2.cre~ ~override/cie528.cre~
+    LPF cie500_set_core INT_VAR name_tra = 528 xp = 8000 hp = 145 ac = 0 - 6 thac0 = 0 apr = 3 rcld = 100 lvl1 = 15 STR_VAR s_ovr = ~KELURDED~ s_cls = EVAL ~%cie500_melee_ai%~ END
+    SAY NAME1 @528
+    SAY NAME2 @528
+    ADD_CRE_ITEM ~RING95~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
+    ADD_CRE_ITEM ~SHADE~   #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~RRING~ EQUIP
+    ADD_CRE_ITEM ~CWSPGRD~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+
+  COPY_EXISTING ~mercwar1.cre~ ~override/cie529.cre~
+    LPF cie500_set_core INT_VAR name_tra = 529 xp = 8000 hp = 110 ac = 0 - 5 thac0 = 1 apr = 8 rcld = 100 lvl1 = 14 STR_VAR s_ovr = ~KELURDED~ s_cls = EVAL ~%cie500_ranged_ai%~ END
+    SAY NAME1 @529
+    SAY NAME2 @529
+    WRITE_LONG 0x28 0x6120
+    ADD_CRE_ITEM ~RING95~ #0  #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
+    ADD_CRE_ITEM ~SHADE~  #0  #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~RRING~ EQUIP
+    ADD_CRE_ITEM ~BOW01~  #0  #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+    ADD_CRE_ITEM ~SW1H05~ #0  #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON2~
+    ADD_CRE_ITEM ~AROW11~ #40 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~QUIVER1~
+    LPF ADD_CRE_EFFECT INT_VAR opcode = 1 target = 1 timing = 9 parameter1 = 1 parameter2 = 0 END
+
+  // CIE530: Blood-Moon Alpha (Apex Were-Jackal)
+  COPY_EXISTING ~jklgtr.cre~ ~override/cie530.cre~
+    LPF cie500_set_core INT_VAR name_tra = 530 xp = 28000 hp = 190 ac = 0 - 8 thac0 = 0 - 2 apr = 4 mr = 25 lvl1 = 19 STR_VAR s_ovr = ~EFJGAZE~ s_cls = EVAL ~%cie500_bersk_ai%~ END
+    SAY NAME1 @530
+    SAY NAME2 @530
+    ADD_CRE_ITEM ~S1-20M3~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+    ADD_CRE_ITEM ~EXTHEAL~ #1 #0 #0 ~IDENTIFIED~ ~QITEM1~
+    ADD_CRE_ITEM ~%cie500_ptn_spd%~ #1 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~QITEM2~
+
+  // CIE531: Shadow-Pelt Stalker (Malarite Backstabber)
+  COPY_EXISTING ~mercwar1.cre~ ~override/cie531.cre~
+    LPF cie500_set_core INT_VAR name_tra = 531 xp = 21000 hp = 130 ac = 0 - 6 thac0 = 0 apr = 3 lvl1 = 16 STR_VAR s_cls = EVAL ~%cie500_thief_ai%~ END
+    SAY NAME1 @531
+    SAY NAME2 @531
+    WRITE_LONG 0x28  0x6300 // Thief leather figure
+    WRITE_BYTE 0x273 4      // THIEF
+    WRITE_BYTE 0x45  115    // Hide in Shadows
+    WRITE_BYTE 0x68  115    // Move Silently
+    SET_BG2_PROFICIENCY 91 2
+    ADD_CRE_ITEM ~LEAT07~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~ARMOR~ EQUIP
+    ADD_CRE_ITEM ~SW1H10~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+    ADD_CRE_ITEM ~%cie500_ptn_inv%~ #1 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~QITEM1~
+    ADD_CRE_ITEM ~%cie500_ptn_inv%~ #1 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~QITEM2~
+    ADD_CRE_ITEM ~EXTHEAL~ #1 #0 #0 ~IDENTIFIED~ ~QITEM3~
+
+  // CIE532: Primordial Earth-Titan
+  COPY_EXISTING ~shearth.cre~ ~override/cie532.cre~
+    LPF cie500_set_core INT_VAR name_tra = 532 xp = 28000 hp = 220 ac = 0 - 6 thac0 = 0 - 2 apr = 3 rsl = 40 rpi = 40 rmi = 50 mr = 25 lvl1 = 20 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
+    SAY NAME1 @532
+    SAY NAME2 @532
+    ADD_CRE_ITEM ~FREEACT~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
+    ADD_CRE_ITEM ~B2-16M2~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+
+  // CIE533: Malarite Fang-Hierophant
+  COPY_EXISTING ~jklshm.cre~ ~override/cie533.cre~
+    LPF cie500_set_core INT_VAR name_tra = 533 xp = 26000 hp = 135 ac = 0 - 5 thac0 = 3 apr = 2 mr = 20 lvl1 = 16 STR_VAR s_cls = ~CIE5CS1~ END
+    SAY NAME1 @533
+    SAY NAME2 @533
+    ADD_CRE_ITEM ~STAF02~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
+    ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM1~
+    ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM2~
+
+  // 6. Upgrade spongy / low-THAC0 regulars & mini-bosses in-place (preserving quest items/DVs!)
+  ACTION_FOR_EACH spgrd IN ~ckspgrd~ ~ckspgrd2~ ~ckspgrd3~ ~ckspgrd4~ ~ckspgrd5~ ~ckspgrd6~ ~ckspgrd7~ ~ckspgrdh~ ~rndspg~ BEGIN
+    ACTION_IF FILE_EXISTS_IN_GAME ~%spgrd%.cre~ BEGIN
+      COPY_EXISTING ~%spgrd%.cre~ ~override~
+        WRITE_SHORT 0x24 115
+        WRITE_SHORT 0x26 115
+        WRITE_BYTE  0x52 1
+        WRITE_BYTE  0x53 8 // 5/2 APR instead of 1 APR sponge
+      BUT_ONLY
+    END
+  END
+
+  ACTION_IF FILE_EXISTS_IN_GAME ~saprince.cre~ BEGIN
+    COPY_EXISTING ~saprince.cre~ ~override~
+      WRITE_LONG  0x14 8000
+      WRITE_SHORT 0x24 180
+      WRITE_SHORT 0x26 180
+      WRITE_SHORT 0x46 (0 - 6)
+      WRITE_SHORT 0x48 (0 - 6)
+      WRITE_BYTE  0x52 (0 - 1)
+      WRITE_BYTE  0x53 3
+    BUT_ONLY
+  END
+
+  ACTION_IF FILE_EXISTS_IN_GAME ~wyvmat.cre~ BEGIN
+    COPY_EXISTING ~wyvmat.cre~ ~override~
+      WRITE_LONG  0x14 8000
+      WRITE_SHORT 0x24 190
+      WRITE_SHORT 0x26 190
+      WRITE_SHORT 0x46 (0 - 6)
+      WRITE_SHORT 0x48 (0 - 6)
+      WRITE_BYTE  0x52 0
+      WRITE_BYTE  0x53 3
+    BUT_ONLY
+  END
+
+  ACTION_IF FILE_EXISTS_IN_GAME ~cpmumg.cre~ BEGIN
+    COPY_EXISTING ~cpmumg.cre~ ~override~
+      WRITE_LONG  0x14 20000
+      WRITE_SHORT 0x24 215
+      WRITE_SHORT 0x26 215
+      WRITE_SHORT 0x46 (0 - 6)
+      WRITE_SHORT 0x48 (0 - 6)
+      WRITE_BYTE  0x52 (0 - 1)
+      WRITE_BYTE  0x53 8 // 5/2 APR
+    BUT_ONLY
+  END
+
+  ACTION_IF FILE_EXISTS_IN_GAME ~harald.cre~ BEGIN
+    COPY_EXISTING ~harald.cre~ ~override~
+      WRITE_LONG  0x14 10000
+      WRITE_SHORT 0x24 185
+      WRITE_SHORT 0x26 185
+      WRITE_SHORT 0x46 (0 - 6)
+      WRITE_SHORT 0x48 (0 - 6)
+      WRITE_BYTE  0x52 0
+      WRITE_BYTE  0x53 3
+    BUT_ONLY
+  END
+
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar9704.are~ BEGIN
+    LAF cie_area_script STR_VAR area = ~ar9704~ fallback = ~ar9704~ RET cie500_9704_scr = script END
+    LAF cie_write_script_blocks STR_VAR script = EVAL ~%cie500_9704_scr%~
+      marker = ~Global("CIE5_HARALD_SHADES"~ source = ~chriz-iwd-encounters/baf/cie5_harald_area.baf~ END
+  END
+
+  ACTION_IF FILE_EXISTS_IN_GAME ~giantfro.cre~ BEGIN
+    COPY_EXISTING ~giantfro.cre~ ~override~
+      WRITE_BYTE 0x52 2
+      WRITE_BYTE 0x53 8
+    BUT_ONLY
+  END
+
+  ACTION_IF FILE_EXISTS_IN_GAME ~frostsal.cre~ BEGIN
+    COPY_EXISTING ~frostsal.cre~ ~override~
+      WRITE_BYTE 0x52 5
+      WRITE_BYTE 0x53 8
+    BUT_ONLY
+  END
+
+  ACTION_IF FILE_EXISTS_IN_GAME ~saeguard.cre~ BEGIN
+    COPY_EXISTING ~saeguard.cre~ ~override~
+      WRITE_SHORT 0x24 110
+      WRITE_SHORT 0x26 110
+      WRITE_SHORT 0x46 (0 - 2)
+      WRITE_SHORT 0x48 (0 - 2)
+      WRITE_BYTE  0x52 3
+      WRITE_BYTE  0x53 8
+    BUT_ONLY
+  END
+
+  // 7. Thin generic filler actors across all 15 non-AR9602 areas via schedule = 0
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar9500.are~ BEGIN
+    COPY_EXISTING ~ar9500.are~ ~override~
+      LPF cie500_disable_actor_at INT_VAR tx = 3390 ty = 2296 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3424 ty = 2223 END
+      LPF cie500_disable_actor_at INT_VAR tx = 919 ty = 2130 END
+      LPF cie500_disable_actor_at INT_VAR tx = 435 ty = 2222 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3211 ty = 1281 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3009 ty = 862 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2954 ty = 838 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2872 ty = 696 END
+      LPF cie500_disable_actor_at INT_VAR tx = 823 ty = 922 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1264 ty = 762 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1151 ty = 767 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1008 ty = 1702 END
+      LPF cie500_disable_actor_at INT_VAR tx = 803 ty = 2493 END
+      LPF cie500_disable_actor_at INT_VAR tx = 271 ty = 1756 END
+      LPF cie500_disable_actor_at INT_VAR tx = 318 ty = 1788 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2987 ty = 1944 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2449 ty = 2171 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2488 ty = 2140 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3425 ty = 999 END
+      LPF cie500_disable_actor_at INT_VAR tx = 255 ty = 1035 END
+      LPF cie500_disable_actor_at INT_VAR tx = 518 ty = 1000 END
+      LPF cie500_disable_actor_at INT_VAR tx = 375 ty = 1067 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1975 ty = 1729 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2055 ty = 1823 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1396 ty = 1880 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1313 ty = 1893 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3646 ty = 1559 END
+      LPF cie500_disable_actor_at INT_VAR tx = 380 ty = 821 END
+      LPF cie500_disable_actor_at INT_VAR tx = 361 ty = 532 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1540 ty = 776 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1560 ty = 837 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1614 ty = 637 END
+      LPF cie500_disable_actor_at INT_VAR tx = 994 ty = 1007 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1126 ty = 983 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1722 ty = 2415 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1511 ty = 2335 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1522 ty = 1575 END
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar9501.are~ BEGIN
+    COPY_EXISTING ~ar9501.are~ ~override~
+      LPF cie500_disable_actor_at INT_VAR tx = 1836 ty = 1139 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1757 ty = 1577 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1797 ty = 2132 END
+      LPF cie500_disable_actor_at INT_VAR tx = 790 ty = 2560 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2345 ty = 2701 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3009 ty = 1922 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2927 ty = 1478 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1995 ty = 889 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2190 ty = 2104 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1412 ty = 354 END
+      LPF cie500_disable_actor_at INT_VAR tx = 716 ty = 1355 END
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar9502.are~ BEGIN
+    COPY_EXISTING ~ar9502.are~ ~override~
+      LPF cie500_disable_actor_at INT_VAR tx = 1408 ty = 1365 END
+      LPF cie500_disable_actor_at INT_VAR tx = 872 ty = 1527 END
+      LPF cie500_disable_actor_at INT_VAR tx = 577 ty = 1718 END
+      LPF cie500_disable_actor_at INT_VAR tx = 362 ty = 2516 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1060 ty = 2110 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2065 ty = 1189 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1876 ty = 2453 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3222 ty = 2179 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3193 ty = 2568 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2582 ty = 992 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2808 ty = 955 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1524 ty = 2569 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3629 ty = 1609 END
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar9600.are~ BEGIN
+    COPY_EXISTING ~ar9600.are~ ~override~
+      LPF cie500_disable_actor_at INT_VAR tx = 636 ty = 1527 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1260 ty = 1849 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2310 ty = 832 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1402 ty = 2005 END
+      LPF cie500_disable_actor_at INT_VAR tx = 734 ty = 858 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2065 ty = 877 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1790 ty = 944 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1743 ty = 1798 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1657 ty = 1890 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1981 ty = 2147 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2123 ty = 1460 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1875 ty = 1481 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1581 ty = 902 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1461 ty = 1847 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1766 ty = 1162 END
+      LPF cie500_disable_actor_at INT_VAR tx = 614 ty = 1069 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1482 ty = 1199 END
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar9601.are~ BEGIN
+    COPY_EXISTING ~ar9601.are~ ~override~
+      LPF cie500_disable_actor_at INT_VAR tx = 772 ty = 434 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1475 ty = 951 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1383 ty = 496 END
+      LPF cie500_disable_actor_at INT_VAR tx = 223 ty = 510 END
+      LPF cie500_disable_actor_at INT_VAR tx = 681 ty = 714 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1553 ty = 717 END
+      LPF cie500_disable_actor_at INT_VAR tx = 423 ty = 1215 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1324 ty = 362 END
+      LPF cie500_disable_actor_at INT_VAR tx = 363 ty = 502 END
+      LPF cie500_disable_actor_at INT_VAR tx = 436 ty = 886 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1622 ty = 1129 END
+      LPF cie500_disable_actor_at INT_VAR tx = 406 ty = 1044 END
+      LPF cie500_disable_actor_at INT_VAR tx = 587 ty = 1250 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1215 ty = 1033 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1459 ty = 724 END
+      LPF cie500_disable_actor_at INT_VAR tx = 870 ty = 909 END
+      LPF cie500_disable_actor_at INT_VAR tx = 674 ty = 896 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1057 ty = 484 END
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar9603.are~ BEGIN
+    COPY_EXISTING ~ar9603.are~ ~override~
+      LPF cie500_disable_actor_at INT_VAR tx = 770 ty = 1074 END
+      LPF cie500_disable_actor_at INT_VAR tx = 879 ty = 1527 END
+      LPF cie500_disable_actor_at INT_VAR tx = 713 ty = 816 END
+      LPF cie500_disable_actor_at INT_VAR tx = 495 ty = 778 END
+      LPF cie500_disable_actor_at INT_VAR tx = 654 ty = 660 END
+      LPF cie500_disable_actor_at INT_VAR tx = 797 ty = 1363 END
+      LPF cie500_disable_actor_at INT_VAR tx = 634 ty = 1518 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1362 ty = 1671 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1830 ty = 790 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1938 ty = 1225 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1935 ty = 1374 END
+      LPF cie500_disable_actor_at INT_VAR tx = 508 ty = 867 END
+      LPF cie500_disable_actor_at INT_VAR tx = 427 ty = 983 END
+      LPF cie500_disable_actor_at INT_VAR tx = 905 ty = 622 END
+      LPF cie500_disable_actor_at INT_VAR tx = 831 ty = 719 END
+      LPF cie500_disable_actor_at INT_VAR tx = 509 ty = 1304 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1454 ty = 620 END
+      LPF cie500_disable_actor_at INT_VAR tx = 465 ty = 839 END
+      LPF cie500_disable_actor_at INT_VAR tx = 477 ty = 1393 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1512 ty = 589 END
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar9700.are~ BEGIN
+    COPY_EXISTING ~ar9700.are~ ~override~
+      LPF cie500_disable_actor_at INT_VAR tx = 2188 ty = 1042 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2105 ty = 1186 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2112 ty = 977 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1990 ty = 1123 END
+      LPF cie500_disable_actor_at INT_VAR tx = 829 ty = 1236 END
+      LPF cie500_disable_actor_at INT_VAR tx = 915 ty = 1294 END
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar9702.are~ BEGIN
+    COPY_EXISTING ~ar9702.are~ ~override~
+      LPF cie500_disable_actor_at INT_VAR tx = 644 ty = 321 END
+      LPF cie500_disable_actor_at INT_VAR tx = 473 ty = 807 END
+      LPF cie500_disable_actor_at INT_VAR tx = 891 ty = 494 END
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar9712.are~ BEGIN
+    COPY_EXISTING ~ar9712.are~ ~override~
+      LPF cie500_disable_actor_at INT_VAR tx = 341 ty = 1392 END
+      LPF cie500_disable_actor_at INT_VAR tx = 197 ty = 1241 END
+      LPF cie500_disable_actor_at INT_VAR tx = 725 ty = 775 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1790 ty = 455 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1804 ty = 1320 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2002 ty = 1237 END
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar9714.are~ BEGIN
+    COPY_EXISTING ~ar9714.are~ ~override~
+      LPF cie500_disable_actor_at INT_VAR tx = 208 ty = 1365 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1125 ty = 1841 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1689 ty = 1614 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2112 ty = 1920 END
+      LPF cie500_disable_actor_at INT_VAR tx = 334 ty = 368 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3357 ty = 1842 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1014 ty = 996 END
+      LPF cie500_disable_actor_at INT_VAR tx = 783 ty = 718 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1065 ty = 2721 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1969 ty = 431 END
+      LPF cie500_disable_actor_at INT_VAR tx = 751 ty = 1230 END
+      LPF cie500_disable_actor_at INT_VAR tx = 510 ty = 368 END
+      LPF cie500_disable_actor_at INT_VAR tx = 364 ty = 1027 END
+      LPF cie500_disable_actor_at INT_VAR tx = 625 ty = 774 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1085 ty = 2566 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2814 ty = 2688 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2935 ty = 2677 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1337 ty = 1636 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1469 ty = 1208 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1076 ty = 1151 END
+      LPF cie500_disable_actor_at INT_VAR tx = 991 ty = 2358 END
+      LPF cie500_disable_actor_at INT_VAR tx = 501 ty = 919 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1894 ty = 1755 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2083 ty = 1475 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1801 ty = 1274 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1937 ty = 1381 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2261 ty = 1315 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2368 ty = 1739 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2227 ty = 1887 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2679 ty = 1009 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2482 ty = 1088 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2890 ty = 1091 END
+      LPF cie500_disable_actor_at INT_VAR tx = 921 ty = 221 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1027 ty = 450 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1435 ty = 214 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2360 ty = 240 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2485 ty = 476 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2715 ty = 720 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2943 ty = 473 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3260 ty = 496 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3035 ty = 1465 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1482 ty = 2430 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1214 ty = 2532 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1586 ty = 2430 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1352 ty = 1074 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1141 ty = 1308 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2085 ty = 598 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1896 ty = 696 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2384 ty = 566 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2404 ty = 2078 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2844 ty = 2485 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2508 ty = 2446 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1470 ty = 490 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1743 ty = 545 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1565 ty = 543 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1493 ty = 440 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1229 ty = 1499 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1303 ty = 1368 END
+      LPF cie500_disable_actor_at INT_VAR tx = 707 ty = 1328 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1954 ty = 1690 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2538 ty = 1618 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2808 ty = 1041 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1193 ty = 701 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2879 ty = 530 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3069 ty = 456 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3176 ty = 507 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2965 ty = 1497 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2865 ty = 1461 END
+      LPF cie500_disable_actor_at INT_VAR tx = 285 ty = 2276 END
+      LPF cie500_disable_actor_at INT_VAR tx = 82 ty = 2541 END
+      LPF cie500_disable_actor_at INT_VAR tx = 266 ty = 2782 END
+      LPF cie500_disable_actor_at INT_VAR tx = 734 ty = 2811 END
+      LPF cie500_disable_actor_at INT_VAR tx = 120 ty = 1102 END
+      LPF cie500_disable_actor_at INT_VAR tx = 99 ty = 822 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1360 ty = 1467 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1313 ty = 1827 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1854 ty = 2845 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2231 ty = 2845 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2607 ty = 2842 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2963 ty = 2554 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3177 ty = 2470 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3388 ty = 2382 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3742 ty = 2357 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3732 ty = 2155 END
+      LPF cie500_disable_actor_at INT_VAR tx = 723 ty = 849 END
+      LPF cie500_disable_actor_at INT_VAR tx = 603 ty = 1209 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1980 ty = 1729 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2592 ty = 942 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2690 ty = 1297 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1217 ty = 217 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1968 ty = 167 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2926 ty = 2168 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1616 ty = 1808 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2252 ty = 1682 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1384 ty = 1899 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2393 ty = 1645 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1738 ty = 1922 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2298 ty = 1845 END
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar9716.are~ BEGIN
+    COPY_EXISTING ~ar9716.are~ ~override~
+      LPF cie500_disable_actor_at INT_VAR tx = 1470 ty = 703 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1516 ty = 804 END
+      LPF cie500_disable_actor_at INT_VAR tx = 584 ty = 1075 END
+      LPF cie500_disable_actor_at INT_VAR tx = 643 ty = 1142 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1256 ty = 460 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1335 ty = 523 END
+      LPF cie500_disable_actor_at INT_VAR tx = 422 ty = 885 END
+      LPF cie500_disable_actor_at INT_VAR tx = 359 ty = 813 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1033 ty = 200 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1133 ty = 266 END
+      LPF cie500_disable_actor_at INT_VAR tx = 144 ty = 532 END
+      LPF cie500_disable_actor_at INT_VAR tx = 210 ty = 623 END
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar9717.are~ BEGIN
+    COPY_EXISTING ~ar9717.are~ ~override~
+      LPF cie500_disable_actor_at INT_VAR tx = 2918 ty = 700 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3001 ty = 657 END
+      LPF cie500_disable_actor_at INT_VAR tx = 224 ty = 1041 END
+      LPF cie500_disable_actor_at INT_VAR tx = 165 ty = 1071 END
+      LPF cie500_disable_actor_at INT_VAR tx = 831 ty = 899 END
+      LPF cie500_disable_actor_at INT_VAR tx = 869 ty = 982 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2662 ty = 251 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2518 ty = 251 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1404 ty = 895 END
+      LPF cie500_disable_actor_at INT_VAR tx = 277 ty = 540 END
+      LPF cie500_disable_actor_at INT_VAR tx = 210 ty = 697 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2490 ty = 738 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3630 ty = 1078 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1162 ty = 1326 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1345 ty = 1361 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3341 ty = 232 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3411 ty = 294 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3630 ty = 478 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3686 ty = 526 END
+      LPF cie500_disable_actor_at INT_VAR tx = 443 ty = 1355 END
+      LPF cie500_disable_actor_at INT_VAR tx = 368 ty = 1346 END
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar9718.are~ BEGIN
+    COPY_EXISTING ~ar9718.are~ ~override~
+      LPF cie500_disable_actor_at INT_VAR tx = 823 ty = 1068 END
+      LPF cie500_disable_actor_at INT_VAR tx = 770 ty = 1107 END
+      LPF cie500_disable_actor_at INT_VAR tx = 473 ty = 839 END
+      LPF cie500_disable_actor_at INT_VAR tx = 477 ty = 612 END
+      LPF cie500_disable_actor_at INT_VAR tx = 913 ty = 499 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1195 ty = 841 END
+      LPF cie500_disable_actor_at INT_VAR tx = 437 ty = 801 END
+      LPF cie500_disable_actor_at INT_VAR tx = 965 ty = 521 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1210 ty = 878 END
+      LPF cie500_disable_actor_at INT_VAR tx = 334 ty = 1124 END
+      LPF cie500_disable_actor_at INT_VAR tx = 704 ty = 517 END
+      LPF cie500_disable_actor_at INT_VAR tx = 223 ty = 912 END
+      LPF cie500_disable_actor_at INT_VAR tx = 175 ty = 1058 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1290 ty = 618 END
+      LPF cie500_disable_actor_at INT_VAR tx = 193 ty = 982 END
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar9800.are~ BEGIN
+    COPY_EXISTING ~ar9800.are~ ~override~
+      LPF cie500_disable_actor_at INT_VAR tx = 754 ty = 2010 END
+      LPF cie500_disable_actor_at INT_VAR tx = 727 ty = 2028 END
+      LPF cie500_disable_actor_at INT_VAR tx = 745 ty = 2055 END
+      LPF cie500_disable_actor_at INT_VAR tx = 615 ty = 2221 END
+      LPF cie500_disable_actor_at INT_VAR tx = 570 ty = 2240 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1202 ty = 2246 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1064 ty = 2027 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1074 ty = 2051 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1043 ty = 2049 END
+      LPF cie500_disable_actor_at INT_VAR tx = 644 ty = 1154 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1216 ty = 910 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2253 ty = 2527 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1848 ty = 2677 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2865 ty = 1691 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3422 ty = 1961 END
+      LPF cie500_disable_actor_at INT_VAR tx = 335 ty = 252 END
+      LPF cie500_disable_actor_at INT_VAR tx = 749 ty = 580 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1110 ty = 861 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1860 ty = 2259 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1671 ty = 2473 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2639 ty = 2289 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2384 ty = 2106 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2940 ty = 2262 END
+      LPF cie500_disable_actor_at INT_VAR tx = 957 ty = 1763 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3089 ty = 383 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3646 ty = 268 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3319 ty = 588 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1680 ty = 765 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2698 ty = 1408 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3087 ty = 1417 END
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar9801.are~ BEGIN
+    COPY_EXISTING ~ar9801.are~ ~override~
+      LPF cie500_disable_actor_at INT_VAR tx = 1980 ty = 406 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2082 ty = 758 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2132 ty = 1163 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2755 ty = 1762 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3260 ty = 869 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2827 ty = 607 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1719 ty = 2493 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1835 ty = 2313 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2509 ty = 2033 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2131 ty = 1934 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3000 ty = 2317 END
+      LPF cie500_disable_actor_at INT_VAR tx = 740 ty = 2301 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1130 ty = 2632 END
+      LPF cie500_disable_actor_at INT_VAR tx = 597 ty = 2380 END
+      LPF cie500_disable_actor_at INT_VAR tx = 750 ty = 2436 END
+      LPF cie500_disable_actor_at INT_VAR tx = 883 ty = 2297 END
+      LPF cie500_disable_actor_at INT_VAR tx = 743 ty = 2241 END
+      LPF cie500_disable_actor_at INT_VAR tx = 670 ty = 1430 END
+      LPF cie500_disable_actor_at INT_VAR tx = 910 ty = 1539 END
+      LPF cie500_disable_actor_at INT_VAR tx = 496 ty = 623 END
+      LPF cie500_disable_actor_at INT_VAR tx = 656 ty = 668 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1200 ty = 786 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1445 ty = 680 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2085 ty = 1058 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1886 ty = 619 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2215 ty = 929 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2346 ty = 530 END
+    BUT_ONLY
+  END
+
+  // 8. Authoritative INI trims for AR9700 harpy packs & AR9801 Stone Nuisance interval
+  COPY ~chriz-iwd-encounters/ini_500/ar9700_exp.ini~ ~override/AR9700.INI~
+    PATCH_IF !FILE_EXISTS_IN_GAME ~dwmesvge.bcs~ BEGIN
+      REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~dwmesvge~ ~%cie500_melee_ai%~
+    END
+  COPY ~chriz-iwd-encounters/ini_500/ar9801_exp.ini~ ~override/AR9801.INI~
+
+  // 9. Place all bespoke CIE5_* encounters across AR9500-AR9801
+  ACTION_FOR_EACH exp_area IN ~ar9500~ ~ar9501~ ~ar9502~ ~ar9600~ ~ar9601~ ~ar9602~ ~ar9603~ ~ar9702~ ~ar9712~ ~ar9714~ ~ar9716~ ~ar9717~ ~ar9718~ ~ar9800~ ~ar9801~ BEGIN
+    LAF cie500_place_area_actors STR_VAR area = EVAL ~%exp_area%~ END
+  END
+
+  PRINT ~chriz-iwd-encounters: Heart of Winter & Trials of the Luremaster expansion overhaul installed.~
+END

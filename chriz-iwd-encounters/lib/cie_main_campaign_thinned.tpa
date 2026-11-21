@@ -1,0 +1,536 @@
+// Generated curated Ch. 2-6 filler removals for Component 420.
+// Excludes all quest/dialog/#-script (except combat-only #IWD_WTA), WTVERBET, WTGUARD, GeneK, and boss allies.
+DEFINE_ACTION_FUNCTION cie_main_disable_fillers BEGIN
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar3101.are~ BEGIN
+    COPY_EXISTING ~ar3101.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 504 ty = 317 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 1)
+      LPF cie_disable_actor_at INT_VAR tx = 264 ty = 470 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 3)
+      LPF cie_disable_actor_at INT_VAR tx = 541 ty = 847 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 5)
+      LPF cie_disable_actor_at INT_VAR tx = 701 ty = 166 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 7)
+      LPF cie_disable_actor_at INT_VAR tx = 826 ty = 702 STR_VAR guard_prefix = ~CIE4~ END // KTGHL1 (Ghoul 2)
+      LPF cie_disable_actor_at INT_VAR tx = 229 ty = 415 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 9)
+      LPF cie_disable_actor_at INT_VAR tx = 660 ty = 532 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 12)
+      LPF cie_disable_actor_at INT_VAR tx = 924 ty = 615 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 14)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar3201.are~ BEGIN
+    COPY_EXISTING ~ar3201.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 207 ty = 808 STR_VAR guard_prefix = ~CIE4~ END // KTGHL1 (Ghoul 1)
+      LPF cie_disable_actor_at INT_VAR tx = 858 ty = 806 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 1)
+      LPF cie_disable_actor_at INT_VAR tx = 923 ty = 638 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 3)
+      LPF cie_disable_actor_at INT_VAR tx = 817 ty = 532 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 5)
+      LPF cie_disable_actor_at INT_VAR tx = 394 ty = 610 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 7)
+      LPF cie_disable_actor_at INT_VAR tx = 219 ty = 283 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton)
+      LPF cie_disable_actor_at INT_VAR tx = 202 ty = 471 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton)
+      LPF cie_disable_actor_at INT_VAR tx = 221 ty = 890 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton)
+      LPF cie_disable_actor_at INT_VAR tx = 351 ty = 866 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton)
+      LPF cie_disable_actor_at INT_VAR tx = 1086 ty = 767 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar3301.are~ BEGIN
+    COPY_EXISTING ~ar3301.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 2106 ty = 481 STR_VAR guard_prefix = ~CIE4~ END // KTZOM1 (Zombie 3)
+      LPF cie_disable_actor_at INT_VAR tx = 1133 ty = 638 STR_VAR guard_prefix = ~CIE4~ END // KTGHL1 (Ghoul 1)
+      LPF cie_disable_actor_at INT_VAR tx = 1240 ty = 938 STR_VAR guard_prefix = ~CIE4~ END // KTSKA1 (Skeleton 1)
+      LPF cie_disable_actor_at INT_VAR tx = 1423 ty = 980 STR_VAR guard_prefix = ~CIE4~ END // KTSKA1 (Skeleton 3)
+      LPF cie_disable_actor_at INT_VAR tx = 1325 ty = 426 STR_VAR guard_prefix = ~CIE4~ END // KTSKA1 (Skeleton 5)
+      LPF cie_disable_actor_at INT_VAR tx = 1337 ty = 584 STR_VAR guard_prefix = ~CIE4~ END // KTSKA1 (Skeleton 7)
+      LPF cie_disable_actor_at INT_VAR tx = 2187 ty = 653 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 9)
+      LPF cie_disable_actor_at INT_VAR tx = 2163 ty = 972 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 11)
+      LPF cie_disable_actor_at INT_VAR tx = 1624 ty = 773 STR_VAR guard_prefix = ~CIE4~ END // KTGHL1 (Ghoul)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar3401.are~ BEGIN
+    COPY_EXISTING ~ar3401.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 532 ty = 468 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 1)
+      LPF cie_disable_actor_at INT_VAR tx = 427 ty = 626 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 3)
+      LPF cie_disable_actor_at INT_VAR tx = 884 ty = 191 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 5)
+      LPF cie_disable_actor_at INT_VAR tx = 822 ty = 472 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 7)
+      LPF cie_disable_actor_at INT_VAR tx = 1091 ty = 232 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 9)
+      LPF cie_disable_actor_at INT_VAR tx = 636 ty = 770 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 11)
+      LPF cie_disable_actor_at INT_VAR tx = 574 ty = 838 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 13)
+      LPF cie_disable_actor_at INT_VAR tx = 1160 ty = 839 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 15)
+      LPF cie_disable_actor_at INT_VAR tx = 788 ty = 768 STR_VAR guard_prefix = ~CIE4~ END // KTZOM1 (Zombie 1)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar3501.are~ BEGIN
+    COPY_EXISTING ~ar3501.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 1600 ty = 1164 STR_VAR guard_prefix = ~CIE4~ END // KTSKA1 (Skeleton Archer 2)
+      LPF cie_disable_actor_at INT_VAR tx = 1468 ty = 1009 STR_VAR guard_prefix = ~CIE4~ END // KTTGA1 (Temple Guardian 2)
+      LPF cie_disable_actor_at INT_VAR tx = 1005 ty = 1112 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 1)
+      LPF cie_disable_actor_at INT_VAR tx = 1494 ty = 1238 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 3)
+      LPF cie_disable_actor_at INT_VAR tx = 1026 ty = 1608 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 5)
+      LPF cie_disable_actor_at INT_VAR tx = 1093 ty = 1497 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 7)
+      LPF cie_disable_actor_at INT_VAR tx = 382 ty = 1337 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 9)
+      LPF cie_disable_actor_at INT_VAR tx = 368 ty = 1705 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 11)
+      LPF cie_disable_actor_at INT_VAR tx = 1850 ty = 1844 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 13)
+      LPF cie_disable_actor_at INT_VAR tx = 1392 ty = 2019 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 15)
+      LPF cie_disable_actor_at INT_VAR tx = 1546 ty = 1881 STR_VAR guard_prefix = ~CIE4~ END // KTGHL1 (Ghoul 1)
+      LPF cie_disable_actor_at INT_VAR tx = 698 ty = 1164 STR_VAR guard_prefix = ~CIE4~ END // KTZOM1 (Zombie 3)
+      LPF cie_disable_actor_at INT_VAR tx = 337 ty = 1076 STR_VAR guard_prefix = ~CIE4~ END // KTSKT1 (Tattered Skeleton 1)
+      LPF cie_disable_actor_at INT_VAR tx = 1882 ty = 1627 STR_VAR guard_prefix = ~CIE4~ END // KTGHL1 (Ghoul 3)
+      LPF cie_disable_actor_at INT_VAR tx = 2040 ty = 1508 STR_VAR guard_prefix = ~CIE4~ END // KTGHL1 (Ghoul 5)
+      LPF cie_disable_actor_at INT_VAR tx = 900 ty = 650 STR_VAR guard_prefix = ~CIE4~ END // KTSKA1 (Skeleton Archer 4)
+      LPF cie_disable_actor_at INT_VAR tx = 913 ty = 426 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 2)
+      LPF cie_disable_actor_at INT_VAR tx = 1146 ty = 396 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 4)
+      LPF cie_disable_actor_at INT_VAR tx = 1027 ty = 589 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 6)
+      LPF cie_disable_actor_at INT_VAR tx = 969 ty = 877 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 8)
+      LPF cie_disable_actor_at INT_VAR tx = 715 ty = 569 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 10)
+      LPF cie_disable_actor_at INT_VAR tx = 2057 ty = 1128 STR_VAR guard_prefix = ~CIE4~ END // KTSKA1 (Skeleton Archer 6)
+      LPF cie_disable_actor_at INT_VAR tx = 2420 ty = 842 STR_VAR guard_prefix = ~CIE4~ END // KTSKA1 (Skeleton Archer 8)
+      LPF cie_disable_actor_at INT_VAR tx = 2388 ty = 1312 STR_VAR guard_prefix = ~CIE4~ END // KTSKA1 (Skeleton Archer 10)
+      LPF cie_disable_actor_at INT_VAR tx = 2270 ty = 1334 STR_VAR guard_prefix = ~CIE4~ END // KTTGA1 (Temple Guardian 1)
+      LPF cie_disable_actor_at INT_VAR tx = 1780 ty = 224 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton)
+      LPF cie_disable_actor_at INT_VAR tx = 2003 ty = 254 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar3502.are~ BEGIN
+    COPY_EXISTING ~ar3502.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 1001 ty = 1452 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 1)
+      LPF cie_disable_actor_at INT_VAR tx = 1044 ty = 1490 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 3)
+      LPF cie_disable_actor_at INT_VAR tx = 1036 ty = 1696 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 5)
+      LPF cie_disable_actor_at INT_VAR tx = 1520 ty = 1607 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 7)
+      LPF cie_disable_actor_at INT_VAR tx = 1666 ty = 1610 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 9)
+      LPF cie_disable_actor_at INT_VAR tx = 1584 ty = 617 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 11)
+      LPF cie_disable_actor_at INT_VAR tx = 1767 ty = 652 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 13)
+      LPF cie_disable_actor_at INT_VAR tx = 1876 ty = 809 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 15)
+      LPF cie_disable_actor_at INT_VAR tx = 2138 ty = 951 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 17)
+      LPF cie_disable_actor_at INT_VAR tx = 1534 ty = 708 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 19)
+      LPF cie_disable_actor_at INT_VAR tx = 1851 ty = 385 STR_VAR guard_prefix = ~CIE4~ END // KTZOM1 (Zombie 1)
+      LPF cie_disable_actor_at INT_VAR tx = 2001 ty = 429 STR_VAR guard_prefix = ~CIE4~ END // KTZOM1 (Zombie 3)
+      LPF cie_disable_actor_at INT_VAR tx = 1552 ty = 418 STR_VAR guard_prefix = ~CIE4~ END // KTZOM1 (Zombie 5)
+      LPF cie_disable_actor_at INT_VAR tx = 1514 ty = 1066 STR_VAR guard_prefix = ~CIE4~ END // KTTAS2 (TatteredSkel2Trap)
+      LPF cie_disable_actor_at INT_VAR tx = 1570 ty = 1330 STR_VAR guard_prefix = ~CIE4~ END // KTTAS2 (TatteredSkel4Trap)
+      LPF cie_disable_actor_at INT_VAR tx = 1200 ty = 1170 STR_VAR guard_prefix = ~CIE4~ END // KTTAS2 (TatteredSkel6Trap)
+      LPF cie_disable_actor_at INT_VAR tx = 1106 ty = 983 STR_VAR guard_prefix = ~CIE4~ END // KTSKA2 (Skeleton Archer 2)
+      LPF cie_disable_actor_at INT_VAR tx = 928 ty = 501 STR_VAR guard_prefix = ~CIE4~ END // KTSKA2 (Skeleton Archer 4)
+      LPF cie_disable_actor_at INT_VAR tx = 834 ty = 573 STR_VAR guard_prefix = ~CIE4~ END // KTTAS2 (Tattered Skeleton 1)
+      LPF cie_disable_actor_at INT_VAR tx = 457 ty = 1097 STR_VAR guard_prefix = ~CIE4~ END // KTTAS2 (Tattered Skeleton 3)
+      LPF cie_disable_actor_at INT_VAR tx = 189 ty = 848 STR_VAR guard_prefix = ~CIE4~ END // KTTGA2 (Temple Guardian 1)
+      LPF cie_disable_actor_at INT_VAR tx = 261 ty = 749 STR_VAR guard_prefix = ~CIE4~ END // KTTGA2 (Temple Guardian 3)
+      LPF cie_disable_actor_at INT_VAR tx = 292 ty = 1367 STR_VAR guard_prefix = ~CIE4~ END // KTSKT2 (Tattered Skeleton 1)
+      LPF cie_disable_actor_at INT_VAR tx = 415 ty = 1398 STR_VAR guard_prefix = ~CIE4~ END // KTSKT2 (Tattered Skeleton 3)
+      LPF cie_disable_actor_at INT_VAR tx = 721 ty = 1058 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 22)
+      LPF cie_disable_actor_at INT_VAR tx = 735 ty = 1209 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 24)
+      LPF cie_disable_actor_at INT_VAR tx = 892 ty = 715 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 26)
+      LPF cie_disable_actor_at INT_VAR tx = 1028 ty = 812 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 28)
+      LPF cie_disable_actor_at INT_VAR tx = 643 ty = 546 STR_VAR guard_prefix = ~CIE4~ END // KTSK1 (Skeleton 30)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar4001.are~ BEGIN
+    COPY_EXISTING ~ar4001.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 563 ty = 1184 STR_VAR guard_prefix = ~CIE4~ END // LM1HWAX (Lizard Man 1)
+      LPF cie_disable_actor_at INT_VAR tx = 535 ty = 906 STR_VAR guard_prefix = ~CIE4~ END // LM1HWAX (Lizard Man 3)
+      LPF cie_disable_actor_at INT_VAR tx = 665 ty = 1173 STR_VAR guard_prefix = ~CIE4~ END // LM2HWLA (Tough Lizard Man 1)
+      LPF cie_disable_actor_at INT_VAR tx = 1199 ty = 1199 STR_VAR guard_prefix = ~CIE4~ END // LM2HWNA (Tough Lizard Man 3)
+      LPF cie_disable_actor_at INT_VAR tx = 977 ty = 661 STR_VAR guard_prefix = ~CIE4~ END // LM1HWMS (Lizard Man 6)
+      LPF cie_disable_actor_at INT_VAR tx = 1634 ty = 495 STR_VAR guard_prefix = ~CIE4~ END // LM1HWAX (Lizard Man 7)
+      LPF cie_disable_actor_at INT_VAR tx = 1740 ty = 555 STR_VAR guard_prefix = ~CIE4~ END // LM2HWLA (Tough Lizard Man 5)
+      LPF cie_disable_actor_at INT_VAR tx = 1605 ty = 1115 STR_VAR guard_prefix = ~CIE4~ END // LM1HWPO (Lizard Man 9)
+      LPF cie_disable_actor_at INT_VAR tx = 1527 ty = 1036 STR_VAR guard_prefix = ~CIE4~ END // LM2HWNA (Tough Lizard Man 7)
+      LPF cie_disable_actor_at INT_VAR tx = 2008 ty = 1282 STR_VAR guard_prefix = ~CIE4~ END // LM1HWMS (Lizard Man 12)
+      LPF cie_disable_actor_at INT_VAR tx = 2718 ty = 1900 STR_VAR guard_prefix = ~CIE4~ END // LM1HWMS (Lizard Man 21)
+      LPF cie_disable_actor_at INT_VAR tx = 2813 ty = 2249 STR_VAR guard_prefix = ~CIE4~ END // LM1HWAX (Lizard Man 22)
+      LPF cie_disable_actor_at INT_VAR tx = 2868 ty = 2548 STR_VAR guard_prefix = ~CIE4~ END // LM1HWMS (Lizard Man 24)
+      LPF cie_disable_actor_at INT_VAR tx = 3019 ty = 2619 STR_VAR guard_prefix = ~CIE4~ END // LM1HWPO (Lizard Man 26)
+      LPF cie_disable_actor_at INT_VAR tx = 3000 ty = 2500 STR_VAR guard_prefix = ~CIE4~ END // LM2HWLA (Tough Lizard Man 10)
+      LPF cie_disable_actor_at INT_VAR tx = 882 ty = 1752 STR_VAR guard_prefix = ~CIE4~ END // LM2HWLA (Tough Lizard Man 12)
+      LPF cie_disable_actor_at INT_VAR tx = 2967 ty = 619 STR_VAR guard_prefix = ~CIE4~ END // LM2HWTE (Tough Lizard Man 18)
+      LPF cie_disable_actor_at INT_VAR tx = 2402 ty = 780 STR_VAR guard_prefix = ~CIE4~ END // LM1HWPO (Lizard Man 28)
+      LPF cie_disable_actor_at INT_VAR tx = 2991 ty = 713 STR_VAR guard_prefix = ~CIE4~ END // LM1HWMS (Lizard Man 30)
+      LPF cie_disable_actor_at INT_VAR tx = 3383 ty = 755 STR_VAR guard_prefix = ~CIE4~ END // LM1HWAX (Lizard Man 32)
+      LPF cie_disable_actor_at INT_VAR tx = 1100 ty = 1699 STR_VAR guard_prefix = ~CIE4~ END // BEETBOMB (Bombadier Beetle 1)
+      LPF cie_disable_actor_at INT_VAR tx = 1108 ty = 2003 STR_VAR guard_prefix = ~CIE4~ END // BEETBOMB (Bombadier Beetle 3)
+      LPF cie_disable_actor_at INT_VAR tx = 580 ty = 2220 STR_VAR guard_prefix = ~CIE4~ END // BEETBOMB (Bombadier Beetle 5)
+      LPF cie_disable_actor_at INT_VAR tx = 615 ty = 2440 STR_VAR guard_prefix = ~CIE4~ END // BEETBOMB (Bombadier Beetle 7)
+      LPF cie_disable_actor_at INT_VAR tx = 939 ty = 937 STR_VAR guard_prefix = ~CIE4~ END // LM2HWLA (NEW Tough Lizard Man 1)
+      LPF cie_disable_actor_at INT_VAR tx = 715 ty = 1409 STR_VAR guard_prefix = ~CIE4~ END // LM2HWTE (NEW Tough Lizard Man 3)
+      LPF cie_disable_actor_at INT_VAR tx = 908 ty = 1834 STR_VAR guard_prefix = ~CIE4~ END // LM2HWTE (NEW Tough Lizard Man 5)
+      LPF cie_disable_actor_at INT_VAR tx = 940 ty = 560 STR_VAR guard_prefix = ~CIE4~ END // LM2HWLA (NEW Tough Lizard Man 7)
+      LPF cie_disable_actor_at INT_VAR tx = 1791 ty = 472 STR_VAR guard_prefix = ~CIE4~ END // LM2HWTE (NEW Tough Lizard Man 9)
+      LPF cie_disable_actor_at INT_VAR tx = 2493 ty = 1290 STR_VAR guard_prefix = ~CIE4~ END // LM1HWAX (NEW Lizard Man 1)
+      LPF cie_disable_actor_at INT_VAR tx = 1840 ty = 1887 STR_VAR guard_prefix = ~CIE4~ END // SPIDSW (NEW Sword Spider 1)
+      LPF cie_disable_actor_at INT_VAR tx = 1301 ty = 2098 STR_VAR guard_prefix = ~CIE4~ END // SPIDSW (NEW Sword Spider 3)
+      LPF cie_disable_actor_at INT_VAR tx = 1775 ty = 2540 STR_VAR guard_prefix = ~CIE4~ END // SPIDSW (NEW Sword Spider 5)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar4002.are~ BEGIN
+    COPY_EXISTING ~ar4002.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 884 ty = 683 STR_VAR guard_prefix = ~CIE4~ END // TROLL (Troll 1)
+      LPF cie_disable_actor_at INT_VAR tx = 354 ty = 411 STR_VAR guard_prefix = ~CIE4~ END // TROLL (Troll 6)
+      LPF cie_disable_actor_at INT_VAR tx = 665 ty = 1105 STR_VAR guard_prefix = ~CIE4~ END // TROLL (Troll 8)
+      LPF cie_disable_actor_at INT_VAR tx = 378 ty = 1256 STR_VAR guard_prefix = ~CIE4~ END // TROLL (Troll 10)
+      LPF cie_disable_actor_at INT_VAR tx = 2806 ty = 1403 STR_VAR guard_prefix = ~CIE4~ END // TROLL (Troll 27)
+      LPF cie_disable_actor_at INT_VAR tx = 2685 ty = 1888 STR_VAR guard_prefix = ~CIE4~ END // TROLL (Troll 33)
+      LPF cie_disable_actor_at INT_VAR tx = 3106 ty = 2008 STR_VAR guard_prefix = ~CIE4~ END // TROLL (Troll 36)
+      LPF cie_disable_actor_at INT_VAR tx = 3482 ty = 2064 STR_VAR guard_prefix = ~CIE4~ END // TROLL (Troll 39)
+      LPF cie_disable_actor_at INT_VAR tx = 705 ty = 572 STR_VAR guard_prefix = ~CIE4~ END // SPIDWR (Wraith Spider 100)
+      LPF cie_disable_actor_at INT_VAR tx = 290 ty = 400 STR_VAR guard_prefix = ~CIE4~ END // SPIDWR (Wraith Spider 103)
+      LPF cie_disable_actor_at INT_VAR tx = 539 ty = 1105 STR_VAR guard_prefix = ~CIE4~ END // SPIDWR (Wraith Spider 105)
+      LPF cie_disable_actor_at INT_VAR tx = 3018 ty = 1097 STR_VAR guard_prefix = ~CIE4~ END // SPIDSW (Sword Spider 109)
+      LPF cie_disable_actor_at INT_VAR tx = 2753 ty = 1724 STR_VAR guard_prefix = ~CIE4~ END // SPIDSW (Sword Spider 112)
+      LPF cie_disable_actor_at INT_VAR tx = 2382 ty = 513 STR_VAR guard_prefix = ~CIE4~ END // LM2HWLA (Tough Lizard Man 101)
+      LPF cie_disable_actor_at INT_VAR tx = 1650 ty = 380 STR_VAR guard_prefix = ~CIE4~ END // LM2HWNA (Tough Lizard Man 103)
+      LPF cie_disable_actor_at INT_VAR tx = 1350 ty = 629 STR_VAR guard_prefix = ~CIE4~ END // LM2HWTE (Tough Lizard Man 105)
+      LPF cie_disable_actor_at INT_VAR tx = 3576 ty = 249 STR_VAR guard_prefix = ~CIE4~ END // BEETBOMB (Bombadier Beetle 2)
+      LPF cie_disable_actor_at INT_VAR tx = 3469 ty = 246 STR_VAR guard_prefix = ~CIE4~ END // BEETBOMB (Bombadier Beetle 4)
+      LPF cie_disable_actor_at INT_VAR tx = 3618 ty = 436 STR_VAR guard_prefix = ~CIE4~ END // BEETBOMB (Bombadier Beetle 6)
+      LPF cie_disable_actor_at INT_VAR tx = 3590 ty = 504 STR_VAR guard_prefix = ~CIE4~ END // BEETBOMB (Bombadier Beetle 8)
+      LPF cie_disable_actor_at INT_VAR tx = 3554 ty = 665 STR_VAR guard_prefix = ~CIE4~ END // BEETBOMB (Bombadier Beetle 10)
+      LPF cie_disable_actor_at INT_VAR tx = 3573 ty = 764 STR_VAR guard_prefix = ~CIE4~ END // BEETBOMB (Bombadier Beetle 12)
+      LPF cie_disable_actor_at INT_VAR tx = 3529 ty = 997 STR_VAR guard_prefix = ~CIE4~ END // BEETBOMB (Bombadier Beetle 14)
+      LPF cie_disable_actor_at INT_VAR tx = 3497 ty = 1224 STR_VAR guard_prefix = ~CIE4~ END // BEETBOMB (Bombadier Beetle 16)
+      LPF cie_disable_actor_at INT_VAR tx = 3525 ty = 1367 STR_VAR guard_prefix = ~CIE4~ END // BEETBOMB (Bombadier Beetle 18)
+      LPF cie_disable_actor_at INT_VAR tx = 3593 ty = 1336 STR_VAR guard_prefix = ~CIE4~ END // BEETBOMB (Bombadier Beetle 20)
+      LPF cie_disable_actor_at INT_VAR tx = 3565 ty = 940 STR_VAR guard_prefix = ~CIE4~ END // BEETBOR (Boring Beetle 102)
+      LPF cie_disable_actor_at INT_VAR tx = 3008 ty = 1186 STR_VAR guard_prefix = ~CIE4~ END // BEETBOMB (Bombadier Beetle 21)
+      LPF cie_disable_actor_at INT_VAR tx = 3122 ty = 912 STR_VAR guard_prefix = ~CIE4~ END // BEETBOMB (Bombadier Beetle 23)
+      LPF cie_disable_actor_at INT_VAR tx = 2716 ty = 1455 STR_VAR guard_prefix = ~CIE4~ END // BEETBOMB (Bombadier Beetle 25)
+      LPF cie_disable_actor_at INT_VAR tx = 585 ty = 2040 STR_VAR guard_prefix = ~CIE4~ END // TROLLT (Troll 202)
+      LPF cie_disable_actor_at INT_VAR tx = 1012 ty = 2224 STR_VAR guard_prefix = ~CIE4~ END // TROLLT (Troll 204)
+      LPF cie_disable_actor_at INT_VAR tx = 1401 ty = 2027 STR_VAR guard_prefix = ~CIE4~ END // TROLLT (Troll 206)
+      LPF cie_disable_actor_at INT_VAR tx = 607 ty = 438 STR_VAR guard_prefix = ~CIE4~ END // TROLL (NEW Troll 2)
+      LPF cie_disable_actor_at INT_VAR tx = 858 ty = 493 STR_VAR guard_prefix = ~CIE4~ END // TROLL (NEW Troll 4)
+      LPF cie_disable_actor_at INT_VAR tx = 2702 ty = 903 STR_VAR guard_prefix = ~CIE4~ END // TROLL (NEW Troll 6)
+      LPF cie_disable_actor_at INT_VAR tx = 3051 ty = 1374 STR_VAR guard_prefix = ~CIE4~ END // TROLL (NEW Troll 8)
+      LPF cie_disable_actor_at INT_VAR tx = 3142 ty = 1445 STR_VAR guard_prefix = ~CIE4~ END // TROLL (NEW Troll 10)
+      LPF cie_disable_actor_at INT_VAR tx = 3261 ty = 744 STR_VAR guard_prefix = ~CIE4~ END // SPIDSW (NEW Sword Spider 1)
+      LPF cie_disable_actor_at INT_VAR tx = 2916 ty = 1016 STR_VAR guard_prefix = ~CIE4~ END // SPIDSW (NEW Sword Spider 3)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar4003.are~ BEGIN
+    COPY_EXISTING ~ar4003.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 2203 ty = 1132 STR_VAR guard_prefix = ~CIE4~ END // SKELBLST (Blast Skeleton 6)
+      LPF cie_disable_actor_at INT_VAR tx = 2343 ty = 1617 STR_VAR guard_prefix = ~CIE4~ END // SKELBLST (Blast Skeleton 8)
+      LPF cie_disable_actor_at INT_VAR tx = 584 ty = 2380 STR_VAR guard_prefix = ~CIE4~ END // SKELBLST (Blast Skeleton 11)
+      LPF cie_disable_actor_at INT_VAR tx = 662 ty = 2650 STR_VAR guard_prefix = ~CIE4~ END // SKELBLST (Blast Skeleton 13)
+      LPF cie_disable_actor_at INT_VAR tx = 2092 ty = 1895 STR_VAR guard_prefix = ~CIE4~ END // SKELBLST (Blast Skeleton 16)
+      LPF cie_disable_actor_at INT_VAR tx = 2960 ty = 2164 STR_VAR guard_prefix = ~CIE4~ END // ZOMBIEP (Poison Zombie 2)
+      LPF cie_disable_actor_at INT_VAR tx = 3103 ty = 2203 STR_VAR guard_prefix = ~CIE4~ END // ZOMBIEP (Poison Zombie 5)
+      LPF cie_disable_actor_at INT_VAR tx = 3213 ty = 2200 STR_VAR guard_prefix = ~CIE4~ END // ZOMBIEP (Poison Zombie 7)
+      LPF cie_disable_actor_at INT_VAR tx = 3372 ty = 2217 STR_VAR guard_prefix = ~CIE4~ END // ZOMBIEP (Poison Zombie 10)
+      LPF cie_disable_actor_at INT_VAR tx = 3383 ty = 2414 STR_VAR guard_prefix = ~CIE4~ END // ZOMBIEP (Poison Zombie 12)
+      LPF cie_disable_actor_at INT_VAR tx = 3070 ty = 1445 STR_VAR guard_prefix = ~CIE4~ END // ZOMBIEP (Poison Zombie 15)
+      LPF cie_disable_actor_at INT_VAR tx = 2997 ty = 1370 STR_VAR guard_prefix = ~CIE4~ END // ZOMBIEP (Poison Zombie 17)
+      LPF cie_disable_actor_at INT_VAR tx = 620 ty = 535 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 2)
+      LPF cie_disable_actor_at INT_VAR tx = 625 ty = 650 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 4)
+      LPF cie_disable_actor_at INT_VAR tx = 695 ty = 705 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 7)
+      LPF cie_disable_actor_at INT_VAR tx = 825 ty = 585 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 9)
+      LPF cie_disable_actor_at INT_VAR tx = 895 ty = 640 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 12)
+      LPF cie_disable_actor_at INT_VAR tx = 900 ty = 755 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 14)
+      LPF cie_disable_actor_at INT_VAR tx = 1747 ty = 760 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 24)
+      LPF cie_disable_actor_at INT_VAR tx = 1905 ty = 950 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 26)
+      LPF cie_disable_actor_at INT_VAR tx = 2160 ty = 950 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 29)
+      LPF cie_disable_actor_at INT_VAR tx = 2032 ty = 1015 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 31)
+      LPF cie_disable_actor_at INT_VAR tx = 2075 ty = 1080 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 34)
+      LPF cie_disable_actor_at INT_VAR tx = 2160 ty = 1190 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 36)
+      LPF cie_disable_actor_at INT_VAR tx = 2202 ty = 1255 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 39)
+      LPF cie_disable_actor_at INT_VAR tx = 2075 ty = 1320 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 41)
+      LPF cie_disable_actor_at INT_VAR tx = 760 ty = 2325 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 44)
+      LPF cie_disable_actor_at INT_VAR tx = 960 ty = 2325 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 46)
+      LPF cie_disable_actor_at INT_VAR tx = 810 ty = 2395 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 49)
+      LPF cie_disable_actor_at INT_VAR tx = 1010 ty = 2395 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 51)
+      LPF cie_disable_actor_at INT_VAR tx = 860 ty = 2465 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 54)
+      LPF cie_disable_actor_at INT_VAR tx = 1060 ty = 2465 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 56)
+      LPF cie_disable_actor_at INT_VAR tx = 910 ty = 2535 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 59)
+      LPF cie_disable_actor_at INT_VAR tx = 1110 ty = 2535 STR_VAR guard_prefix = ~CIE4~ END // WIGHTCLD (Cold Wight 61)
+      LPF cie_disable_actor_at INT_VAR tx = 573 ty = 752 STR_VAR guard_prefix = ~CIE4~ END // KTSKA3 (Skeleton Archer 2)
+      LPF cie_disable_actor_at INT_VAR tx = 782 ty = 993 STR_VAR guard_prefix = ~CIE4~ END // KTSKA3 (Skeleton Archer 5)
+      LPF cie_disable_actor_at INT_VAR tx = 1158 ty = 1314 STR_VAR guard_prefix = ~CIE4~ END // SKELBLST (Blast Skeleton 101)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar4004.are~ BEGIN
+    COPY_EXISTING ~ar4004.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 3050 ty = 1170 STR_VAR guard_prefix = ~CIE4~ END // YUAEWBL (Yuan-ti Elite 9)
+      LPF cie_disable_actor_at INT_VAR tx = 3110 ty = 1040 STR_VAR guard_prefix = ~CIE4~ END // YUAEWSW (Yuan-ti Elite 11)
+      LPF cie_disable_actor_at INT_VAR tx = 3310 ty = 1175 STR_VAR guard_prefix = ~CIE4~ END // YUAEWBL (Yuan-ti Elite 13)
+      LPF cie_disable_actor_at INT_VAR tx = 3320 ty = 2668 STR_VAR guard_prefix = ~CIE4~ END // YUAEWBO (Yuan-ti Elite Add 2)
+      LPF cie_disable_actor_at INT_VAR tx = 2831 ty = 1269 STR_VAR guard_prefix = ~CIE4~ END // YUAEWBO (Yuan-ti Elite Add 4)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar5001.are~ BEGIN
+    COPY_EXISTING ~ar5001.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 1283 ty = 1617 STR_VAR guard_prefix = ~CIE4~ END // SDORCBW1 (Shadowed Orc Archer)
+      LPF cie_disable_actor_at INT_VAR tx = 855 ty = 1383 STR_VAR guard_prefix = ~CIE4~ END // SDORCBW1 (Shadowed Orc Archer)
+      LPF cie_disable_actor_at INT_VAR tx = 985 ty = 1572 STR_VAR guard_prefix = ~CIE4~ END // SDORCAX1 (Shadowed Orc Grunt)
+      LPF cie_disable_actor_at INT_VAR tx = 1099 ty = 1021 STR_VAR guard_prefix = ~CIE4~ END // SDGOBAX1 (Shadowed Goblin Grun)
+      LPF cie_disable_actor_at INT_VAR tx = 1144 ty = 949 STR_VAR guard_prefix = ~CIE4~ END // SDGOBAX1 (Shadowed Goblin Grun)
+      LPF cie_disable_actor_at INT_VAR tx = 1195 ty = 930 STR_VAR guard_prefix = ~CIE4~ END // SDGOBAX1 (Shadowed Goblin Grun)
+      LPF cie_disable_actor_at INT_VAR tx = 1261 ty = 926 STR_VAR guard_prefix = ~CIE4~ END // SDGOBBW1 (Shadowed Goblin Arch)
+      LPF cie_disable_actor_at INT_VAR tx = 1163 ty = 754 STR_VAR guard_prefix = ~CIE4~ END // SDORCBW1 (Shadowed Orc Archer)
+      LPF cie_disable_actor_at INT_VAR tx = 1364 ty = 1927 STR_VAR guard_prefix = ~CIE4~ END // SDORCAX1 (Shadowed Orc Grunt)
+      LPF cie_disable_actor_at INT_VAR tx = 1189 ty = 2154 STR_VAR guard_prefix = ~CIE4~ END // SDORCAX1 (Shadowed Orc Grunt)
+      LPF cie_disable_actor_at INT_VAR tx = 1980 ty = 1380 STR_VAR guard_prefix = ~CIE4~ END // SKELBLAD (Bladed Skeleton)
+      LPF cie_disable_actor_at INT_VAR tx = 1954 ty = 1500 STR_VAR guard_prefix = ~CIE4~ END // SKELBLAD (Bladed Skeleton)
+      LPF cie_disable_actor_at INT_VAR tx = 2326 ty = 1594 STR_VAR guard_prefix = ~CIE4~ END // SKELBLAD (Bone_1_2)
+      LPF cie_disable_actor_at INT_VAR tx = 2477 ty = 1721 STR_VAR guard_prefix = ~CIE4~ END // SKELBLAD (Bone_1_4)
+      LPF cie_disable_actor_at INT_VAR tx = 2369 ty = 1393 STR_VAR guard_prefix = ~CIE4~ END // SKELBLAD (Bone_2_2)
+      LPF cie_disable_actor_at INT_VAR tx = 2500 ty = 1350 STR_VAR guard_prefix = ~CIE4~ END // SKELBLAD (Bone_2_3)
+      LPF cie_disable_actor_at INT_VAR tx = 2630 ty = 1300 STR_VAR guard_prefix = ~CIE4~ END // SKELBLAD (Bone_2_5)
+      LPF cie_disable_actor_at INT_VAR tx = 2594 ty = 1419 STR_VAR guard_prefix = ~CIE4~ END // SHATSOUL (Shattered Soul)
+      LPF cie_disable_actor_at INT_VAR tx = 2385 ty = 1038 STR_VAR guard_prefix = ~CIE4~ END // SKELBLAD (Bone_3_2)
+      LPF cie_disable_actor_at INT_VAR tx = 2455 ty = 1028 STR_VAR guard_prefix = ~CIE4~ END // SHATSOUL (Shattered Soul)
+      LPF cie_disable_actor_at INT_VAR tx = 1463 ty = 1994 STR_VAR guard_prefix = ~CIE4~ END // SDORCBW1 (Shadowed Orc Archer)
+      LPF cie_disable_actor_at INT_VAR tx = 585 ty = 1150 STR_VAR guard_prefix = ~CIE4~ END // SDORCAX1 (Shadowed Orc Grunt)
+      LPF cie_disable_actor_at INT_VAR tx = 524 ty = 1149 STR_VAR guard_prefix = ~CIE4~ END // SDORCAX1 (Shadowed Orc Grunt)
+      LPF cie_disable_actor_at INT_VAR tx = 945 ty = 1969 STR_VAR guard_prefix = ~CIE4~ END // SDORCAX1 (Shadowed Orc Grunt)
+      LPF cie_disable_actor_at INT_VAR tx = 2316 ty = 1689 STR_VAR guard_prefix = ~CIE4~ END // SKELBLAD (Bladed Skeleton)
+      LPF cie_disable_actor_at INT_VAR tx = 2340 ty = 1801 STR_VAR guard_prefix = ~CIE4~ END // SHATSOUL (Shattered Soul)
+      LPF cie_disable_actor_at INT_VAR tx = 414 ty = 1118 STR_VAR guard_prefix = ~CIE4~ END // SDORCAX1 (Shadowed Orc Grunt)
+      LPF cie_disable_actor_at INT_VAR tx = 677 ty = 1986 STR_VAR guard_prefix = ~CIE4~ END // SDGOBAX1 (Shadowed Goblin Grun)
+      LPF cie_disable_actor_at INT_VAR tx = 959 ty = 1807 STR_VAR guard_prefix = ~CIE4~ END // SDGOBAX1 (Shadowed Goblin Grun)
+      LPF cie_disable_actor_at INT_VAR tx = 418 ty = 838 STR_VAR guard_prefix = ~CIE4~ END // SDGOBBW1 (Shadowed Goblin Arch)
+      LPF cie_disable_actor_at INT_VAR tx = 537 ty = 905 STR_VAR guard_prefix = ~CIE4~ END // SDGOBBW1 (Shadowed Goblin Arch)
+      LPF cie_disable_actor_at INT_VAR tx = 1054 ty = 1876 STR_VAR guard_prefix = ~CIE4~ END // SDORCAX1 (Shadowed Orc Grunt)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar5002.are~ BEGIN
+    COPY_EXISTING ~ar5002.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 1432 ty = 1822 STR_VAR guard_prefix = ~CIE4~ END // SDGOBBW2 (Shadowed Goblin Mark)
+      LPF cie_disable_actor_at INT_VAR tx = 798 ty = 1916 STR_VAR guard_prefix = ~CIE4~ END // SDGOBBW2 (Shadowed Goblin Mark)
+      LPF cie_disable_actor_at INT_VAR tx = 644 ty = 1117 STR_VAR guard_prefix = ~CIE4~ END // SDGOBBW2 (Shadowed Goblin Mark)
+      LPF cie_disable_actor_at INT_VAR tx = 2322 ty = 1285 STR_VAR guard_prefix = ~CIE4~ END // SKELARM (Skel_1_1)
+      LPF cie_disable_actor_at INT_VAR tx = 2315 ty = 1380 STR_VAR guard_prefix = ~CIE4~ END // SKELARM (Skel_1_3)
+      LPF cie_disable_actor_at INT_VAR tx = 2659 ty = 1630 STR_VAR guard_prefix = ~CIE4~ END // SKELARM (Skel_2_2)
+      LPF cie_disable_actor_at INT_VAR tx = 2491 ty = 810 STR_VAR guard_prefix = ~CIE4~ END // SKELARM (Skel_4_1)
+      LPF cie_disable_actor_at INT_VAR tx = 2595 ty = 912 STR_VAR guard_prefix = ~CIE4~ END // SKELARM (Skel_4_3)
+      LPF cie_disable_actor_at INT_VAR tx = 1121 ty = 1842 STR_VAR guard_prefix = ~CIE4~ END // SDGOBAX2 (Shadowed Goblin Warr)
+      LPF cie_disable_actor_at INT_VAR tx = 1003 ty = 1850 STR_VAR guard_prefix = ~CIE4~ END // SDGOBAX2 (Shadowed Goblin Warr)
+      LPF cie_disable_actor_at INT_VAR tx = 2899 ty = 1342 STR_VAR guard_prefix = ~CIE4~ END // SKELARM (Skel_3_2)
+      LPF cie_disable_actor_at INT_VAR tx = 1341 ty = 2107 STR_VAR guard_prefix = ~CIE4~ END // SDORCBW2 (Shadowed Orc Marksma)
+      LPF cie_disable_actor_at INT_VAR tx = 1498 ty = 1796 STR_VAR guard_prefix = ~CIE4~ END // SDGOBBW2 (Shadowed Goblin Mark)
+      LPF cie_disable_actor_at INT_VAR tx = 933 ty = 2071 STR_VAR guard_prefix = ~CIE4~ END // SDGOBAX2 (Shadowed Goblin Warr)
+      LPF cie_disable_actor_at INT_VAR tx = 918 ty = 2133 STR_VAR guard_prefix = ~CIE4~ END // SDGOBAX2 (Shadowed Goblin Warr)
+      LPF cie_disable_actor_at INT_VAR tx = 904 ty = 1853 STR_VAR guard_prefix = ~CIE4~ END // SDGOBAX2 (Shadowed Goblin Warr)
+      LPF cie_disable_actor_at INT_VAR tx = 831 ty = 1973 STR_VAR guard_prefix = ~CIE4~ END // SDGOBBW2 (Shadowed Goblin Mark)
+      LPF cie_disable_actor_at INT_VAR tx = 1780 ty = 505 STR_VAR guard_prefix = ~CIE4~ END // SDGOBBW2 (Shadowed Goblin Mark)
+      LPF cie_disable_actor_at INT_VAR tx = 2382 ty = 1347 STR_VAR guard_prefix = ~CIE4~ END // SHATSOUL (Shattered Soul)
+      LPF cie_disable_actor_at INT_VAR tx = 2733 ty = 941 STR_VAR guard_prefix = ~CIE4~ END // SHATSOUL (Shattered Soul)
+      LPF cie_disable_actor_at INT_VAR tx = 2629 ty = 1831 STR_VAR guard_prefix = ~CIE4~ END // SHATSOUL (Shattered Soul)
+      LPF cie_disable_actor_at INT_VAR tx = 2956 ty = 1518 STR_VAR guard_prefix = ~CIE4~ END // SHATSOUL (Shattered Soul)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar5003.are~ BEGIN
+    COPY_EXISTING ~ar5003.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 2242 ty = 1640 STR_VAR guard_prefix = ~CIE4~ END // SKELBLAD (Bladed Skeleton)
+      LPF cie_disable_actor_at INT_VAR tx = 2594 ty = 1531 STR_VAR guard_prefix = ~CIE4~ END // SKELBLAD (Bladed Skeleton)
+      LPF cie_disable_actor_at INT_VAR tx = 1944 ty = 1731 STR_VAR guard_prefix = ~CIE4~ END // SKELBLAD (Bladed Skeleton)
+      LPF cie_disable_actor_at INT_VAR tx = 1860 ty = 1750 STR_VAR guard_prefix = ~CIE4~ END // SKELARM (Armored Skeleton)
+      LPF cie_disable_actor_at INT_VAR tx = 1970 ty = 1915 STR_VAR guard_prefix = ~CIE4~ END // SKELARM (Armored Skeleton)
+      LPF cie_disable_actor_at INT_VAR tx = 2051 ty = 1918 STR_VAR guard_prefix = ~CIE4~ END // SKELBLAD (Bladed Skeleton)
+      LPF cie_disable_actor_at INT_VAR tx = 2271 ty = 1846 STR_VAR guard_prefix = ~CIE4~ END // SKELARM (Armored Skeleton)
+      LPF cie_disable_actor_at INT_VAR tx = 1583 ty = 1921 STR_VAR guard_prefix = ~CIE4~ END // SKELARM (Armored Skeleton)
+      LPF cie_disable_actor_at INT_VAR tx = 1650 ty = 1959 STR_VAR guard_prefix = ~CIE4~ END // SKELARM (Armored Skeleton)
+      LPF cie_disable_actor_at INT_VAR tx = 1007 ty = 1138 STR_VAR guard_prefix = ~CIE4~ END // SDGOBBW2 (Shadowed Goblin Mark)
+      LPF cie_disable_actor_at INT_VAR tx = 1390 ty = 910 STR_VAR guard_prefix = ~CIE4~ END // SDGOBBW2 (Shadowed Goblin Mark)
+      LPF cie_disable_actor_at INT_VAR tx = 1869 ty = 1101 STR_VAR guard_prefix = ~CIE4~ END // SDGOBBW2 (Shadowed Goblin Mark)
+      LPF cie_disable_actor_at INT_VAR tx = 2178 ty = 833 STR_VAR guard_prefix = ~CIE4~ END // SKELBLAD (Bladed Skeleton)
+      LPF cie_disable_actor_at INT_VAR tx = 1423 ty = 458 STR_VAR guard_prefix = ~CIE4~ END // SDGOBAX2 (Shadowed Goblin Warr)
+      LPF cie_disable_actor_at INT_VAR tx = 1468 ty = 504 STR_VAR guard_prefix = ~CIE4~ END // SDGOBAX2 (Shadowed Goblin Warr)
+      LPF cie_disable_actor_at INT_VAR tx = 1525 ty = 466 STR_VAR guard_prefix = ~CIE4~ END // SDGOBBW2 (Shadowed Goblin Mark)
+      LPF cie_disable_actor_at INT_VAR tx = 1511 ty = 761 STR_VAR guard_prefix = ~CIE4~ END // SDGOBBW2 (Shadowed Goblin Mark)
+      LPF cie_disable_actor_at INT_VAR tx = 1521 ty = 677 STR_VAR guard_prefix = ~CIE4~ END // SDGOBBW2 (Shadowed Goblin Mark)
+      LPF cie_disable_actor_at INT_VAR tx = 1320 ty = 679 STR_VAR guard_prefix = ~CIE4~ END // SDORCAX1 (Shadowed Orc Grunt)
+      LPF cie_disable_actor_at INT_VAR tx = 1281 ty = 692 STR_VAR guard_prefix = ~CIE4~ END // SDORCAX1 (Shadowed Orc Grunt)
+      LPF cie_disable_actor_at INT_VAR tx = 2438 ty = 847 STR_VAR guard_prefix = ~CIE4~ END // SKELBLAD (Bladed Skeleton)
+      LPF cie_disable_actor_at INT_VAR tx = 1322 ty = 771 STR_VAR guard_prefix = ~CIE4~ END // SDORCAX1 (Shadowed Orc Grunt)
+      LPF cie_disable_actor_at INT_VAR tx = 2388 ty = 698 STR_VAR guard_prefix = ~CIE4~ END // SHATSOUL (Shattered Soul)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar5104.are~ BEGIN
+    COPY_EXISTING ~ar5104.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 615 ty = 577 STR_VAR guard_prefix = ~CIE4~ END // SDELFSW5 (Sword_0)
+      LPF cie_disable_actor_at INT_VAR tx = 722 ty = 533 STR_VAR guard_prefix = ~CIE4~ END // SDELFSW5 (Sword_1)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar5401.are~ BEGIN
+    COPY_EXISTING ~ar5401.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 517 ty = 324 STR_VAR guard_prefix = ~CIE4~ END // SDORCAX1 (Shadowed Orc Grunt)
+      LPF cie_disable_actor_at INT_VAR tx = 712 ty = 258 STR_VAR guard_prefix = ~CIE4~ END // SDORCAX1 (Shadowed Orc Grunt)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar5402.are~ BEGIN
+    COPY_EXISTING ~ar5402.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 391 ty = 387 STR_VAR guard_prefix = ~CIE4~ END // SDELFBW1 (Shadowed Elven Arche)
+      LPF cie_disable_actor_at INT_VAR tx = 254 ty = 337 STR_VAR guard_prefix = ~CIE4~ END // SDELFBW1 (Shadowed Elven Arche)
+      LPF cie_disable_actor_at INT_VAR tx = 492 ty = 175 STR_VAR guard_prefix = ~CIE4~ END // SDELFBW1 (Shadowed Elven Arche)
+      LPF cie_disable_actor_at INT_VAR tx = 611 ty = 369 STR_VAR guard_prefix = ~CIE4~ END // SDELFBW1 (Shadowed Elven Arche)
+      LPF cie_disable_actor_at INT_VAR tx = 630 ty = 330 STR_VAR guard_prefix = ~CIE4~ END // SDELFBW1 (Shadowed Elven Arche)
+      LPF cie_disable_actor_at INT_VAR tx = 412 ty = 610 STR_VAR guard_prefix = ~CIE4~ END // SDELFSW3 (Shadowed Elven Sword)
+      LPF cie_disable_actor_at INT_VAR tx = 419 ty = 416 STR_VAR guard_prefix = ~CIE4~ END // SDELFSW3 (Shadowed Elven Sword)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar5403.are~ BEGIN
+    COPY_EXISTING ~ar5403.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 382 ty = 549 STR_VAR guard_prefix = ~CIE4~ END // SDELFBW1 (Shadowed Elven Arche)
+      LPF cie_disable_actor_at INT_VAR tx = 645 ty = 598 STR_VAR guard_prefix = ~CIE4~ END // SDELFBW1 (Shadowed Elven Arche)
+      LPF cie_disable_actor_at INT_VAR tx = 705 ty = 545 STR_VAR guard_prefix = ~CIE4~ END // SDELFBW1 (Shadowed Elven Arche)
+      LPF cie_disable_actor_at INT_VAR tx = 667 ty = 320 STR_VAR guard_prefix = ~CIE4~ END // SDELFBW1 (Shadowed Elven Arche)
+      LPF cie_disable_actor_at INT_VAR tx = 582 ty = 497 STR_VAR guard_prefix = ~CIE4~ END // SDELFSW3 (Shadowed Elven Sword)
+      LPF cie_disable_actor_at INT_VAR tx = 191 ty = 503 STR_VAR guard_prefix = ~CIE4~ END // SDELFSW3 (Shadowed Elven Sword)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar5404.are~ BEGIN
+    COPY_EXISTING ~ar5404.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 229 ty = 430 STR_VAR guard_prefix = ~CIE4~ END // SPIDWR (Wraith Spider)
+      LPF cie_disable_actor_at INT_VAR tx = 250 ty = 375 STR_VAR guard_prefix = ~CIE4~ END // SPIDWR (Wraith Spider)
+      LPF cie_disable_actor_at INT_VAR tx = 596 ty = 381 STR_VAR guard_prefix = ~CIE4~ END // SPIDWR (Wraith Spider)
+      LPF cie_disable_actor_at INT_VAR tx = 688 ty = 595 STR_VAR guard_prefix = ~CIE4~ END // SPIDWR (Wraith Spider)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar6002.are~ BEGIN
+    COPY_EXISTING ~ar6002.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 2349 ty = 1727 STR_VAR guard_prefix = ~CIE4~ END // ORCEWBOW (Orc Elite 1)
+      LPF cie_disable_actor_at INT_VAR tx = 2401 ty = 1776 STR_VAR guard_prefix = ~CIE4~ END // ORCEWBOW (Orc Elite 3)
+      LPF cie_disable_actor_at INT_VAR tx = 1895 ty = 1945 STR_VAR guard_prefix = ~CIE4~ END // ORCEWBOW (Orc Elite 5)
+      LPF cie_disable_actor_at INT_VAR tx = 2401 ty = 1193 STR_VAR guard_prefix = ~CIE4~ END // ORCEWBOW (Orc Elite 7)
+      LPF cie_disable_actor_at INT_VAR tx = 726 ty = 1627 STR_VAR guard_prefix = ~CIE4~ END // ORCEWBOW (Orc Elite 9)
+      LPF cie_disable_actor_at INT_VAR tx = 478 ty = 1807 STR_VAR guard_prefix = ~CIE4~ END // ORCEWBOW (Orc Elite 11)
+      LPF cie_disable_actor_at INT_VAR tx = 2633 ty = 1435 STR_VAR guard_prefix = ~CIE4~ END // NEOOROG (Neo Orog 3)
+      LPF cie_disable_actor_at INT_VAR tx = 2662 ty = 1575 STR_VAR guard_prefix = ~CIE4~ END // NEOOROG (Neo Orog 5)
+      LPF cie_disable_actor_at INT_VAR tx = 2194 ty = 1264 STR_VAR guard_prefix = ~CIE4~ END // NEOOROG (Neo Orog 8)
+      LPF cie_disable_actor_at INT_VAR tx = 801 ty = 1882 STR_VAR guard_prefix = ~CIE4~ END // NEOOROG (Neo Orog 11)
+      LPF cie_disable_actor_at INT_VAR tx = 1986 ty = 1713 STR_VAR guard_prefix = ~CIE4~ END // NEOOROGE (Neo Orog Elite 2)
+      LPF cie_disable_actor_at INT_VAR tx = 1654 ty = 1108 STR_VAR guard_prefix = ~CIE4~ END // NEOOROGE (Neo Orog Elite 4)
+      LPF cie_disable_actor_at INT_VAR tx = 1752 ty = 1239 STR_VAR guard_prefix = ~CIE4~ END // NEOOROGE (Neo Orog Elite 6)
+      LPF cie_disable_actor_at INT_VAR tx = 792 ty = 1784 STR_VAR guard_prefix = ~CIE4~ END // NEOOROGE (Neo Orog Elite 8)
+      LPF cie_disable_actor_at INT_VAR tx = 1142 ty = 1677 STR_VAR guard_prefix = ~CIE4~ END // NEOOROGE (Neo Orog Elite 10)
+      LPF cie_disable_actor_at INT_VAR tx = 1964 ty = 1194 STR_VAR guard_prefix = ~CIE4~ END // NEOOROGE (Neo Orog Elite 12)
+      LPF cie_disable_actor_at INT_VAR tx = 2470 ty = 1389 STR_VAR guard_prefix = ~CIE4~ END // NEOOROG (Neo Orog R2)
+      LPF cie_disable_actor_at INT_VAR tx = 661 ty = 1763 STR_VAR guard_prefix = ~CIE4~ END // NEOOROGE (Neo Orog Elite R1)
+      LPF cie_disable_actor_at INT_VAR tx = 1538 ty = 1742 STR_VAR guard_prefix = ~CIE4~ END // NEOOROGE (Neo Orog Elite R3)
+      LPF cie_disable_actor_at INT_VAR tx = 1813 ty = 1821 STR_VAR guard_prefix = ~CIE4~ END // ORCEWBOW (Orc Elite)
+      LPF cie_disable_actor_at INT_VAR tx = 2158 ty = 1668 STR_VAR guard_prefix = ~CIE4~ END // ORCEWBOW (Orc Elite)
+      LPF cie_disable_actor_at INT_VAR tx = 1839 ty = 1620 STR_VAR guard_prefix = ~CIE4~ END // ORCEWBOW (Orc Elite)
+      LPF cie_disable_actor_at INT_VAR tx = 631 ty = 991 STR_VAR guard_prefix = ~CIE4~ END // DROWVAN (Drow Vanguard)
+      LPF cie_disable_actor_at INT_VAR tx = 2379 ty = 1420 STR_VAR guard_prefix = ~CIE4~ END // NEOOROGG (Neo Orog General)
+      LPF cie_disable_actor_at INT_VAR tx = 696 ty = 1878 STR_VAR guard_prefix = ~CIE4~ END // NEOOROGG (Neo Orog General)
+      LPF cie_disable_actor_at INT_VAR tx = 923 ty = 1371 STR_VAR guard_prefix = ~CIE4~ END // NEOOROGG (Neo Orog General)
+      LPF cie_disable_actor_at INT_VAR tx = 2525 ty = 755 STR_VAR guard_prefix = ~CIE4~ END // DROWVAN (Drow Vanguard)
+      LPF cie_disable_actor_at INT_VAR tx = 1733 ty = 734 STR_VAR guard_prefix = ~CIE4~ END // DROWVAN (Drow Vanguard)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar6003.are~ BEGIN
+    COPY_EXISTING ~ar6003.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 1368 ty = 1779 STR_VAR guard_prefix = ~CIE4~ END // NEOOROGE (Neo Orog Elite)
+      LPF cie_disable_actor_at INT_VAR tx = 1404 ty = 1940 STR_VAR guard_prefix = ~CIE4~ END // NEOOROGE (Neo Orog Elite)
+      LPF cie_disable_actor_at INT_VAR tx = 1475 ty = 1977 STR_VAR guard_prefix = ~CIE4~ END // NEOOROGE (Neo Orog Elite)
+      LPF cie_disable_actor_at INT_VAR tx = 1483 ty = 1865 STR_VAR guard_prefix = ~CIE4~ END // NEOOROGE (Neo Orog Elite)
+      LPF cie_disable_actor_at INT_VAR tx = 2451 ty = 1419 STR_VAR guard_prefix = ~CIE4~ END // NEOOROGG (Neo Orog General)
+      LPF cie_disable_actor_at INT_VAR tx = 2577 ty = 1381 STR_VAR guard_prefix = ~CIE4~ END // NEOOROGG (Neo Orog General)
+      LPF cie_disable_actor_at INT_VAR tx = 2693 ty = 1446 STR_VAR guard_prefix = ~CIE4~ END // NEOOROGG (Neo Orog General)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar6005.are~ BEGIN
+    COPY_EXISTING ~ar6005.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 1035 ty = 1499 STR_VAR guard_prefix = ~CIE4~ END // UDGHOUL (Ghoul)
+      LPF cie_disable_actor_at INT_VAR tx = 1057 ty = 1585 STR_VAR guard_prefix = ~CIE4~ END // UDGHOUL (Ghoul)
+      LPF cie_disable_actor_at INT_VAR tx = 1064 ty = 1431 STR_VAR guard_prefix = ~CIE4~ END // UDGHOUL (Ghoul)
+      LPF cie_disable_actor_at INT_VAR tx = 891 ty = 1570 STR_VAR guard_prefix = ~CIE4~ END // UDGHOUL (Ghoul)
+      LPF cie_disable_actor_at INT_VAR tx = 1147 ty = 1471 STR_VAR guard_prefix = ~CIE4~ END // UDGHAST (Ghast)
+      LPF cie_disable_actor_at INT_VAR tx = 624 ty = 1244 STR_VAR guard_prefix = ~CIE4~ END // UDGHOUL (Ghoul)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar7001.are~ BEGIN
+    COPY_EXISTING ~ar7001.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 2770 ty = 1031 STR_VAR guard_prefix = ~CIE4~ END // WTSALF3 (Frost Salamander 1)
+      LPF cie_disable_actor_at INT_VAR tx = 3143 ty = 1376 STR_VAR guard_prefix = ~CIE4~ END // WTSALF3 (Frost Salamander 3)
+      LPF cie_disable_actor_at INT_VAR tx = 3227 ty = 1465 STR_VAR guard_prefix = ~CIE4~ END // WTSALF3 (Frost Salamander 4)
+      LPF cie_disable_actor_at INT_VAR tx = 3135 ty = 824 STR_VAR guard_prefix = ~CIE4~ END // WTSALF3 (Frost Salamander 5)
+      LPF cie_disable_actor_at INT_VAR tx = 3605 ty = 1234 STR_VAR guard_prefix = ~CIE4~ END // WTSALF3 (Frost Salamander 6)
+      LPF cie_disable_actor_at INT_VAR tx = 2926 ty = 2282 STR_VAR guard_prefix = ~CIE4~ END // WTSALF3 (Frost Salamander 8)
+      LPF cie_disable_actor_at INT_VAR tx = 1606 ty = 626 STR_VAR guard_prefix = ~CIE4~ END // WTSALF2 (Frost Salamander 7)
+      LPF cie_disable_actor_at INT_VAR tx = 1179 ty = 1548 STR_VAR guard_prefix = ~CIE4~ END // WTSALF1 (Frost Salamander 1)
+      LPF cie_disable_actor_at INT_VAR tx = 1715 ty = 2107 STR_VAR guard_prefix = ~CIE4~ END // WTSALF1 (Frost Salamander 5)
+      LPF cie_disable_actor_at INT_VAR tx = 3436 ty = 1677 STR_VAR guard_prefix = ~CIE4~ END // WTSALF1 (Frost Salamander 7)
+      LPF cie_disable_actor_at INT_VAR tx = 2481 ty = 2159 STR_VAR guard_prefix = ~CIE4~ END // WTICETRL (Greater Ice Troll 2)
+      LPF cie_disable_actor_at INT_VAR tx = 1073 ty = 1046 STR_VAR guard_prefix = ~CIE4~ END // WTICETRL (Greater Ice Troll 4)
+      LPF cie_disable_actor_at INT_VAR tx = 3301 ty = 1388 STR_VAR guard_prefix = ~CIE4~ END // WTICETRL (Greater Ice Troll 6)
+      LPF cie_disable_actor_at INT_VAR tx = 901 ty = 698 STR_VAR guard_prefix = ~CIE4~ END // WTSALFD (Dead Salamander)
+      LPF cie_disable_actor_at INT_VAR tx = 1556 ty = 1940 STR_VAR guard_prefix = ~CIE4~ END // WTICETRL (Greater Ice Troll 8)
+      LPF cie_disable_actor_at INT_VAR tx = 1750 ty = 1849 STR_VAR guard_prefix = ~CIE4~ END // WTICETRL (Greater Ice Troll 10)
+      LPF cie_disable_actor_at INT_VAR tx = 2964 ty = 1684 STR_VAR guard_prefix = ~CIE4~ END // WTICETRL (Greater Ice Troll 12)
+      LPF cie_disable_actor_at INT_VAR tx = 2289 ty = 935 STR_VAR guard_prefix = ~CIE4~ END // WTICETRL (Greater Ice Troll 14)
+      LPF cie_disable_actor_at INT_VAR tx = 3320 ty = 1252 STR_VAR guard_prefix = ~CIE4~ END // WTICETRL (Greater Ice Troll 15)
+      LPF cie_disable_actor_at INT_VAR tx = 1202 ty = 1431 STR_VAR guard_prefix = ~CIE4~ END // WTICETRL (Greater Ice Troll 16)
+      LPF cie_disable_actor_at INT_VAR tx = 3272 ty = 804 STR_VAR guard_prefix = ~CIE4~ END // WTSALF3 (Frost Salamander)
+      LPF cie_disable_actor_at INT_VAR tx = 3032 ty = 887 STR_VAR guard_prefix = ~CIE4~ END // WTSALF3 (Frost Salamander)
+      LPF cie_disable_actor_at INT_VAR tx = 3650 ty = 1074 STR_VAR guard_prefix = ~CIE4~ END // WTSALF3 (Frost Salamander)
+      LPF cie_disable_actor_at INT_VAR tx = 3489 ty = 1306 STR_VAR guard_prefix = ~CIE4~ END // WTSALF3 (Frost Salamander)
+      LPF cie_disable_actor_at INT_VAR tx = 2036 ty = 2410 STR_VAR guard_prefix = ~CIE4~ END // WTSALF3 (Frost Salamander)
+      LPF cie_disable_actor_at INT_VAR tx = 1111 ty = 856 STR_VAR guard_prefix = ~CIE4~ END // WTSALF3 (Frost Salamander)
+      LPF cie_disable_actor_at INT_VAR tx = 2220 ty = 631 STR_VAR guard_prefix = ~CIE4~ END // WTSALF3 (Frost Salamander)
+      LPF cie_disable_actor_at INT_VAR tx = 1680 ty = 480 STR_VAR guard_prefix = ~CIE4~ END // WTSALF3 (Frost Salamander)
+      LPF cie_disable_actor_at INT_VAR tx = 3599 ty = 1883 STR_VAR guard_prefix = ~CIE4~ END // WTSALF3 (Frost Salamander)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar7004.are~ BEGIN
+    COPY_EXISTING ~ar7004.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 2353 ty = 647 STR_VAR guard_prefix = ~CIE4~ END // WTYETI (Glacier Yeti 1)
+      LPF cie_disable_actor_at INT_VAR tx = 2608 ty = 659 STR_VAR guard_prefix = ~CIE4~ END // WTYETI (Glacier Yeti 3)
+      LPF cie_disable_actor_at INT_VAR tx = 2727 ty = 747 STR_VAR guard_prefix = ~CIE4~ END // WTYETI (Glacier Yeti 5)
+      LPF cie_disable_actor_at INT_VAR tx = 2596 ty = 983 STR_VAR guard_prefix = ~CIE4~ END // WTYETI (Glacier Yeti 7)
+      LPF cie_disable_actor_at INT_VAR tx = 3363 ty = 1193 STR_VAR guard_prefix = ~CIE4~ END // WTSNOTRO (Snow Troll 1)
+      LPF cie_disable_actor_at INT_VAR tx = 3331 ty = 1482 STR_VAR guard_prefix = ~CIE4~ END // WTSNOTRO (Snow Troll 3)
+      LPF cie_disable_actor_at INT_VAR tx = 3545 ty = 1029 STR_VAR guard_prefix = ~CIE4~ END // WTSNOTRO (Snow Troll 5)
+      LPF cie_disable_actor_at INT_VAR tx = 3714 ty = 1476 STR_VAR guard_prefix = ~CIE4~ END // WTSNOTRO (Snow Troll 7)
+      LPF cie_disable_actor_at INT_VAR tx = 3508 ty = 863 STR_VAR guard_prefix = ~CIE4~ END // WTSNOTRO (Snow Troll 9)
+      LPF cie_disable_actor_at INT_VAR tx = 3112 ty = 880 STR_VAR guard_prefix = ~CIE4~ END // WTSNOTRO (Snow Troll 11)
+      LPF cie_disable_actor_at INT_VAR tx = 3422 ty = 1384 STR_VAR guard_prefix = ~CIE4~ END // WTICETR1 (Ice Troll 2)
+      LPF cie_disable_actor_at INT_VAR tx = 3565 ty = 730 STR_VAR guard_prefix = ~CIE4~ END // WTICETR1 (Ice Troll 4)
+      LPF cie_disable_actor_at INT_VAR tx = 3295 ty = 2186 STR_VAR guard_prefix = ~CIE4~ END // WINWOLF (Winter Wolf 1)
+      LPF cie_disable_actor_at INT_VAR tx = 3487 ty = 2211 STR_VAR guard_prefix = ~CIE4~ END // WINWOLF (Winter Wolf 3)
+      LPF cie_disable_actor_at INT_VAR tx = 3210 ty = 2398 STR_VAR guard_prefix = ~CIE4~ END // WINWOLF (Winter Wolf 5)
+      LPF cie_disable_actor_at INT_VAR tx = 3486 ty = 2394 STR_VAR guard_prefix = ~CIE4~ END // WINWOLF (Winter Wolf 7)
+      LPF cie_disable_actor_at INT_VAR tx = 2487 ty = 630 STR_VAR guard_prefix = ~CIE4~ END // WTYETI (Glacier Yeti)
+      LPF cie_disable_actor_at INT_VAR tx = 2455 ty = 714 STR_VAR guard_prefix = ~CIE4~ END // WTYETI (Glacier Yeti)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar8001.are~ BEGIN
+    COPY_EXISTING ~ar8001.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 1272 ty = 2655 STR_VAR guard_prefix = ~CIE4~ END // SAL8001 (Salamander 101)
+      LPF cie_disable_actor_at INT_VAR tx = 1088 ty = 2298 STR_VAR guard_prefix = ~CIE4~ END // SAL8001 (Salamander 103)
+      LPF cie_disable_actor_at INT_VAR tx = 1838 ty = 2041 STR_VAR guard_prefix = ~CIE4~ END // SAL8001 (Salamander 105)
+      LPF cie_disable_actor_at INT_VAR tx = 2139 ty = 1603 STR_VAR guard_prefix = ~CIE4~ END // SAL8001 (Salamander 107)
+      LPF cie_disable_actor_at INT_VAR tx = 1755 ty = 1448 STR_VAR guard_prefix = ~CIE4~ END // SAL8001 (Salamander 109)
+      LPF cie_disable_actor_at INT_VAR tx = 1858 ty = 1201 STR_VAR guard_prefix = ~CIE4~ END // SAL8001 (Salamander 111)
+      LPF cie_disable_actor_at INT_VAR tx = 768 ty = 1353 STR_VAR guard_prefix = ~CIE4~ END // SAL8001 (Salamander 113)
+      LPF cie_disable_actor_at INT_VAR tx = 1040 ty = 1168 STR_VAR guard_prefix = ~CIE4~ END // SAL8001 (Salamander 115)
+      LPF cie_disable_actor_at INT_VAR tx = 1266 ty = 950 STR_VAR guard_prefix = ~CIE4~ END // SAL8001 (Salamander 117)
+      LPF cie_disable_actor_at INT_VAR tx = 791 ty = 836 STR_VAR guard_prefix = ~CIE4~ END // SAL8001 (Salamander 119)
+      LPF cie_disable_actor_at INT_VAR tx = 1118 ty = 766 STR_VAR guard_prefix = ~CIE4~ END // SAL8001 (Salamander 122)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar8006.are~ BEGIN
+    COPY_EXISTING ~ar8006.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 1286 ty = 1101 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE2 (Thief 3)
+      LPF cie_disable_actor_at INT_VAR tx = 1395 ty = 937 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE2 (Thief 4)
+      LPF cie_disable_actor_at INT_VAR tx = 1410 ty = 809 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE2 (Thief 5)
+      LPF cie_disable_actor_at INT_VAR tx = 1580 ty = 825 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE2 (Thief 6)
+      LPF cie_disable_actor_at INT_VAR tx = 1761 ty = 1386 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE2 (Thief 7)
+      LPF cie_disable_actor_at INT_VAR tx = 1829 ty = 1416 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE2 (Thief 8)
+      LPF cie_disable_actor_at INT_VAR tx = 1889 ty = 1355 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE2 (Thief 9)
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar8007.are~ BEGIN
+    COPY_EXISTING ~ar8007.are~ ~override~
+      LPF cie_disable_actor_at INT_VAR tx = 1610 ty = 830 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE3 (Thief 1)
+      LPF cie_disable_actor_at INT_VAR tx = 1470 ty = 1015 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE3 (Thief 2)
+      LPF cie_disable_actor_at INT_VAR tx = 1220 ty = 600 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE3 (Thief 3)
+      LPF cie_disable_actor_at INT_VAR tx = 865 ty = 685 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE3 (Thief 4)
+      LPF cie_disable_actor_at INT_VAR tx = 500 ty = 630 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE3 (Thief 5)
+      LPF cie_disable_actor_at INT_VAR tx = 590 ty = 680 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE3 (Thief 6)
+      LPF cie_disable_actor_at INT_VAR tx = 1000 ty = 830 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE3 (Thief 8)
+      LPF cie_disable_actor_at INT_VAR tx = 1340 ty = 1010 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE3 (Thief 9)
+      LPF cie_disable_actor_at INT_VAR tx = 1415 ty = 1130 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE3 (Thief 10)
+      LPF cie_disable_actor_at INT_VAR tx = 1680 ty = 1300 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE3 (Thief 12)
+      LPF cie_disable_actor_at INT_VAR tx = 200 ty = 915 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE3 (Thief 13)
+      LPF cie_disable_actor_at INT_VAR tx = 225 ty = 1060 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE3 (Thief 14)
+      LPF cie_disable_actor_at INT_VAR tx = 435 ty = 1090 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE3 (Thief 15)
+      LPF cie_disable_actor_at INT_VAR tx = 580 ty = 1190 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE3 (Thief 16)
+      LPF cie_disable_actor_at INT_VAR tx = 830 ty = 1340 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE3 (Thief 17)
+      LPF cie_disable_actor_at INT_VAR tx = 1020 ty = 1460 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE3 (Thief 18)
+      LPF cie_disable_actor_at INT_VAR tx = 1090 ty = 1570 STR_VAR guard_prefix = ~CIE4~ END // LDDTHIE3 (Thief 19)
+    BUT_ONLY
+  END
+END

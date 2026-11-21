@@ -458,3 +458,652 @@ BEGIN
     END
   BUT_ONLY
 END
+
+// Validate SPL V1 header and non-overlapping ability/casting effect tables.
+DEFINE_PATCH_FUNCTION cie_spl_valid
+  RET valid reason
+BEGIN
+  SET valid = 0
+  SPRINT reason ~~
+  PATCH_IF (BUFFER_LENGTH < 0x72) BEGIN
+    SPRINT reason ~shorter than an SPL header~
+  END ELSE BEGIN
+    READ_ASCII 0 sig (8)
+    READ_LONG 0x64 ab_off
+    READ_SHORT 0x68 ab_cnt
+    READ_LONG 0x6a fx_off
+    READ_SHORT 0x6e cast_first
+    READ_SHORT 0x70 cast_cnt
+    PATCH_IF !(~%sig%~ STRING_EQUAL ~SPL V1  ~) BEGIN
+      SPRINT reason ~not an SPL V1 file~
+    END ELSE PATCH_IF (ab_off + ab_cnt * 0x28 > BUFFER_LENGTH) BEGIN
+      SPRINT reason ~its ability table runs past the end of the file~
+    END ELSE PATCH_IF (fx_off + (cast_first + cast_cnt) * 0x30 > BUFFER_LENGTH) BEGIN
+      SPRINT reason ~its casting effects run past the end of the file~
+    END ELSE BEGIN
+      SET valid = 1
+      FOR (a = 0; a < ab_cnt; ++a) BEGIN
+        READ_SHORT (ab_off + a * 0x28 + 0x1e) n
+        READ_SHORT (ab_off + a * 0x28 + 0x20) first
+        PATCH_IF (fx_off + (first + n) * 0x30 > BUFFER_LENGTH) BEGIN
+          SET valid = 0
+          SPRINT reason ~the effects of ability %a% run past the end of the file~
+        END
+        PATCH_IF (cast_cnt > 0) AND (n > 0) AND (first < cast_first + cast_cnt) AND (cast_first < first + n) BEGIN
+          SET valid = 0
+          SPRINT reason ~ability %a% shares effects with the casting effects~
+        END
+        FOR (b = a + 1; b < ab_cnt; ++b) BEGIN
+          READ_SHORT (ab_off + b * 0x28 + 0x1e) n2
+          READ_SHORT (ab_off + b * 0x28 + 0x20) first2
+          PATCH_IF (n > 0) AND (n2 > 0) AND (first < first2 + n2) AND (first2 < first + n) BEGIN
+            SET valid = 0
+            SPRINT reason ~abilities %a% and %b% share effects~
+          END
+        END
+      END
+    END
+  END
+END
+
+// Insert one effect into `ability` at `position` and shift all later effect indices
+// and the ability table if stored behind effects (workaround for WeiDU #ADD_SPELL_EFFECT).
+DEFINE_PATCH_FUNCTION cie_spl_insert_effect
+  INT_VAR ability = 0 position = 0 opcode = 0 target = 2 power = 0 parameter1 = 0 parameter2 = 0
+          timing = 0 resist_dispel = 0 duration = 0 probability1 = 100 probability2 = 0
+          dicenumber = 0 dicesize = 0 savingthrow = 0 savebonus = 0 special = 0
+  STR_VAR resource = ~~
+BEGIN
+  READ_LONG 0x64 ab_off
+  READ_SHORT 0x68 ab_cnt
+  READ_LONG 0x6a fx_off
+  READ_SHORT 0x6e cast_first
+  READ_SHORT 0x70 cast_cnt
+  SET ab = ab_off + ability * 0x28
+  READ_SHORT (ab + 0x1e) n
+  READ_SHORT (ab + 0x20) first
+  SET at = first + ((position > n) ? n : position)
+  SET where = fx_off + at * 0x30
+  INSERT_BYTES where 0x30
+  WRITE_SHORT where opcode
+  WRITE_BYTE (where + 0x02) target
+  WRITE_BYTE (where + 0x03) power
+  WRITE_LONG (where + 0x04) parameter1
+  WRITE_LONG (where + 0x08) parameter2
+  WRITE_BYTE (where + 0x0c) timing
+  WRITE_BYTE (where + 0x0d) resist_dispel
+  WRITE_LONG (where + 0x0e) duration
+  WRITE_BYTE (where + 0x12) probability1
+  WRITE_BYTE (where + 0x13) probability2
+  WRITE_ASCIIE (where + 0x14) ~%resource%~ #8
+  WRITE_LONG (where + 0x1c) dicenumber
+  WRITE_LONG (where + 0x20) dicesize
+  WRITE_LONG (where + 0x24) savingthrow
+  WRITE_LONG (where + 0x28) savebonus
+  WRITE_LONG (where + 0x2c) special
+  PATCH_IF (ab_off >= where) BEGIN
+    SET ab_off += 0x30
+    WRITE_LONG 0x64 ab_off
+    SET ab += 0x30
+  END
+  WRITE_SHORT (ab + 0x1e) (n + 1)
+  FOR (b = 0; b < ab_cnt; ++b) BEGIN
+    PATCH_IF (b != ability) BEGIN
+      READ_SHORT (ab_off + b * 0x28 + 0x20) f2
+      PATCH_IF (f2 >= at) BEGIN
+        WRITE_SHORT (ab_off + b * 0x28 + 0x20) (f2 + 1)
+      END
+    END
+  END
+  PATCH_IF (cast_first >= at) AND ((cast_cnt > 0) OR (cast_first > at)) BEGIN
+    WRITE_SHORT 0x6e (cast_first + 1)
+  END
+END
+
+// Delete effect at `index` in the SPL effect table and shift all indices behind it.
+DEFINE_PATCH_FUNCTION cie_spl_delete_effect
+  INT_VAR index = 0
+BEGIN
+  READ_LONG 0x64 ab_off
+  READ_SHORT 0x68 ab_cnt
+  READ_LONG 0x6a fx_off
+  READ_SHORT 0x6e cast_first
+  READ_SHORT 0x70 cast_cnt
+  SET where = fx_off + index * 0x30
+  DELETE_BYTES where 0x30
+  PATCH_IF (ab_off > where) BEGIN
+    SET ab_off -= 0x30
+    WRITE_LONG 0x64 ab_off
+  END
+  FOR (b = 0; b < ab_cnt; ++b) BEGIN
+    READ_SHORT (ab_off + b * 0x28 + 0x1e) n
+    READ_SHORT (ab_off + b * 0x28 + 0x20) first
+    PATCH_IF (index >= first) AND (index < first + n) BEGIN
+      WRITE_SHORT (ab_off + b * 0x28 + 0x1e) (n - 1)
+    END ELSE PATCH_IF (first > index) BEGIN
+      WRITE_SHORT (ab_off + b * 0x28 + 0x20) (first - 1)
+    END
+  END
+  PATCH_IF (index >= cast_first) AND (index < cast_first + cast_cnt) BEGIN
+    WRITE_SHORT 0x70 (cast_cnt - 1)
+  END ELSE PATCH_IF (cast_first > index) BEGIN
+    WRITE_SHORT 0x6e (cast_first - 1)
+  END
+END
+
+// Delete ability header `ability` and all of its effects safely.
+DEFINE_PATCH_FUNCTION cie_spl_delete_ability
+  INT_VAR ability = 0
+BEGIN
+  READ_LONG 0x64 ab_off
+  READ_SHORT 0x68 ab_cnt
+  PATCH_IF (ability >= 0) AND (ability < ab_cnt) BEGIN
+    READ_SHORT (ab_off + ability * 0x28 + 0x1e) n
+    READ_SHORT (ab_off + ability * 0x28 + 0x20) first
+    FOR (i = n - 1; i >= 0; --i) BEGIN
+      LPF cie_spl_delete_effect INT_VAR index = (first + i) END
+    END
+    READ_LONG 0x64 ab_off
+    READ_SHORT 0x68 ab_cnt
+    READ_LONG 0x6a fx_off
+    SET ab_pos = ab_off + ability * 0x28
+    DELETE_BYTES ab_pos 0x28
+    WRITE_SHORT 0x68 (ab_cnt - 1)
+    PATCH_IF (fx_off > ab_pos) BEGIN
+      WRITE_LONG 0x6a (fx_off - 0x28)
+    END
+  END
+END
+
+// Return matching SPLPROT.2DA row for (stat, value, relation) or append a new row.
+DEFINE_ACTION_FUNCTION cie_splprot_row
+  INT_VAR stat = 0 value = 0 relation = 0
+  RET row
+BEGIN
+  OUTER_SET row = 0 - 1
+  ACTION_IF FILE_EXISTS_IN_GAME ~splprot.2da~ BEGIN
+    OUTER_SET rows = 0
+    COPY_EXISTING ~splprot.2da~ ~override~
+      COUNT_2DA_ROWS 4 rows
+      READ_2DA_ENTRIES_NOW cie_splprot 4
+      FOR (r = 0; r < cie_splprot; ++r) BEGIN
+        READ_2DA_ENTRY_FORMER cie_splprot r 1 s
+        READ_2DA_ENTRY_FORMER cie_splprot r 2 v
+        READ_2DA_ENTRY_FORMER cie_splprot r 3 rel
+        PATCH_IF (row < 0) AND (IS_AN_INT ~%s%~) AND (IS_AN_INT ~%v%~) AND (IS_AN_INT ~%rel%~) BEGIN
+          PATCH_IF (s = stat) AND (v = value) AND (rel = relation) BEGIN
+            SET row = r
+          END
+        END
+      END
+    BUT_ONLY
+    ACTION_IF (row < 0) BEGIN
+      OUTER_SET row = rows
+      APPEND ~splprot.2da~ ~%row%_CIE %stat% %value% %relation%~
+    END
+  END
+END
+
+// Current language directory from weidu.conf (lowercase, defaults to en_us).
+DEFINE_ACTION_FUNCTION cie_game_language
+  RET lang
+BEGIN
+  OUTER_SPRINT lang ~en_us~
+  ACTION_IF (FILE_EXISTS ~weidu.conf~) BEGIN
+    COPY - ~weidu.conf~ ~weidu.conf~
+      REPLACE_EVALUATE CASE_INSENSITIVE ~lang_dir[ %TAB%]*=[ %TAB%]*\([A-Za-z_]+\)~ BEGIN
+        SPRINT lang ~%MATCH1%~
+      END ~%MATCH0%~
+  END
+  ACTION_TO_LOWER lang
+END
+
+// Build scroll index ($cie_scrolls(<SPELL>) => space-separated scroll ITMs).
+DEFINE_ACTION_MACRO cie_index_scrolls
+BEGIN
+  COPY_EXISTING_REGEXP GLOB ~^.+\.itm$~ ~override~
+    PATCH_IF (BUFFER_LENGTH >= 0x72) BEGIN
+      READ_ASCII 0 sig (8)
+      READ_SHORT 0x1c item_type
+      PATCH_IF (~%sig%~ STRING_EQUAL ~ITM V1  ~) AND (item_type = 11) BEGIN
+        READ_LONG 0x64 ab_off
+        READ_SHORT 0x68 ab_cnt
+        READ_LONG 0x6a fx_off
+        SPRINT item ~%SOURCE_RES%~
+        TO_UPPER item
+        FOR (a = 0; a < ab_cnt; ++a) BEGIN
+          PATCH_IF (ab_off + (a + 1) * 0x38 <= BUFFER_LENGTH) BEGIN
+            READ_SHORT (ab_off + a * 0x38 + 0x1e) n
+            READ_SHORT (ab_off + a * 0x38 + 0x20) first
+            FOR (i = 0; i < n; ++i) BEGIN
+              SET fx = fx_off + (first + i) * 0x30
+              PATCH_IF (fx + 0x30 <= BUFFER_LENGTH) BEGIN
+                READ_SHORT fx op
+                READ_ASCII (fx + 0x14) res (8) NULL
+                TO_UPPER res
+                PATCH_IF ((op = 146) OR (op = 147) OR (op = 148)) AND !(~%res%~ STRING_EQUAL ~~) BEGIN
+                  PATCH_IF !(VARIABLE_IS_SET $cie_scrolls(~%res%~)) BEGIN
+                    SPRINT $cie_scrolls(~%res%~) ~~
+                  END
+                  SPRINT known EVAL ~%cie_scrolls_%res%%~
+                  PATCH_IF (INDEX (CASE_SENSITIVE EXACT_MATCH ~ %item% ~ ~%known% ~) < 0) BEGIN
+                    SPRINT $cie_scrolls(~%res%~) ~%known% %item%~
+                  END
+                END
+              END
+            END
+          END
+        END
+      END
+    END
+  BUT_ONLY
+  OUTER_SET cie_scrolls_indexed = 1
+END
+
+DEFINE_ACTION_FUNCTION cie_scrolls_of
+  STR_VAR spell = ~~
+  RET scrolls
+BEGIN
+  ACTION_IF !(VARIABLE_IS_SET cie_scrolls_indexed) BEGIN
+    LAM cie_index_scrolls
+  END
+  OUTER_SPRINT key ~%spell%~
+  ACTION_TO_UPPER key
+  OUTER_SPRINT scrolls ~~
+  ACTION_IF (VARIABLE_IS_SET $cie_scrolls(~%key%~)) BEGIN
+    OUTER_SPRINT scrolls EVAL ~%cie_scrolls_%key%%~
+  END
+END
+
+// Set English spell description strref on a spell and all scrolls teaching/casting it.
+DEFINE_ACTION_FUNCTION cie_write_spell_text
+  INT_VAR text = 0
+  STR_VAR spell = ~~
+BEGIN
+  LAF cie_game_language RET lang END
+  ACTION_IF (~%lang%~ STRING_EQUAL ~en_us~) AND FILE_EXISTS_IN_GAME ~%spell%.spl~ BEGIN
+    COPY_EXISTING ~%spell%.spl~ ~override~
+      PATCH_IF (BUFFER_LENGTH >= 0x54) BEGIN WRITE_LONG 0x50 text END
+    BUT_ONLY
+    LAF cie_scrolls_of STR_VAR spell RET scrolls END
+    OUTER_PATCH_SAVE remaining ~%scrolls%~ BEGIN REPLACE_TEXTUALLY ~^ +~ ~~ END
+    OUTER_WHILE !(~%remaining%~ STRING_EQUAL ~~) BEGIN
+      OUTER_PATCH_SAVE scroll ~%remaining%~ BEGIN REPLACE_TEXTUALLY ~ .*$~ ~~ END
+      OUTER_PATCH_SAVE remaining ~%remaining%~ BEGIN REPLACE_TEXTUALLY ~^[^ ]+ ?~ ~~ END
+      ACTION_IF FILE_EXISTS_IN_GAME ~%scroll%.itm~ BEGIN
+        COPY_EXISTING ~%scroll%.itm~ ~override~
+          PATCH_IF (BUFFER_LENGTH >= 0x58) BEGIN WRITE_LONG 0x54 text END
+        BUT_ONLY
+      END
+    END
+  END
+END
+
+// Strip non-generic MYAREA, Malavon warp, StartCutSceneMode, and NumTimesTalkedTo
+// blocks directly on a compiled SCS caster BCS without decompiling (preserves
+// GTIMES.IDS timers byte-for-byte). Falls back to an authored BAF without SCS.
+DEFINE_ACTION_FUNCTION cie_build_caster_script
+  STR_VAR donor = ~~ fallback_baf = ~~ target = ~~
+BEGIN
+  OUTER_SET used_scs = 0
+  ACTION_IF FILE_EXISTS_IN_GAME ~%donor%.bcs~ BEGIN
+    COPY_EXISTING - ~%donor%.bcs~ nowhere
+      PATCH_IF (INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~instantprep~) >= 0) BEGIN
+        SET used_scs = 1
+      END
+  END
+  ACTION_IF used_scs BEGIN
+    COPY_EXISTING ~%donor%.bcs~ ~override/%target%.bcs~
+      REPLACE_TEXTUALLY EXACT_MATCH ~%WNL%~ ~%LNL%~
+      SET pos = 0
+      WHILE (pos >= 0) BEGIN
+        SET bstart = INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~CR%LNL%CO%LNL%~ pos)
+        PATCH_IF (bstart < 0) BEGIN
+          SET pos = 0 - 1
+        END ELSE BEGIN
+          SET bend = INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~RS%LNL%CR%LNL%~ bstart)
+          PATCH_IF (bend < 0) BEGIN
+            SET pos = 0 - 1
+          END ELSE BEGIN
+            SET blen = bend + 6 - bstart
+            READ_ASCII bstart blk (blen)
+            SET drop = 0
+            INNER_PATCH ~%blk%~ BEGIN
+              PATCH_IF (INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~"MYAREA~) >= 0)
+                  OR (INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~MALAVON~) >= 0)
+                  OR (INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~AC%LNL%120OB~) >= 0)
+                  OR (INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~AC%LNL%121OB~) >= 0)
+                  OR (INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~AC%LNL%198OB~) >= 0)
+                  OR (INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~TR%LNL%16441 ~) >= 0)
+                  OR (INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~TR%LNL%16442 ~) >= 0)
+                  OR (INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~TR%LNL%16443 ~) >= 0) BEGIN
+                SET drop = 1
+              END
+            END
+            PATCH_IF drop BEGIN
+              DELETE_BYTES bstart blen
+              SET pos = bstart
+            END ELSE BEGIN
+              SET pos = bstart + blen
+            END
+          END
+        END
+      END
+  END ELSE BEGIN
+    COPY ~chriz-iwd-encounters/baf/%fallback_baf%.baf~ ~override/%target%.bcs~
+      COMPILE_BAF_TO_BCS
+  END
+END
+
+// Copy 400-byte soundset (0xA4..0x233), animation ID (0x28), colors and general/race/gender.
+DEFINE_ACTION_FUNCTION cie_apply_look_and_voice
+  INT_VAR anim_override = 0 - 1
+  STR_VAR cre = ~~ visual_donor = ~~
+BEGIN
+  ACTION_IF FILE_EXISTS_IN_GAME ~%visual_donor%.cre~ BEGIN
+    COPY_EXISTING - ~%visual_donor%.cre~ nowhere
+      READ_LONG 0x28 v_anim
+      READ_ASCII 0x2c v_colors (7)
+      READ_ASCII 0xa4 v_sounds (400)
+      READ_BYTE 0x271 v_general
+      READ_BYTE 0x272 v_race
+      READ_BYTE 0x275 v_gender
+    COPY_EXISTING ~%cre%.cre~ ~override~
+      PATCH_IF (anim_override >= 0) BEGIN
+        WRITE_LONG 0x28 anim_override
+      END ELSE BEGIN
+        WRITE_LONG 0x28 v_anim
+      END
+      WRITE_ASCIIE 0x2c ~%v_colors%~ (7)
+      WRITE_ASCIIE 0xa4 ~%v_sounds%~ (400)
+      WRITE_BYTE 0x271 v_general
+      WRITE_BYTE 0x272 v_race
+      WRITE_BYTE 0x275 v_gender
+    BUT_ONLY
+  END
+END
+
+// Remove all existing items from a cloned CRE so donor quest/unique drops never leak.
+DEFINE_PATCH_FUNCTION cie_clear_all_items BEGIN
+  READ_LONG 0x2bc ioff
+  READ_LONG 0x2c0 icnt
+  FOR (k = icnt - 1; k >= 0; k -= 1) BEGIN
+    READ_ASCII (ioff + 0x14 * k) ires (8) NULL
+    PATCH_IF (~%ires%~ STRING_COMPARE ~~) BEGIN
+      REMOVE_CRE_ITEM ~%ires%~
+      READ_LONG 0x2bc ioff
+      READ_LONG 0x2c0 icnt
+      PATCH_IF (k > icnt) BEGIN SET k = icnt END
+    END
+  END
+END
+
+// Authoritative owned stats & scripts on a bespoke CIE creature.
+DEFINE_PATCH_FUNCTION cie_set_core
+  INT_VAR xp = 0 hp = 100 ac = 0 thac0 = 5 apr = 2 ea = 255
+          sv1 = 5 sv2 = 6 sv3 = 6 sv4 = 7 sv5 = 6
+          rfir = 0 rcld = 0 rele = 0 racd = 0 mr = 0 rsl = 0 rcr = 0 rpi = 0 rmi = 0
+          lvl1 = 15 lvl2 = 1 clear_items = 1
+  STR_VAR s_ovr = ~~ s_cls = ~~ s_rac = ~~ s_gen = ~~ s_def = ~~
+BEGIN
+  WRITE_LONG  0x14 xp
+  WRITE_LONG  0x20 0 // live state (never dead/stone)
+  WRITE_SHORT 0x24 hp
+  WRITE_SHORT 0x26 hp
+  WRITE_SHORT 0x46 ac
+  WRITE_SHORT 0x48 ac
+  WRITE_BYTE  0x52 thac0
+  WRITE_BYTE  0x53 apr
+  WRITE_BYTE  0x54 sv1
+  WRITE_BYTE  0x55 sv2
+  WRITE_BYTE  0x56 sv3
+  WRITE_BYTE  0x57 sv4
+  WRITE_BYTE  0x58 sv5
+  WRITE_BYTE  0x59 rfir
+  WRITE_BYTE  0x5a rcld
+  WRITE_BYTE  0x5b rele
+  WRITE_BYTE  0x5c racd
+  WRITE_BYTE  0x5d mr
+  WRITE_BYTE  0x5e rfir
+  WRITE_BYTE  0x5f rcld
+  WRITE_BYTE  0x60 rsl
+  WRITE_BYTE  0x61 rcr
+  WRITE_BYTE  0x62 rpi
+  WRITE_BYTE  0x63 rmi
+  WRITE_BYTE  0x234 lvl1
+  WRITE_BYTE  0x235 lvl2
+  WRITE_BYTE  0x238 19 // STR
+  WRITE_BYTE  0x23a 16 // INT
+  WRITE_BYTE  0x23b 16 // WIS
+  WRITE_BYTE  0x23c 17 // DEX
+  WRITE_BYTE  0x23d 16 // CON
+  WRITE_ASCIIE 0x248 ~%s_ovr%~ #8
+  WRITE_ASCIIE 0x250 ~%s_cls%~ #8
+  WRITE_ASCIIE 0x258 ~%s_rac%~ #8
+  WRITE_ASCIIE 0x260 ~%s_gen%~ #8
+  WRITE_ASCIIE 0x268 ~%s_def%~ #8
+  WRITE_BYTE  0x270 ea
+  WRITE_ASCII 0x280 ~~ #32 // empty DV for safe multi-instance
+  WRITE_ASCII 0x2cc ~~ #8  // no dialog
+  LPF DELETE_CRE_EFFECT INT_VAR opcode_to_delete = 20 END  // no baked invisibility
+  LPF DELETE_CRE_EFFECT INT_VAR opcode_to_delete = 208 END // no immortal MINHP
+  PATCH_IF clear_items BEGIN
+    LPF cie_clear_all_items END
+  END
+END
+
+// Disable a generic placed filler actor at exact (tx, ty) via schedule = 0.
+DEFINE_PATCH_FUNCTION cie_disable_actor_at
+  INT_VAR tx = 0 ty = 0
+  STR_VAR guard_prefix = ~CIE5_~
+BEGIN
+  READ_LONG  0x54 aoff
+  READ_SHORT 0x58 acnt
+  SET plen = STRING_LENGTH ~%guard_prefix%~
+  SET done = 0
+  FOR (i = 0; i < acnt AND !done; ++i) BEGIN
+    SET here = aoff + 0x110 * i
+    READ_SHORT (here + 0x20) ax
+    READ_SHORT (here + 0x22) ay
+    READ_LONG  (here + 0x40) asched
+    READ_ASCII here anm (plen) NULL
+    PATCH_IF (ax = tx) AND (ay = ty) AND (asched != 0) AND (~%anm%~ STRING_COMPARE_CASE ~%guard_prefix%~) BEGIN
+      WRITE_LONG (here + 0x40) 0
+      SET done = 1
+    END
+  END
+END
+
+// Authoritative placement of a bespoke actor from a 0x110 .actor template.
+DEFINE_PATCH_FUNCTION cie_place_actor
+  STR_VAR template = ~~
+BEGIN
+  INNER_PATCH_FILE ~%template%~ BEGIN
+    READ_ASCII 0 wanted_name (32) NULL
+    READ_SHORT 0x20 wanted_x
+    READ_SHORT 0x22 wanted_y
+    READ_ASCII 0x70 wanted_def (8) NULL
+    READ_ASCII 0x80 wanted_cre (8) NULL
+    READ_ASCII 0 wanted_rec (0x110)
+  END
+  READ_LONG  0x54 aoff
+  READ_SHORT 0x58 acnt
+  SET found = 0 - 1
+  FOR (i = 0; i < acnt; ++i) BEGIN
+    SET here = aoff + 0x110 * i
+    READ_ASCII here nm (32) NULL
+    PATCH_IF (~%nm%~ STRING_EQUAL_CASE ~%wanted_name%~) BEGIN
+      SET found = here
+    END
+  END
+  PATCH_IF (found < 0) BEGIN
+    READ_ASCII aoff old_tbl (0x110 * acnt)
+    SET aoff = BUFFER_LENGTH
+    INSERT_BYTES aoff (0x110 * (acnt + 1))
+    WRITE_ASCIIE aoff ~%old_tbl%~ (0x110 * acnt)
+    SET found = aoff + 0x110 * acnt
+    WRITE_LONG  0x54 aoff
+    WRITE_SHORT 0x58 (acnt + 1)
+  END
+  WRITE_ASCIIE found ~%wanted_rec%~ (0x110)
+  WRITE_SHORT  (found + 0x20) wanted_x
+  WRITE_SHORT  (found + 0x22) wanted_y
+  WRITE_SHORT  (found + 0x24) wanted_x
+  WRITE_SHORT  (found + 0x26) wanted_y
+  WRITE_LONG   (found + 0x28) 9
+  WRITE_LONG   (found + 0x40) 0xffffffff
+  WRITE_ASCIIE (found + 0x70) ~%wanted_def%~ #8
+  WRITE_ASCIIE (found + 0x80) ~%wanted_cre%~ #8
+END
+
+DEFINE_ACTION_FUNCTION cie_place_area_actors
+  STR_VAR folder = ~actors_500~ area = ~~
+BEGIN
+  ACTION_IF FILE_EXISTS_IN_GAME ~%area%.are~ BEGIN
+    ACTION_BASH_FOR ~chriz-iwd-encounters/%folder%/%area%~ ~.*\.actor~ BEGIN
+      COPY_EXISTING ~%area%.are~ ~override~
+        LPF cie_place_actor STR_VAR template = EVAL ~%BASH_FOR_FILESPEC%~ END
+      BUT_ONLY
+    END
+  END
+END
+
+// Strip unconditional BCLAW..GOODBER wipes from a Dispel/Remove Magic SPL ability/block.
+DEFINE_PATCH_FUNCTION cie_strip_unconditional_dispel_items
+  INT_VAR fx_off = 0 first = 0 count = 0
+BEGIN
+  FOR (i = count - 1; i >= 0; --i) BEGIN
+    SET fx = fx_off + (first + i) * 0x30
+    READ_SHORT fx op
+    READ_ASCII (fx + 0x14) res (8) NULL
+    TO_UPPER res
+    PATCH_IF ((op = 112) OR (op = 123)) AND
+        (~%res%~ STRING_EQUAL ~BCLAW~ OR ~%res%~ STRING_EQUAL ~CTOUCH~ OR ~%res%~ STRING_EQUAL ~DECASTA~
+      OR ~%res%~ STRING_EQUAL ~DOBONE~ OR ~%res%~ STRING_EQUAL ~LTOUCH~ OR ~%res%~ STRING_EQUAL ~MOONBLA~
+      OR ~%res%~ STRING_EQUAL ~MSWORD~ OR ~%res%~ STRING_EQUAL ~SHAMME1~ OR ~%res%~ STRING_EQUAL ~SHAMME2~
+      OR ~%res%~ STRING_EQUAL ~SHAMME3~ OR ~%res%~ STRING_EQUAL ~SHILLEL~ OR ~%res%~ STRING_EQUAL ~SMCUDGE~
+      OR ~%res%~ STRING_EQUAL ~FSEEDS~ OR ~%res%~ STRING_EQUAL ~GOODBER~) BEGIN
+      LPF cie_spl_delete_effect INT_VAR index = (first + i) END
+    END
+  END
+END
+
+// Give a boss CRE explicit caster-level Abjuration Fiend Dispel Magic (cloned from SPIN214)
+// and rewrite its CRE spellbook and AI script references cleanly & idempotently.
+DEFINE_ACTION_FUNCTION cie_install_boss_dispel
+  INT_VAR caster_level = 26
+  STR_VAR cre = ~~ cloned_spl = ~~ script_hint = ~~
+BEGIN
+  OUTER_SPRINT cloned_up ~%cloned_spl%~
+  ACTION_TO_UPPER cloned_up
+  ACTION_CLEAR_ARRAY cie_boss_scripts
+  ACTION_IF (~%script_hint%~ STRING_COMPARE ~~) BEGIN
+    OUTER_SPRINT hint_up ~%script_hint%~
+    ACTION_TO_UPPER hint_up
+    OUTER_SET $cie_boss_scripts(~%hint_up%~) = 1
+  END
+  OUTER_SET has_spin214 = FILE_EXISTS_IN_GAME ~spin214.spl~
+  ACTION_IF FILE_EXISTS_IN_GAME ~%cre%.cre~ BEGIN
+    COPY_EXISTING ~%cre%.cre~ ~override~
+      PATCH_IF (BUFFER_LENGTH >= 0x2d4) BEGIN
+        WRITE_BYTE 0x234 caster_level
+        WRITE_BYTE 0x235 caster_level
+        WRITE_BYTE 0x236 caster_level
+        FOR (slot = 0x248; slot < 0x270; slot += 8) BEGIN
+          LPF cie_read_script_slot INT_VAR offset = slot RET sc = script END
+          PATCH_IF (~%sc%~ STRING_COMPARE ~~) BEGIN
+            TO_UPPER sc
+            SET $cie_boss_scripts(~%sc%~) = 1
+          END
+        END
+        PATCH_IF has_spin214 BEGIN
+          READ_LONG 0x2a0 k_off
+          READ_LONG 0x2a4 k_cnt
+          FOR (i = 0; i < k_cnt; ++i) BEGIN
+            SET pos = k_off + i * 12
+            PATCH_IF (pos + 12 <= BUFFER_LENGTH) BEGIN
+              READ_ASCII pos kspl (8) NULL
+              PATCH_IF (~%kspl%~ STRING_EQUAL_CASE ~SPIN214~) BEGIN
+                WRITE_ASCIIE pos ~%cloned_up%~ #8
+              END
+            END
+          END
+          READ_LONG 0x2b0 m_off
+          READ_LONG 0x2b4 m_cnt
+          FOR (i = 0; i < m_cnt; ++i) BEGIN
+            SET pos = m_off + i * 12
+            PATCH_IF (pos + 12 <= BUFFER_LENGTH) BEGIN
+              READ_ASCII pos mspl (8) NULL
+              PATCH_IF (~%mspl%~ STRING_EQUAL_CASE ~SPIN214~) BEGIN
+                WRITE_ASCIIE pos ~%cloned_up%~ #8
+              END
+            END
+          END
+        END
+      END
+    BUT_ONLY
+  END
+  ACTION_IF has_spin214 BEGIN
+    COPY_EXISTING ~spin214.spl~ ~override/%cloned_up%.spl~
+      LPF cie_spl_valid RET valid reason END
+      PATCH_IF valid BEGIN
+        WRITE_BYTE 0x25 1 // Abjuration -> blocked by Spell Immunity: Abjuration
+        READ_LONG  0x64 ab_off
+        READ_SHORT 0x68 ab_cnt
+        FOR (a = 0; a < ab_cnt; ++a) BEGIN
+          READ_LONG  0x64 ab_off
+          READ_LONG  0x6a fx_off
+          SET ab = ab_off + a * 0x28
+          WRITE_SHORT (ab + 0x26) 461
+          READ_SHORT (ab + 0x1e) n
+          READ_SHORT (ab + 0x20) first
+          FOR (i = 0; i < n; ++i) BEGIN
+            SET fx = fx_off + (first + i) * 0x30
+            READ_SHORT fx op
+            PATCH_IF (op = 58) BEGIN
+              WRITE_LONG (fx + 0x04) caster_level
+              WRITE_LONG (fx + 0x08) 0x00020002
+            END ELSE PATCH_IF (op = 171) OR (op = 172) BEGIN
+              READ_ASCII (fx + 0x14) res (8) NULL
+              PATCH_IF (~%res%~ STRING_EQUAL_CASE ~SPIN214~) BEGIN
+                WRITE_ASCIIE (fx + 0x14) ~%cloned_up%~ #8
+              END
+            END
+          END
+          LPF cie_strip_unconditional_dispel_items INT_VAR fx_off first count = n END
+        END
+        READ_LONG  0x6a fx_off
+        READ_SHORT 0x6e cf_first
+        READ_SHORT 0x70 cf_cnt
+        FOR (i = 0; i < cf_cnt; ++i) BEGIN
+          SET fx = fx_off + (cf_first + i) * 0x30
+          READ_SHORT fx op
+          PATCH_IF (op = 58) BEGIN
+            WRITE_LONG (fx + 0x04) caster_level
+            WRITE_LONG (fx + 0x08) 0x00020002
+          END ELSE PATCH_IF (op = 171) OR (op = 172) BEGIN
+            READ_ASCII (fx + 0x14) res (8) NULL
+            PATCH_IF (~%res%~ STRING_EQUAL_CASE ~SPIN214~) BEGIN
+              WRITE_ASCIIE (fx + 0x14) ~%cloned_up%~ #8
+            END
+          END
+        END
+        LPF cie_strip_unconditional_dispel_items INT_VAR fx_off first = cf_first count = cf_cnt END
+      END
+    BUT_ONLY
+    ACTION_PHP_EACH cie_boss_scripts AS sc => unused BEGIN
+      ACTION_IF FILE_EXISTS_IN_GAME ~%sc%.bcs~ BEGIN
+        COPY_EXISTING ~%sc%.bcs~ ~override~
+          DECOMPILE_AND_PATCH BEGIN
+            REPLACE_TEXTUALLY CASE_INSENSITIVE ~HaveSpell(\(INNATE_FIEND_DISPEL_MAGIC\|3214\|SPIN214\))~ ~HaveSpellRES("%cloned_up%")~
+            REPLACE_TEXTUALLY CASE_INSENSITIVE ~HaveSpellRES("SPIN214")~ ~HaveSpellRES("%cloned_up%")~
+            REPLACE_TEXTUALLY CASE_INSENSITIVE ~ReallyForceSpell(\([^,;%LNL%%WNL%]+\),[ %TAB%%LNL%%WNL%]*\(INNATE_FIEND_DISPEL_MAGIC\|3214\|SPIN214\))~ ~ReallyForceSpellRES("%cloned_up%",\1)~
+            REPLACE_TEXTUALLY CASE_INSENSITIVE ~ForceSpell(\([^,;%LNL%%WNL%]+\),[ %TAB%%LNL%%WNL%]*\(INNATE_FIEND_DISPEL_MAGIC\|3214\|SPIN214\))~ ~ForceSpellRES("%cloned_up%",\1)~
+            REPLACE_TEXTUALLY CASE_INSENSITIVE ~Spell(\([^,;%LNL%%WNL%]+\),[ %TAB%%LNL%%WNL%]*\(INNATE_FIEND_DISPEL_MAGIC\|3214\|SPIN214\))~ ~SpellRES("%cloned_up%",\1)~
+            REPLACE_TEXTUALLY CASE_INSENSITIVE ~"SPIN214"~ ~"%cloned_up%"~
+          END
+        BUT_ONLY
+      END
+    END
+  END
+END
