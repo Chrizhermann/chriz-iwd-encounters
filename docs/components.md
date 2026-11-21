@@ -390,6 +390,11 @@ SCS, and with a real party.
   fixes it, nothing changes (the base game teleports him on its own timers, every
   9–26 seconds).
 
+### Sprite
+
+- SCS 35.21 component `6510` (improved fiends and celestials) changes `BELHIF.CRE` (`+0x28`) from his base-game / SoD animation `BELHIFET` (`0xE256`, `E256.INI` `MBE1` with `personal_space=3` and his `belhif1a`–`belhif9` combat/death voices) to `RAVER` (`0x7F2E`, Pit Fiend).
+- **Change:** restores `BELHIFET` (`IDS_OF_SYMBOL (~animate~ ~BELHIFET~)`, falling back to `0xE256`) on `BELHIF.CRE` (`+0x28`), matching the original IWD / IWD:EE / Siege of Dragonspear boss sprite and soundset regardless of install state or prior overrides.
+
 ### Caster-level dispel
 
 - `BELHIF.CRE` sets its class level bytes to 26 and replaces `SPIN214` with
@@ -486,6 +491,11 @@ without SCS, and with a real party.
   spell only outside IWD:EE (`stratagems/fiend/fiend.tpa`), so the block only sets
   her one-round spell timer. While `DW#BATEL.SPL` does not exist, every block of her
   scripts that names it is removed.
+
+### Sprite
+
+- SCS 35.21 component `6510` (improved fiends and celestials) changes `BELHIF.CRE` (`+0x28`) from his base-game / SoD animation `BELHIFET` (`0xE256`, `E256.INI` `MBE1` with `personal_space=3` and his `belhif1a`–`belhif9` combat/death voices) to `RAVER` (`0x7F2E`, Pit Fiend).
+- **Change:** restores `BELHIFET` (`IDS_OF_SYMBOL (~animate~ ~BELHIFET~)`, falling back to `0xE256`) on `BELHIF.CRE` (`+0x28`), matching the original IWD / IWD:EE / Siege of Dragonspear boss sprite and soundset regardless of install state or prior overrides.
 
 ### Caster-level dispel
 
