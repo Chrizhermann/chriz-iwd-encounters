@@ -486,6 +486,9 @@ def main():
                 "no item or effect of Belhifet stops +2 weapons")
         c.check(bel[0x234:0x237] == b"\x1a\x1a\x1a",
                 "Belhifet level bytes are 26/26/26 (%s)" % list(bel[0x234:0x237]))
+        bel_anim, = struct.unpack_from("<I", bel, 0x28)
+        c.check(bel_anim == 0xE256,
+                "Belhifet uses his BELHIFET sprite (0x%04X)" % bel_anim)
         if res.get("SPIN214", "SPL") is not None:
             bdisp = res.get("CIEBELDI", "SPL")
             bdisp_rows = spl_effect_rows(bdisp) if bdisp else []

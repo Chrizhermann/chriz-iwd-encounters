@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.3.1 (2026-11-22)
+
+- **300 (Belhifet's final fight):** Restores Belhifet's base-game / IWD:EE / Siege of Dragonspear `BELHIFET` sprite (`0xE256`, `E256.INI`) and `belhif*` voice lines on `BELHIF.CRE`, overriding SCS 35.21 component `6510`'s Pit Fiend (`0x7F2E`) sprite swap.
+
 ## v0.3.0 (2026-11-21)
 
 - **120 (Baldur's Gate spell rules and fixes):**

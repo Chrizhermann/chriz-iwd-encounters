@@ -16,6 +16,9 @@
 //   - His two cornugons (the base game keeps them on Hard and Insane) come through
 //     Poquelin's portal as a second wave when he falls below two thirds of his hit
 //     points; on Insane a third follows below one third.
+//   - Keeps Belhifet's original BELHIFET (0xE256) sprite and E256.INI voice lines
+//     instead of SCS 6510's RAVER/Pit Fiend replacement (0x7F2E) (Christopher,
+//     2026-11-22).
 //   - Poquelin's transformation no longer dispels the party.
 //   - SCS 35.21's pause between his teleports works.
 // docs/components.md describes each change in engine-neutral terms.
@@ -25,9 +28,14 @@ DEFINE_ACTION_FUNCTION cie_belhifet BEGIN
   LAF cie_area_script STR_VAR area = ~ar1105~ fallback = ~AR1105~ RET cie_area_script = script END
   LAF cie_creature_script STR_VAR creature = ~belhif~ fallback = ~CIEBELAI~ RET cie_bel_script = script END
   OUTER_SET cie_bel_hp = 350
+  OUTER_SET cie_bel_anim = IDS_OF_SYMBOL (~animate~ ~BELHIFET~)
+  ACTION_IF (cie_bel_anim < 0) BEGIN
+    OUTER_SET cie_bel_anim = 0xe256
+  END
   COPY_EXISTING ~belhif.cre~ ~override~
     WRITE_SHORT 0x24 350
     WRITE_SHORT 0x26 350
+    WRITE_LONG 0x28 cie_bel_anim
   BUT_ONLY
 
   LAF cie_belhifet_protections END

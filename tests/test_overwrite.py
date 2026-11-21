@@ -100,6 +100,7 @@ class Overwrite(unittest.TestCase):
             d[0x20:0x24] = b"TEST"
             if name == "belhif":
                 d[0x234:0x237] = bytes([1, 1, 1])
+                struct.pack_into("<I", d, 0x28, 0x7F2E)
             if name == "idol":
                 # Delete the old effect table. The owned movement effect must return.
                 struct.pack_into("<I", d, 0x2c8, 0)
@@ -397,6 +398,7 @@ END
                 if SCENARIO == "edited" and name not in {"CIEPOQ","CIESENTR","LICH","LICH2"}:
                     self.assertEqual(d[0x20:0x24], b"TEST")
         self.assertEqual(self.res.get("BELHIF","CRE")[0x234:0x237], b"\x1a\x1a\x1a")
+        self.assertEqual(long(self.res.get("BELHIF","CRE"), 0x28), 0xE256)
         self.assertEqual(self.res.get("TANARRI","CRE")[0x234:0x237], b"\x12\x12\x12")
         if SCENARIO=="edited":
             donor=self.res.get("SDELFCH1","CRE"); repaired=self.res.get("SDELFCH2","CRE")
