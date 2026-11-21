@@ -151,6 +151,36 @@ nicht nackt sind". Graded by difficulty on 2026-10-28: "ab Core ein paar prebuff
   and priests whose AI is neither an SCS script nor one of the two named above (for
   example priests that other mods add with their own scripts).
 
+## 120: Baldur's Gate spell rules and fixes
+
+Works with and without SCS. Adjusts core spell mechanics and descriptions to follow
+Baldur's Gate caster-level and counterplay rules:
+
+- **Caster-level Dispel / Remove Magic:** Remove Magic (`SPWI302`), Dispel Magic
+  (`SPWI323`, `SPPR303`), Inquisitor Dispel Magic (`SPCL231`), and Fiend Dispel Magic
+  (`SPIN214`) roll against target effect creator levels (50 % base, +5 % per level above,
+  −10 % per level below, 1–99 %) including for magically created weapons instead of IWD's
+  unconditional wipe; `SPPR303`'s self-cast wrapper collapses to a level-1 real dispel,
+  `NISHRUSU`/`HAKSU` carry `SPECIFIC = 25`, area floor traps (`SPWI010`) stay untouched,
+  and English spell/scroll texts describe the level roll.
+- **Minor Spell Deflection (`SPWI318`):** absorbs spell levels 1–4 only, leaving Breach (5)
+  and Pierce Magic (6) able to strip protections cleanly.
+- **Non-stacking image & armor buffs:** Spirit Armor (`SPWI414`), Reflected Image
+  (`SPWI120`), and Mirror Image (`SPWI212`/`SPWI298`) remove previous instances before
+  re-applying; Mirror Image blocks Reflected Image for its duration.
+- **AoE Mirror Image bypass:** spells whose type-3 area-of-effect damage projectiles deal
+  targeted damage (`opcode 12`) bypass Mirror Image (`save_type` bit 24).
+- **Logical immunities:** Web (`SPWI215`) and Grease (`SPWI101`) exclude winged,
+  incorporeal, elemental, and ooze races (plus spiders for Web); Stinking Cloud
+  (`SPWI213`) excludes undead, golems, elementals, and slimes; Spook (`SPWI125`) excludes
+  undead, golems, and True Seeing (`STAT 118 > 0`); Horror (`SPWI205`) excludes undead
+  and golems (`SPLPROT.2DA` + `opcode 324`). Emotion: Hopelessness (`SPWI411`) stays
+  untouched.
+- **Universal school:** Find Familiar (`SPWI123`), Minor Sequencer (`SPWI420`),
+  Contingency (`SPWI617`), Spell Sequencer (`SPWI710`), Spell Trigger (`SPWI809`), Chain
+  Contingency (`SPWI908`), and Wish (`SPWI919`) drop specialist-school restrictions on both
+  the spell and teaching scrolls (`(Universal)` description).
+
 ## 300: Belhifet's final fight
 
 Works with and without SCS. Designed with Christopher on 2026-10-26 ("Denke der
@@ -360,6 +390,14 @@ SCS, and with a real party.
   fixes it, nothing changes (the base game teleports him on its own timers, every
   9–26 seconds).
 
+### Caster-level dispel
+
+- `BELHIF.CRE` sets its class level bytes to 26 and replaces `SPIN214` with
+  `CIEBELDI` (Abjuration school, projectile `461`, BG caster-level `opcode 58` at level 26
+  with `p2 = 0x00020002`, unconditional created-item wipes removed), rewritten across
+  his spellbook and AI script (`EEBELHI1`), remaining lethal against 3M+ XP Heart of Winter
+  parties while blocked by *Spell Immunity: Abjuration*.
+
 ## 310: Yxunomei and her temple
 
 Works with and without SCS. Designed with Christopher on 2026-11-03 and 2026-11-04,
@@ -448,6 +486,14 @@ without SCS, and with a real party.
   spell only outside IWD:EE (`stratagems/fiend/fiend.tpa`), so the block only sets
   her one-round spell timer. While `DW#BATEL.SPL` does not exist, every block of her
   scripts that names it is removed.
+
+### Caster-level dispel
+
+- `TANARRI.CRE` sets its class level bytes to 18 and replaces `SPIN214` with
+  `CIEYXUDI` (Abjuration school, projectile `461`, BG caster-level `opcode 58` at level 18
+  with `p2 = 0x00020002`, unconditional created-item wipes removed), rewritten across
+  her spellbook and AI script (`D5YXUN`), staying dangerous to buffed parties unless
+  countered by *Spell Immunity: Abjuration*.
 
 ### Not changed
 
@@ -675,9 +721,10 @@ hostile, force-casts Heavenly Inferno and jumps to `[817.551]`; two bronze sentr
 five waves of five creatures follow, 20 seconds apart (`AR8013.BCS`). Below half his hit
 points he escapes: the movie `RETURN` plays and the party is moved to Easthaven.
 
-- **Hit points:** 420 (base game 250): the escape comes after 210 damage instead of
-  125, so his waves and spells come into play. On a copy of his creature (`CIEPOQ`) for
-  this cave only: the finale in Easthaven places the same creature file, unchanged.
+- **Hit points:** 310 (base game 250; lowered from 420): the escape comes after 155 damage
+  instead of 125, keeping the cave fair while giving his waves room to engage. On a copy
+  of his creature (`CIEPOQ`) for this cave only: the finale in Easthaven places the same
+  creature file, unchanged.
 - **The jump:** once between three quarters and half his hit points, a Dimension Door
   to the other of his two places (where he stands and where his opener jumps to), then
   Fire Storm around himself (he is immune to fire). His script sets `CIE_POQ_WAVE`; the
@@ -936,6 +983,33 @@ Dimension Door and landed at one of his points ([604.826]). Before the hero fix,
 `TRSPH1` raised only `SPRITE_IS_DEADAR9711_HERO` and no replacement came; with it,
 `TRSPH4` appeared 1.5 seconds after `TRSPH1` died and `TRSPH5` after `TRSPH2`. Not tested
 in the game: his Dispel Magic (the install checks cover it), without SCS, with a real party.
+
+## 420: Main campaign overhaul (Chapters 2–6)
+
+Works with and without SCS across Chapters 2–6 (`AR3101`–`AR8007`):
+
+- **Curated horde compression (~40–50 %):** disables repeating filler clones across the
+  Vale of Shadows, Dragon's Eye, Severed Hand, Dorn's Deep, Wyrm's Tooth, and Marketh's
+  Palace (24 of 29 `LDDTHIE2`/`LDDTHIE3` thieves removed, `AR6001.INI` myconids 63 to 33,
+  halved `AR5002` worg/goblin spawns, empty dead-end alcoves), while keeping every quest
+  NPC, dialog actor, `#PRST_DV`, `#5104_DV`, `WTVERBET`, `NEOOROGC`, and `Genek` intact.
+- **Kresselack's Antechamber (`AR3503`):** preserves all 52 undead in 3 timed waves (Wave 1
+  immediately, Wave 2 `GNTEAM3M`–`6M` at 27 s, Wave 3 `GNTEAM7M` at 54 s, or immediately if
+  spotted or attacked) so `Shout(89)` never pulls all 52 at once.
+- **Terikan (`AR6005`/`AR6006`):** raises HP to 115, keeps vanilla `60 s`/`120 s` phylactery
+  respawns (`LICH` remains 0 XP; `LICH2` yields 18,000 XP), grants innate level 1–3 spell
+  immunity (`CIELICIM`) so Lv 4+ Secret Word / Breach pierce him cleanly, fires immediate
+  `MYAREA` rally in `UDLICH1`, and rallies the 12 tomb undead in `AR6005` (`CIE605_M01`–`12`)
+  and 3 greater mummies in `AR6006` (`CIE606_M01`–`03`), excluding `Genek`.
+- **Tarnsen & Ginafae repairs:** `TARNSEN` swaps `GNMBG9GH` and throwing axe `AX1H04` for
+  melee AI (`DWMESVGE`/`GNMMG9GH`) and `AX1H01`; `DGINA2.DLG` state 19 checks
+  `SPRITE_IS_DEADMarketh` instead of `Marketh_Dead`.
+- **Upgraded regulars & 5 named elite squads (`CIE401`–`CIE429`):** stronger Severed Hand
+  fighters/officers/Lv 10–11 tower casters, 2-APR `GIANTFN`, stronger `WYRM`/`BIKNIGHT`,
+  and 5 *Drasus*/*Iron Throne*-style squads (Talonite Inner Circle `AR4002`, Fallen Elven
+  War Council `AR5104`, Orog Warlord Command `AR6003`, Kontik's Aurilite Specialists
+  `AR7004` starting neutral on `GNTEAM2`, and Kraken Society Elite `AR8007`) balancing each
+  chapter within ±2 % net XP.
 
 ## 500: Heart of Winter and Trials of the Luremaster expansion overhaul
 

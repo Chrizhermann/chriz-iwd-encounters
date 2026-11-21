@@ -1,0 +1,19 @@
+IF
+  Global("CIE_TERIKAN_INIT","LOCALS",0)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_TERIKAN_INIT","LOCALS",1)
+    ApplySpellRES("CIELICIM",Myself)
+    Continue()
+END
+
+IF
+  See(NearestEnemyOf(Myself))
+  Global("LICH_MINIONS_FOLLOW","MYAREA",0)
+  Global("CIE_TERIKAN_RALLY","LOCALS",0)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_TERIKAN_RALLY","LOCALS",1)
+    SetGlobal("LICH_MINIONS_FOLLOW","MYAREA",1)
+    Continue()
+END

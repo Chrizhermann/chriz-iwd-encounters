@@ -1,0 +1,34 @@
+IF
+  Global("CIE_AWAKE","LOCALS",0)
+  GlobalLT("CIE_3503_WAVE","MYAREA",2)
+  !See([GOODCUTOFF])
+  !AttackedBy([GOODCUTOFF],DEFAULT)
+  !TookDamage()
+THEN
+  RESPONSE #100
+    NoAction()
+END
+
+IF
+  Global("CIE_AWAKE","LOCALS",0)
+  OR(4)
+    GlobalGT("CIE_3503_WAVE","MYAREA",1)
+    See([GOODCUTOFF])
+    AttackedBy([GOODCUTOFF],DEFAULT)
+    TookDamage()
+THEN
+  RESPONSE #100
+    SetGlobal("CIE_AWAKE","LOCALS",1)
+    SetGlobal("MAP_GROUP_HOSTILE7","MYAREA",1)
+    Enemy()
+    Continue()
+END
+
+IF
+  Global("CIE_AWAKE","LOCALS",1)
+  ActionListEmpty()
+  !See([GOODCUTOFF])
+THEN
+  RESPONSE #100
+    MoveToObject(Player1)
+END

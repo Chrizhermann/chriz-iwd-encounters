@@ -1,5 +1,6 @@
 @100 = ~Repair Sword Coast Stratagems caster AI that misses some IWD:EE casters~
 @110 = ~Party banter starts only between living party members in one area (stops a crash with the Crossmod Banter Pack)~
+@120 = ~Baldur's Gate spell rules and fixes (caster-level Dispel/Remove Magic, Minor Spell Deflection L1-4, non-stacking Mirror/Reflected/Spirit Armor, AoE Mirror Image bypass, logical Web/Grease/Stinking Cloud/Spook/Horror immunities, Universal utility schools)~
 @200 = ~Enemy priests prepare when they first see the party (Core Rules and up)~
 @300 = ~Belhifet's final fight: no blanket spell immunity, more hit points by difficulty, his cornugons as a second wave~
 @310 = ~Yxunomei's temple: her mages come when the fight starts, her champions join her, yuan-ti elites on Hard and Insane~
@@ -13,6 +14,7 @@
 @390 = ~Icasaracht's lair: more hit points for her and her soul gem, no second gem, the second underpriestess repaired~
 @400 = ~Lord Maluradek: his banishment rooms fill with animated plates that fight, more hit points, all rooms awake below half~
 @410 = ~The Luremaster: he opens with Improved Invisibility, hops away when an enemy reaches him, his Dispel Magic works~
+@420 = ~Main campaign overhaul (Ch. 2-6): curated filler thinning, Drasus/Iron-Throne-style squads, Severed Hand/Terikan/AR3503/Tarnsen/DGINA2 fixes~
 @500 = ~Heart of Winter & Trials of the Luremaster: curated encounters, thinned hordes, and AR9602 repair~
 
 @501 = ~Rimehorn Runecaster~
@@ -49,6 +51,227 @@
 @532 = ~Primordial Earth-Titan~
 @533 = ~Malarite Fang-Hierophant~
 
+@1201 = ~Remove Magic
+(Abjuration)
+
+Level: 3
+Range: 40 ft.
+Duration: Instant
+Casting Time: 3
+Area of Effect: 15-ft. radius
+Saving Throw: None
+
+This is the combat version of Dispel Magic; it affects opponents only. Each affected target's magical effects have a 50% base chance to be dispelled, adjusted by +5% per caster level above the effect's creator level and -10% per caster level below (minimum 1%, maximum 99%). This includes magically created items (subject to the same level roll) and the effects of spells and potions, though it does not affect permanent magical items.~
+@1202 = ~Dispel Magic
+(Abjuration)
+
+Level: 3
+Range: Visual range of the caster
+Duration: Instant
+Casting Time: 3
+Area of Effect: 15-ft. radius
+Saving Throw: None
+
+Dispel Magic attempts to remove magical effects upon anyone within the area of effect, using a 50% base chance adjusted by +5% per caster level above the creator level and -10% per caster level below (minimum 1%, maximum 99%). This includes magically created items (subject to the same level roll) and the effects of spells and potions, though it does not affect permanent magical items.~
+@1203 = ~Dispel Magic
+(Abjuration)
+
+Level: 3
+Sphere: Protection
+Range: Visual range of the caster
+Duration: Instant
+Casting Time: 6
+Area of Effect: 15-ft. radius
+Saving Throw: None
+
+Dispel Magic attempts to remove magical effects upon anyone within the area of effect, including deafness and feeblemindedness, using a 50% base chance adjusted by +5% per caster level above the creator level and -10% per caster level below (minimum 1%, maximum 99%). This includes magically created items (subject to the same level roll) and the effects of spells and potions, though it does not affect permanent magical items.~
+@1204 = ~Minor Spell Deflection
+(Abjuration)
+
+Level: 3
+Range: 0
+Duration: 3 rounds/level
+Casting Time: 3
+Area of Effect: The caster
+Saving Throw: None
+
+This spell is similar to the 6th-level spell Spell Deflection, causing spells cast against the wizard to be absorbed and consumed. This spell affects a total of 4 spell levels, including spells cast from scrolls and innate spell-like abilities, but excludes area effects that are not centered directly upon the wizard and stationary area effects such as Cloudkill and Stinking Cloud.
+
+This spell affects up to 4th-level spells only; 5th-level and higher spells such as Breach and Pierce Magic bypass it. It does not protect the caster from Dispel Magic, nor is it dispelled by Dispel Magic.~
+@1205 = ~Find Familiar
+(Universal)
+
+Level: 1
+Range: 0
+Duration: Permanent
+Casting Time: 9
+Area of Effect: Special
+Saving Throw: None
+
+This spell enables the caster to attempt to summon a familiar to act as <PRO_HISHER> aide and companion. Familiars are typically small creatures. A creature acting as a familiar can benefit a wizard, conveying its sensory powers to its master, conversing with <PRO_HIMHER>, and serving as a guard/scout/spy as well. A wizard can have only one familiar at a time, and <PRO_HESHE> has no control over what sort of creature answers the summoning, if any come at all.
+
+Note: Only one party member may have a familiar.
+
+The creature is always more intelligent than others of its type (typically by 2 or 3 Intelligence points), and its bond with the wizard confers upon it an exceptionally long life. The wizard has an empathic link with the familiar and can issue it mental commands. The caster receives half the familiar's total Hit Points (rounded down) as bonus Hit Points. However, the caster must take care to treat <PRO_HISHER> familiar well, for if the familiar should die, the caster loses the bonus Hit Points and the familiar's Hit Points again as damage. Also when a familiar dies, the caster loses 1 point of Constitution PERMANENTLY.
+
+Example: A Mage has 12 Hit Points and casts Find Familiar. The imp summoned has 9 Hit Points, so the caster gets a bonus of 4 Hit Points. The caster now has 16 Hit Points. If the familiar dies, the caster loses those 4 Hit Points (putting <PRO_HIMHER> back at 12), loses 1 point of Constitution permanently (which may cause additional Hit Point loss), and takes 9 damage.
+
+Here is a list of the familiars that the player receives according to alignment:
+
+LAWFUL GOOD, NEUTRAL GOOD: Pseudo Dragon
+- Hit Points: 12
+- Armor Class: 0
+- Magic Resistance: 35%
+- Combat: 2 attacks per round at 19 THAC0 for 1d3 slashing damage
+- Special Abilities: Can cast Blur once per day. Regenerates 1 HP/round. Immune to level drain, sleep, and petrification.
+
+CHAOTIC GOOD: Fairy Dragon
+- Hit Points: 12
+- Armor Class: 6
+- Magic Resistance: 25%
+- Combat: 2 attacks per round at 19 THAC0 for 1d2 slashing damage
+- Special Abilities: Can cast Mirror Image once per day. Has 100% resistance to fire and 125% resistance to electricity. Immune to level drain, sleep, and petrification.
+
+LAWFUL NEUTRAL: Ferret
+- Hit Points: 12
+- Armor Class: 2
+- Magic Resistance: 35%
+- Combat: 2 attacks per round at 19 THAC0 for 1d3 slashing damage
+- Special Abilities: Has 20% in Find Traps, 50% in Pick Pockets, and 25% in Hide in Shadows/Move Silently. Can cast Blur once per day. Immune to level drain, sleep, and petrification.
+
+TRUE NEUTRAL: Rabbit
+- Hit Points: 12
+- Armor Class: 3
+- Magic Resistance: 45%
+- Combat: 2 attacks per round at 15 THAC0 for 1d2 slashing damage
+- Special Abilities: Has 40% in Find Traps and 20% in Move Silently/Hide In Shadows. Has 125% resistance to fire and 75% resistance to cold, electricity, and acid. Immune to level drain, sleep, and petrification.
+
+CHAOTIC NEUTRAL: Cat
+- Hit Points: 12
+- Armor Class: 2
+- Magic Resistance: 35%
+- Combat: 2 attacks per round at 19 THAC0 for 1d3 slashing damage
+- Special Abilities: Has 15% in Pick Pockets and 65% in Move Silently/Hide In Shadows. Can cast Blur once per day. Immune to level drain, sleep, and petrification.
+
+LAWFUL EVIL: Imp
+- Hit Points: 9
+- Armor Class: 4
+- Magic Resistance: 15%
+- Combat: 1 attack per round at 21 THAC0 for 1d6 slashing damage
+- Special Abilities: Has 100% resistance to fire, cold, and electricity. Can cast Polymorph Self once per day. Regenerates 1 HP/round.
+
+NEUTRAL EVIL: Dust Mephit
+- Hit Points: 12
+- Armor Class: 8
+- Magic Resistance: 10%
+- Combat: 2 attacks per round at 15 THAC0 for 1d2 slashing damage
+- Special Abilities: Has 100% resistance to fire and 35% resistance to slashing, piercing, and missile damage. Can cast Glass Dust twice per day. Regenerates 1 HP/round. Immune to level drain, sleep, and petrification.
+
+CHAOTIC EVIL: Quasit
+- Hit Points: 12
+- Armor Class: 4
+- Magic Resistance: 15%
+- Combat: 2 attacks per round at 19 THAC0 for 1d6 slashing damage
+- Special Abilities: Has 100% resistance to fire, cold, and electricity and 35% resistance to slashing, piercing, and missile. Can cast Horror once per day. Regenerates 1 HP/round.~
+@1206 = ~Minor Sequencer
+(Universal)
+
+Level: 4
+Range: 0
+Duration: Permanent until activated
+Casting Time: 9
+Area of Effect: Special
+Saving Throw: None
+
+This spell allows a wizard to store two spells and activate them both at the same time from <PRO_HISHER> Special Abilities menu. Both spells must be of 2nd level or lower. To create a sequencer, a wizard must memorize not only Minor Sequencer but the spells <PRO_HESHE> intends to store in it (a Sorcerer can store spells of any level for which <PRO_HESHE> still has spell slots). After casting Minor Sequencer, the player will be prompted to choose the sequenced spells from those <PRO_HESHE> has memorized.
+
+A sequencer lasts until activated and, once used, releases its spells immediately (no casting time). The Special Abilities icon also disappears until the next time a sequencer is formed. A wizard can possess only one Minor Sequencer at a time, and it cannot be given to other characters.~
+@1207 = ~Contingency
+(Universal)
+
+Level: 6
+Range: 0
+Duration: Permanent until triggered
+Casting Time: 9
+Area of Effect: The caster
+Saving Throw: None
+
+Upon casting this spell, the wizard is allowed to choose a spell out of <PRO_HISHER> repertoire of known spells. One spell level every 3 levels of the caster is allowed -- up to 6th-level spells at 18th level. Once the spell is chosen, the caster can choose a condition of some kind from the list provided. The starting condition can be anything from reaching 10% of <PRO_HISHER> Hit Points to an enemy being sighted. Once this starting condition is satisfied, the spell that was chosen will be cast automatically.
+
+For example, a 12th-level wizard could place the spell Stoneskin in a contingency with the starting condition being "the wizard reaches 50% of <PRO_HISHER> Hit Points." Once the wizard is reduced to 50% of <PRO_HISHER> Hit Points or below, Stoneskin would be immediately cast upon <PRO_HIMHER>. This requires no action by the wizard, but happens automatically and instantaneously.
+
+A limitation of this spell is that the target of the spell placed in the contingency must be the caster. Therefore, it should not be an offensive spell, nor can it target any other party members.~
+@1208 = ~Spell Sequencer
+(Universal)
+
+Level: 7
+Range: 0
+Duration: Permanent until activated
+Casting Time: 9
+Area of Effect: Special
+Saving Throw: None
+
+This spell allows a wizard to store three spells and activate them all at the same time from <PRO_HISHER> Special Abilities menu. All spells must be of 4th level or lower. To create a sequencer, a wizard must memorize not only Spell Sequencer but the spells <PRO_HESHE> intends to store in it (a Sorcerer can store spells of any level for which <PRO_HESHE> still has spell slots). After casting Spell Sequencer, the player will be prompted to choose the sequenced spells from those <PRO_HESHE> has memorized.
+
+A sequencer lasts until activated and, once used, releases its spells immediately (no casting time). The Special Abilities icon also disappears until the next time a sequencer is formed. A wizard can possess only one Spell Sequencer at a time, and it cannot be given to other characters.~
+@1209 = ~Spell Trigger
+(Universal)
+
+Level: 8
+Range: 0
+Duration: Permanent until activated
+Casting Time: 9
+Area of Effect: The caster
+Saving Throw: None
+
+This spell allows a wizard to store spells in a magical ability (accessed via the Special Abilities menu) that is created by the spell. This item, the trigger, can store three spells to be released simultaneously, all of which must be of 6th level or lower. A wizard can only possess one spell trigger at a time, and the trigger cannot be given to other characters. Once the spell trigger is used, the icon will disappear from the Special Abilities button.~
+@1210 = ~Chain Contingency
+(Universal)
+
+Level: 9
+Range: 0
+Duration: Permanent until triggered
+Casting Time: 9
+Area of Effect: The caster
+Saving Throw: None
+
+Chain Contingency channels some of the magical energy of the wizard and releases it only under certain circumstances. The wizard chooses three spells that will be released under certain conditions, such as being hit by an enemy. When this condition occurs, all three spells are cast immediately. Spells of 8th level or lower may be used in the contingency.~
+@1211 = ~Wish
+(Universal)
+
+Level: 9
+Range: 0
+Duration: Special
+Casting Time: 5
+Area of Effect: Special
+Saving Throw: None
+
+Wish is a more potent version of the Limited Wish spell. It will fulfill literally the utterance of the spellcaster. Thus, the actuality of the past, present, or future might be altered (but possibly only for the wizard unless the wording of the spell is most carefully stated) in some limited manner. Greedy desires usually end in disaster for the wisher.
+
+The wiser the wizard, the better chance that <PRO_HESHE> will choose the right wording. Wizards with low Wisdom will more often than not meet with disaster when asking for a wish.~
+
+@4201 = ~Talonite Shield-Vanguard~
+@4202 = ~Talonite Venom-Archer~
+@4203 = ~Talonite Stormcaller~
+@4204 = ~Talonite War-Mage~
+@4210 = ~Fallen Blade-Captain~
+@4211 = ~Shadowed High Battlemage~
+@4212 = ~Shadowed Deadeye Sniper~
+@4213 = ~Corrupted Hierophant~
+@4214 = ~Shadowblade Assassin~
+@4215 = ~Fallen Ward-Guard~
+@4216 = ~Orog Warlord Champion~
+@4217 = ~Orog War-Shaman~
+@4218 = ~Orog Skullsplitter~
+@4220 = ~Aurilite Frostblade~
+@4221 = ~Aurilite Cryomancer~
+@4222 = ~Aurilite Icebow Stalker~
+@4225 = ~Kraken Archmage Envoy~
+@4226 = ~Kraken Heavy Enforcer~
+@4227 = ~Deep Kraken Inquisitor~
+@4228 = ~Kraken Nightblade~
+@4229 = ~Kraken Crossbow Marksman~
+
 @9000 = ~This mod is for Icewind Dale: Enhanced Edition.~
 @9001 = ~This component needs Sword Coast Stratagems' smarter mages or smarter priests.~
 @9002 = ~This component needs Sword Coast Stratagems' smarter priests.~
@@ -65,3 +288,4 @@
 @9013 = ~This component needs Lord Maluradek (lordm.cre) and his floor (ar9712.are).~
 @9014 = ~This component needs the Luremaster (trgbard.cre) and his hall (ar9711.are).~
 @9015 = ~This component needs Heart of Winter and Trials of the Luremaster (ar9500.are, ar9714.are).~
+@9016 = ~This component needs the main campaign areas (ar4002.are, ar8007.are).~

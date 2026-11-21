@@ -14,7 +14,7 @@ spec.loader.exec_module(check)
 
 class Templates(unittest.TestCase):
     def test_actor_records_are_external_named_placements(self):
-        for folder in ("actors", "actors_500"):
+        for folder in ("actors", "actors_420", "actors_500"):
             for path in (MOD / folder).glob("*/*.actor"):
                 with self.subTest(path=str(path.relative_to(MOD))):
                     d = path.read_bytes()
@@ -39,11 +39,17 @@ class Templates(unittest.TestCase):
                 self.assertLessEqual(0xc8 + 4 * end, len(d))
 
     def test_spawn_sections_are_complete(self):
-        for path in (MOD / "ini").glob("*.ini"):
-            text = path.read_text(encoding="utf-8").lower()
-            self.assertIn("[" + path.stem + "]", text)
-            for key in ("cre_file", "spec", "spawn_point", "script_override"):
-                self.assertRegex(text, r"(?m)^" + key + r"\s*=\s*\S+")
+        for folder in ("ini", "ini_420"):
+            for path in (MOD / folder).glob("*.ini"):
+                text = path.read_text(encoding="utf-8").lower()
+                stem_section = path.stem.removesuffix("_main")
+                self.assertIn("[" + stem_section + "]" if "[" + stem_section + "]" in text else "[spawn_main]", text)
+                for key in ("cre_file", "spec", "spawn_point", "script_override"):
+                    if folder == "ini":
+                        self.assertRegex(text, r"(?m)^" + key + r"\s*=\s*\S+")
+                    else:
+                        if key in ("cre_file", "spec", "spawn_point"):
+                            self.assertRegex(text, r"(?m)^" + key + r"\s*=\s*\S+")
 
     def test_private_spells_have_complete_effect_tables(self):
         for path in (MOD / "data").glob("*.spl"):

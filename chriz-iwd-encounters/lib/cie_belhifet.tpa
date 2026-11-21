@@ -38,6 +38,7 @@ DEFINE_ACTION_FUNCTION cie_belhifet BEGIN
   LAF cie_belhifet_no_dispel END
   LAF cie_belhifet_teleport_pause END
   LAF cie_belhifet_second_wave END
+  LAF cie_belhifet_dispel END
 END
 
 // Immunity to spell levels 1-3 instead of every level, +2 weapons hit him,
@@ -794,4 +795,10 @@ DEFINE_ACTION_FUNCTION cie_belhifet_second_wave BEGIN
       PRINT ~chriz-iwd-encounters: on Insane a third cornugon (CIEBELC3, from %cie_c1_cre%) comes at [%cie_c3_x%.%cie_c3_y%].~
     END
   END
+END
+
+// High caster-level Abjuration dispel (L26 CIEBELDI) vs 3M+ XP parties, blocked by SI: Abjuration.
+DEFINE_ACTION_FUNCTION cie_belhifet_dispel BEGIN
+  LAF cie_install_boss_dispel INT_VAR caster_level = 26 STR_VAR cre = ~belhif~ cloned_spl = ~CIEBELDI~ script_hint = ~EEBELHI1~ END
+  PRINT ~chriz-iwd-encounters: Belhifet uses caster level 26 Abjuration Dispel Magic (CIEBELDI).~
 END

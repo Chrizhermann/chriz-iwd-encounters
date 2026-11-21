@@ -5,106 +5,20 @@
 // spellcasters with full SCS spellbooks and net XP preserved. Works with and
 // without SCS.
 
-// Strip non-generic MYAREA, Malavon warp, StartCutSceneMode, and NumTimesTalkedTo
-// blocks directly on a compiled SCS caster BCS without decompiling (preserves
-// GTIMES.IDS timers byte-for-byte). Falls back to an authored BAF without SCS.
+// Shared helper wrappers (implementations live in cie_shared.tpa).
 DEFINE_ACTION_FUNCTION cie500_build_caster_script
   STR_VAR donor = ~~ fallback_baf = ~~ target = ~~
 BEGIN
-  OUTER_SET used_scs = 0
-  ACTION_IF FILE_EXISTS_IN_GAME ~%donor%.bcs~ BEGIN
-    COPY_EXISTING - ~%donor%.bcs~ nowhere
-      PATCH_IF (INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~instantprep~) >= 0) BEGIN
-        SET used_scs = 1
-      END
-  END
-  ACTION_IF used_scs BEGIN
-    COPY_EXISTING ~%donor%.bcs~ ~override/%target%.bcs~
-      REPLACE_TEXTUALLY EXACT_MATCH ~%WNL%~ ~%LNL%~
-      SET pos = 0
-      WHILE (pos >= 0) BEGIN
-        SET bstart = INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~CR%LNL%CO%LNL%~ pos)
-        PATCH_IF (bstart < 0) BEGIN
-          SET pos = 0 - 1
-        END ELSE BEGIN
-          SET bend = INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~RS%LNL%CR%LNL%~ bstart)
-          PATCH_IF (bend < 0) BEGIN
-            SET pos = 0 - 1
-          END ELSE BEGIN
-            SET blen = bend + 6 - bstart
-            READ_ASCII bstart blk (blen)
-            SET drop = 0
-            INNER_PATCH ~%blk%~ BEGIN
-              PATCH_IF (INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~"MYAREA~) >= 0)
-                  OR (INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~MALAVON~) >= 0)
-                  OR (INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~AC%LNL%120OB~) >= 0)
-                  OR (INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~AC%LNL%121OB~) >= 0)
-                  OR (INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~AC%LNL%198OB~) >= 0)
-                  OR (INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~TR%LNL%16441 ~) >= 0)
-                  OR (INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~TR%LNL%16442 ~) >= 0)
-                  OR (INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~TR%LNL%16443 ~) >= 0) BEGIN
-                SET drop = 1
-              END
-            END
-            PATCH_IF drop BEGIN
-              DELETE_BYTES bstart blen
-              SET pos = bstart
-            END ELSE BEGIN
-              SET pos = bstart + blen
-            END
-          END
-        END
-      END
-  END ELSE BEGIN
-    COPY ~chriz-iwd-encounters/baf/%fallback_baf%.baf~ ~override/%target%.bcs~
-      COMPILE_BAF_TO_BCS
-  END
+  LAF cie_build_caster_script STR_VAR donor fallback_baf target END
 END
 
-// Copy 400-byte soundset (0xA4..0x233) and animation ID (0x28) from a visual donor.
 DEFINE_ACTION_FUNCTION cie500_apply_look_and_voice
   INT_VAR anim_override = 0 - 1
   STR_VAR cre = ~~ visual_donor = ~~
 BEGIN
-  ACTION_IF FILE_EXISTS_IN_GAME ~%visual_donor%.cre~ BEGIN
-    COPY_EXISTING - ~%visual_donor%.cre~ nowhere
-      READ_LONG 0x28 v_anim
-      READ_ASCII 0x2c v_colors (7)
-      READ_ASCII 0xa4 v_sounds (400)
-      READ_BYTE 0x271 v_general
-      READ_BYTE 0x272 v_race
-      READ_BYTE 0x275 v_gender
-    COPY_EXISTING ~%cre%.cre~ ~override~
-      PATCH_IF (anim_override >= 0) BEGIN
-        WRITE_LONG 0x28 anim_override
-      END ELSE BEGIN
-        WRITE_LONG 0x28 v_anim
-      END
-      WRITE_ASCIIE 0x2c ~%v_colors%~ (7)
-      WRITE_ASCIIE 0xa4 ~%v_sounds%~ (400)
-      WRITE_BYTE 0x271 v_general
-      WRITE_BYTE 0x272 v_race
-      WRITE_BYTE 0x275 v_gender
-    BUT_ONLY
-  END
+  LAF cie_apply_look_and_voice INT_VAR anim_override STR_VAR cre visual_donor END
 END
 
-// Remove all existing items from a cloned CRE so donor quest/unique drops never leak.
-DEFINE_PATCH_FUNCTION cie500_clear_all_items BEGIN
-  READ_LONG 0x2bc ioff
-  READ_LONG 0x2c0 icnt
-  FOR (k = icnt - 1; k >= 0; k -= 1) BEGIN
-    READ_ASCII (ioff + 0x14 * k) ires (8) NULL
-    PATCH_IF (~%ires%~ STRING_COMPARE ~~) BEGIN
-      REMOVE_CRE_ITEM ~%ires%~
-      READ_LONG 0x2bc ioff
-      READ_LONG 0x2c0 icnt
-      PATCH_IF (k > icnt) BEGIN SET k = icnt END
-    END
-  END
-END
-
-// Authoritative owned stats & scripts on a bespoke CIE5xx creature.
 DEFINE_PATCH_FUNCTION cie500_set_core
   INT_VAR name_tra = 0 xp = 0 hp = 100 ac = 0 thac0 = 5 apr = 2
           sv1 = 5 sv2 = 6 sv3 = 6 sv4 = 7 sv5 = 6
@@ -112,68 +26,14 @@ DEFINE_PATCH_FUNCTION cie500_set_core
           lvl1 = 15 lvl2 = 1
   STR_VAR s_ovr = ~~ s_cls = ~~ s_rac = ~~ s_gen = ~~ s_def = ~~
 BEGIN
-  WRITE_LONG  0x14 xp
-  WRITE_LONG  0x20 0 // live state (never dead/stone)
-  WRITE_SHORT 0x24 hp
-  WRITE_SHORT 0x26 hp
-  WRITE_SHORT 0x46 ac
-  WRITE_SHORT 0x48 ac
-  WRITE_BYTE  0x52 thac0
-  WRITE_BYTE  0x53 apr
-  WRITE_BYTE  0x54 sv1
-  WRITE_BYTE  0x55 sv2
-  WRITE_BYTE  0x56 sv3
-  WRITE_BYTE  0x57 sv4
-  WRITE_BYTE  0x58 sv5
-  WRITE_BYTE  0x59 rfir
-  WRITE_BYTE  0x5a rcld
-  WRITE_BYTE  0x5b rele
-  WRITE_BYTE  0x5c racd
-  WRITE_BYTE  0x5d mr
-  WRITE_BYTE  0x5e rfir
-  WRITE_BYTE  0x5f rcld
-  WRITE_BYTE  0x60 rsl
-  WRITE_BYTE  0x61 rcr
-  WRITE_BYTE  0x62 rpi
-  WRITE_BYTE  0x63 rmi
-  WRITE_BYTE  0x234 lvl1
-  WRITE_BYTE  0x235 lvl2
-  WRITE_BYTE  0x238 19 // STR
-  WRITE_BYTE  0x23a 16 // INT
-  WRITE_BYTE  0x23b 16 // WIS
-  WRITE_BYTE  0x23c 17 // DEX
-  WRITE_BYTE  0x23d 16 // CON
-  WRITE_ASCIIE 0x248 ~%s_ovr%~ #8
-  WRITE_ASCIIE 0x250 ~%s_cls%~ #8
-  WRITE_ASCIIE 0x258 ~%s_rac%~ #8
-  WRITE_ASCIIE 0x260 ~%s_gen%~ #8
-  WRITE_ASCIIE 0x268 ~%s_def%~ #8
-  WRITE_BYTE  0x270 255 // ENEMY
-  WRITE_ASCII 0x280 ~~ #32 // empty DV for safe multi-instance
-  WRITE_ASCII 0x2cc ~~ #8  // no dialog
-  LPF DELETE_CRE_EFFECT INT_VAR opcode_to_delete = 20 END  // no baked invisibility
-  LPF DELETE_CRE_EFFECT INT_VAR opcode_to_delete = 208 END // no immortal MINHP
-  LPF cie500_clear_all_items END
+  LPF cie_set_core INT_VAR xp hp ac thac0 apr sv1 sv2 sv3 sv4 sv5 rfir rcld rele racd mr rsl rcr rpi rmi lvl1 lvl2
+    STR_VAR s_ovr s_cls s_rac s_gen s_def END
 END
 
-// Disable a generic placed filler actor at exact (tx, ty) via schedule = 0.
 DEFINE_PATCH_FUNCTION cie500_disable_actor_at
   INT_VAR tx = 0 ty = 0
 BEGIN
-  READ_LONG  0x54 aoff
-  READ_SHORT 0x58 acnt
-  SET done = 0
-  FOR (i = 0; i < acnt AND !done; ++i) BEGIN
-    SET here = aoff + 0x110 * i
-    READ_SHORT (here + 0x20) ax
-    READ_SHORT (here + 0x22) ay
-    READ_LONG  (here + 0x40) asched
-    READ_ASCII here anm (5) NULL
-    PATCH_IF (ax = tx) AND (ay = ty) AND (asched != 0) AND (~%anm%~ STRING_COMPARE_CASE ~CIE5_~) BEGIN
-      WRITE_LONG (here + 0x40) 0
-      SET done = 1
-    END
-  END
+  LPF cie_disable_actor_at INT_VAR tx ty STR_VAR guard_prefix = ~CIE5_~ END
 END
 
 // Restore one AR9602.ARE placed actor row (fixes SCS 6040's 64x XACTILE overwrite)
@@ -223,54 +83,13 @@ END
 DEFINE_PATCH_FUNCTION cie500_place_actor
   STR_VAR template = ~~
 BEGIN
-  INNER_PATCH_FILE ~%template%~ BEGIN
-    READ_ASCII 0 wanted_name (32) NULL
-    READ_SHORT 0x20 wanted_x
-    READ_SHORT 0x22 wanted_y
-    READ_ASCII 0x70 wanted_def (8) NULL
-    READ_ASCII 0x80 wanted_cre (8) NULL
-    READ_ASCII 0 wanted_rec (0x110)
-  END
-  READ_LONG  0x54 aoff
-  READ_SHORT 0x58 acnt
-  SET found = 0 - 1
-  FOR (i = 0; i < acnt; ++i) BEGIN
-    SET here = aoff + 0x110 * i
-    READ_ASCII here nm (32) NULL
-    PATCH_IF (~%nm%~ STRING_EQUAL_CASE ~%wanted_name%~) BEGIN
-      SET found = here
-    END
-  END
-  PATCH_IF (found < 0) BEGIN
-    READ_ASCII aoff old_tbl (0x110 * acnt)
-    SET aoff = BUFFER_LENGTH
-    INSERT_BYTES aoff (0x110 * (acnt + 1))
-    WRITE_ASCIIE aoff ~%old_tbl%~ (0x110 * acnt)
-    SET found = aoff + 0x110 * acnt
-    WRITE_LONG  0x54 aoff
-    WRITE_SHORT 0x58 (acnt + 1)
-  END
-  WRITE_ASCIIE found ~%wanted_rec%~ (0x110)
-  WRITE_SHORT  (found + 0x20) wanted_x
-  WRITE_SHORT  (found + 0x22) wanted_y
-  WRITE_SHORT  (found + 0x24) wanted_x
-  WRITE_SHORT  (found + 0x26) wanted_y
-  WRITE_LONG   (found + 0x28) 9
-  WRITE_LONG   (found + 0x40) 0xffffffff
-  WRITE_ASCIIE (found + 0x70) ~%wanted_def%~ #8
-  WRITE_ASCIIE (found + 0x80) ~%wanted_cre%~ #8
+  LPF cie_place_actor STR_VAR template END
 END
 
 DEFINE_ACTION_FUNCTION cie500_place_area_actors
   STR_VAR area = ~~
 BEGIN
-  ACTION_IF FILE_EXISTS_IN_GAME ~%area%.are~ BEGIN
-    ACTION_BASH_FOR ~chriz-iwd-encounters/actors_500/%area%~ ~.*\.actor~ BEGIN
-      COPY_EXISTING ~%area%.are~ ~override~
-        LPF cie500_place_actor STR_VAR template = EVAL ~%BASH_FOR_FILESPEC%~ END
-      BUT_ONLY
-    END
-  END
+  LAF cie_place_area_actors STR_VAR folder = ~actors_500~ area END
 END
 
 DEFINE_ACTION_FUNCTION cie_expansions BEGIN

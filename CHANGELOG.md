@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.3.0 (2026-11-21)
+
+- **120 (Baldur's Gate spell rules and fixes):**
+  - Dispel Magic (`SPWI323`, `SPPR303`), Remove Magic (`SPWI302`), Inquisitor Dispel (`SPCL231`), and Fiend Dispel Magic (`SPIN214`) use BG's caster-level check (`50%` base, `+5%` per level above / `-10%` below, `1%–99%`), including against summoned/created magical weapons, instead of IWD's unconditional 100% wipe. Collapses `SPPR303`'s self-cast wrapper to a level-1 real dispel, tags `NISHRUSU`/`HAKSU` as `SPECIFIC = 25`, leaves floor traps (`SPWI010`) untouched, and updates spell & scroll descriptions.
+  - Minor Spell Deflection (`SPWI318`): deflects spell levels 1–4 only so *Breach* (5) and *Pierce Magic* (6) bypass it cleanly.
+  - Non-stacking Spirit Armor (`SPWI414`), Reflected Image (`SPWI120`), and Mirror Image (`SPWI212` / `SPWI298`, mutually exclusive with Reflected Image via matching duration).
+  - Area-of-effect `.PRO` type-3 damage bypasses Mirror Image (`save_type` bit 24).
+  - Logical creature & True Seeing immunities on Web, Grease, Stinking Cloud, Spook (`STAT 118 TRUE_SIGHT > 0`, Golem, Undead), and Horror (Golem, Undead).
+  - Universal school & full school/scroll usability for Find Familiar, Minor Sequencer, Contingency, Spell Sequencer, Spell Trigger, Chain Contingency, and Wish.
+- **300 & 310 (Boss dispel updates):**
+  - Belhifet (`300`): casts caster-level 26 Abjuration Dispel Magic (`CIEBELDI`, `BELHIF` levels 26/26/26), dangerous even to 3M+ XP HoW/TotLM parties yet blocked by *Spell Immunity: Abjuration*.
+  - Yxunomei (`310`): casts caster-level 18 Abjuration Dispel Magic (`CIEYXUDI`, `TANARRI` levels 18/18/18), dangerous on Hard/Insane yet blocked by *Spell Immunity: Abjuration*.
+- **360 (Poquelin in the Ascension Cave):** cave hit points lowered from `420` to `310` (escape at half = `155` damage).
+- **420 (Main campaign overhaul, Chapters 2–6):**
+  - Curated ~40–50% trash thinning across Chapters 2–6 (`AR3101`–`AR8007`, half of `AR5002` worg/goblin spawns, `AR6001.INI` myconids `63 -> 33`, 24/29 Marketh Palace thieves) while leaving every quest NPC, dialog actor, and quest death-variable (`#5104_DV`, `#PRST_DV`, `WTVERBET`, `NEOOROGC`, `Genek`) intact.
+  - Five *Drasus* / *Iron Throne*-style named specialist squads (`CIE401`–`CIE429`): Talonite Inner Circle (`AR4002`), Fallen Elven War Council (`AR5104`), Orog Warlord Command (`AR6003`), Kontik's Aurilite Specialists (`AR7004`, starting `NEUTRAL` on `GNTEAM2`), and Kraken Society Elite (`AR8007`), plus Severed Hand tower/caster upgrades (`THAC0 6–8`, Lv 10–11 wizards/clerics) and `GIANTFN` (`2 APR`) / `WYRM` / `BIKNIGHT` upgrades maintaining `±2%` XP parity per chapter.
+  - Fixes & encounter pacing: Kresselack's Antechamber (`AR3503`) 3-wave crypt awakening (0s / 27s / 54s); Terikan (`AR6005`–`AR6006`) `115` HP, innate Lv 1–3 spell immunity `CIELICIM` (allowing *Secret Word* Lv4 / *Breach* Lv5 while keeping vanilla `60s`/`120s` respawn timers), immediate `MYAREA` rally in `UDLICH1` + explicit tomb minion rally (excluding `Genek`); `TARNSEN` (`AR8001`) melee weapon/AI fix; `DGINA2.DLG` `SPRITE_IS_DEADMarketh` trigger repair.
+
 ## v0.2.2 (2026-11-08)
 
 - Every component writes its decided encounter, whatever the game files hold: edited

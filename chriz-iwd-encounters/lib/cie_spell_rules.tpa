@@ -1,0 +1,469 @@
+// Component 120: Baldur's Gate spell rules and fixes for Icewind Dale: Enhanced Edition.
+//   - Remove Magic (SPWI302), Dispel Magic (SPWI323, SPPR303), Inquisitor Dispel (SPCL231),
+//     and Fiend Dispel Magic (SPIN214) use Baldur's Gate caster-level rolls (49% base,
+//     +5% per level above, -10% per level below, 99% cap) including for magical weapons,
+//     instead of IWD's unconditional 100% wipe. Area floor traps (SPWI010) stay untouched.
+//   - Minor Spell Deflection (SPWI318) deflects spell levels 1-4 (never Breach or higher).
+//   - Spirit Armor (SPWI414), Reflected Image (SPWI120), and Mirror Image (SPWI212 / SPWI298)
+//     refresh cleanly without stacking with themselves (or each other for images).
+//   - Area-of-effect damage projectiles (.PRO type 3) bypass Mirror Image.
+//   - Logical immunities for Web, Grease, Stinking Cloud, Spook (incl. True Seeing), and Horror.
+//   - Find Familiar, Sequencers, Contingencies, and Wish belong to the Universal school.
+
+// Convert a Dispel/Remove Magic SPL to BG caster-level roll (op58 p2=0x00020001 or
+// explicit p1 level with p2=0x00020002) and remove unconditional item wipes.
+DEFINE_ACTION_FUNCTION cie_patch_dispel_spell
+  INT_VAR keep_p1 = 0 p2_mode = 0x00020001 collapse_self_cast = 0
+  STR_VAR spell = ~~
+BEGIN
+  ACTION_IF FILE_EXISTS_IN_GAME ~%spell%.spl~ BEGIN
+    COPY_EXISTING ~%spell%.spl~ ~override~
+      LPF cie_spl_valid RET valid reason END
+      PATCH_IF !valid BEGIN
+        PATCH_PRINT ~chriz-iwd-encounters: %spell%.spl left as it is (%reason%).~
+      END ELSE BEGIN
+        PATCH_IF collapse_self_cast BEGIN
+          READ_LONG 0x64 ab_off
+          READ_SHORT 0x68 ab_cnt
+          PATCH_IF (ab_cnt > 1) BEGIN
+            READ_LONG 0x6a fx_off
+            READ_SHORT (ab_off + 0x1e) n0
+            READ_SHORT (ab_off + 0x20) f0
+            SET is_wrapper = 0
+            FOR (i = 0; i < n0; ++i) BEGIN
+              SET fx = fx_off + (f0 + i) * 0x30
+              READ_SHORT fx op
+              READ_ASCII (fx + 0x14) res (8) NULL
+              PATCH_IF (op = 146) AND (~%res%~ STRING_EQUAL_CASE ~%spell%~) BEGIN
+                SET is_wrapper = 1
+              END
+            END
+            PATCH_IF is_wrapper BEGIN
+              LPF cie_spl_delete_ability INT_VAR ability = 0 END
+              READ_LONG 0x64 ab_off
+              WRITE_SHORT (ab_off + 0x10) 1
+            END
+          END
+        END
+        READ_LONG 0x64 ab_off
+        READ_SHORT 0x68 ab_cnt
+        FOR (a = 0; a < ab_cnt; ++a) BEGIN
+          READ_LONG 0x6a fx_off
+          READ_SHORT (ab_off + a * 0x28 + 0x1e) n
+          READ_SHORT (ab_off + a * 0x28 + 0x20) first
+          FOR (i = 0; i < n; ++i) BEGIN
+            SET fx = fx_off + (first + i) * 0x30
+            READ_SHORT fx op
+            PATCH_IF (op = 58) BEGIN
+              PATCH_IF !keep_p1 BEGIN
+                WRITE_LONG (fx + 0x04) 0
+              END
+              WRITE_LONG (fx + 0x08) p2_mode
+            END
+          END
+          LPF cie_strip_unconditional_dispel_items INT_VAR fx_off first count = n END
+          READ_LONG 0x64 ab_off
+          READ_SHORT 0x68 ab_cnt
+        END
+        READ_LONG 0x6a fx_off
+        READ_SHORT 0x6e cf_first
+        READ_SHORT 0x70 cf_cnt
+        FOR (i = 0; i < cf_cnt; ++i) BEGIN
+          SET fx = fx_off + (cf_first + i) * 0x30
+          READ_SHORT fx op
+          PATCH_IF (op = 58) BEGIN
+            PATCH_IF !keep_p1 BEGIN
+              WRITE_LONG (fx + 0x04) 0
+            END
+            WRITE_LONG (fx + 0x08) p2_mode
+          END
+        END
+        LPF cie_strip_unconditional_dispel_items INT_VAR fx_off first = cf_first count = cf_cnt END
+      END
+    BUT_ONLY
+  END
+END
+
+// Prepend an opcode 324 immunity guard to every ability unless the exact guard already exists.
+DEFINE_PATCH_FUNCTION cie_ensure_op324_guard
+  INT_VAR p1 = 0 p2 = 0
+  STR_VAR self_res = ~~
+BEGIN
+  READ_LONG 0x64 ab_off
+  READ_SHORT 0x68 ab_cnt
+  FOR (a = 0; a < ab_cnt; ++a) BEGIN
+    READ_LONG 0x64 ab_off
+    READ_LONG 0x6a fx_off
+    READ_SHORT (ab_off + a * 0x28 + 0x1e) n
+    READ_SHORT (ab_off + a * 0x28 + 0x20) first
+    SET seen = 0
+    FOR (i = 0; i < n AND !seen; ++i) BEGIN
+      SET fx = fx_off + (first + i) * 0x30
+      READ_SHORT fx op
+      READ_LONG (fx + 0x04) ep1
+      READ_LONG (fx + 0x08) ep2
+      READ_ASCII (fx + 0x14) eres (8) NULL
+      PATCH_IF (op = 324) AND (ep1 = p1) AND (ep2 = p2) AND (~%eres%~ STRING_EQUAL_CASE ~%self_res%~) BEGIN
+        SET seen = 1
+      END
+    END
+    PATCH_IF !seen BEGIN
+      LPF cie_spl_insert_effect INT_VAR ability = a position = 0 opcode = 324 target = 2 power = 0
+        parameter1 = p1 parameter2 = p2 timing = 0 resist_dispel = 0 duration = 0
+        STR_VAR resource = EVAL ~%self_res%~ END
+    END
+  END
+END
+
+DEFINE_PATCH_FUNCTION cie_remove_op321_res
+  INT_VAR ability = 0
+  STR_VAR res = ~~
+BEGIN
+  READ_LONG 0x64 ab_off
+  READ_LONG 0x6a fx_off
+  READ_SHORT (ab_off + ability * 0x28 + 0x1e) n
+  READ_SHORT (ab_off + ability * 0x28 + 0x20) first
+  FOR (i = n - 1; i >= 0; --i) BEGIN
+    SET fx = fx_off + (first + i) * 0x30
+    READ_SHORT fx op
+    READ_ASCII (fx + 0x14) r (8) NULL
+    PATCH_IF (op = 321) AND (~%r%~ STRING_EQUAL_CASE ~%res%~) BEGIN
+      LPF cie_spl_delete_effect INT_VAR index = (first + i) END
+    END
+  END
+END
+
+DEFINE_ACTION_FUNCTION cie_spell_rules BEGIN
+  // 1. BG caster-level Dispel / Remove Magic + Nishruu/Hakeashar SPECIFIC=25
+  LAF cie_patch_dispel_spell INT_VAR keep_p1 = 0 p2_mode = 0x00020001 STR_VAR spell = ~SPWI302~ END
+  LAF cie_patch_dispel_spell INT_VAR keep_p1 = 0 p2_mode = 0x00020001 STR_VAR spell = ~SPWI323~ END
+  LAF cie_patch_dispel_spell INT_VAR keep_p1 = 0 p2_mode = 0x00020001 collapse_self_cast = 1 STR_VAR spell = ~SPPR303~ END
+  LAF cie_patch_dispel_spell INT_VAR keep_p1 = 1 p2_mode = 0x00020002 STR_VAR spell = ~SPCL231~ END
+  LAF cie_patch_dispel_spell INT_VAR keep_p1 = 0 p2_mode = 0x00020001 STR_VAR spell = ~SPIN214~ END
+
+  ACTION_FOR_EACH cre IN ~HAKSU~ ~NISHRUSU~ BEGIN
+    ACTION_IF FILE_EXISTS_IN_GAME ~%cre%.cre~ BEGIN
+      COPY_EXISTING ~%cre%.cre~ ~override~
+        PATCH_IF (BUFFER_LENGTH > 0x274) BEGIN WRITE_BYTE 0x274 25 END
+      BUT_ONLY
+    END
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~specific.ids~ BEGIN
+    APPEND ~specific.ids~ ~25 NISHRUU_HAKEASHAR~ UNLESS ~^25[^0-9]~
+  END
+
+  OUTER_SET str_spwi302 = RESOLVE_STR_REF (@1201)
+  LAF cie_write_spell_text INT_VAR text = str_spwi302 STR_VAR spell = ~SPWI302~ END
+  OUTER_SET str_spwi323 = RESOLVE_STR_REF (@1202)
+  LAF cie_write_spell_text INT_VAR text = str_spwi323 STR_VAR spell = ~SPWI323~ END
+  OUTER_SET str_sppr303 = RESOLVE_STR_REF (@1203)
+  LAF cie_write_spell_text INT_VAR text = str_sppr303 STR_VAR spell = ~SPPR303~ END
+
+  // 2. Minor Spell Deflection (SPWI318): levels 1-4 only (Breach Lv5 & Pierce Lv6 bypass)
+  ACTION_IF FILE_EXISTS_IN_GAME ~spwi318.spl~ BEGIN
+    COPY_EXISTING ~spwi318.spl~ ~override~
+      LPF cie_spl_valid RET valid reason END
+      PATCH_IF valid BEGIN
+        READ_LONG 0x64 ab_off
+        READ_SHORT 0x68 ab_cnt
+        FOR (a = 0; a < ab_cnt; ++a) BEGIN
+          READ_LONG 0x64 ab_off
+          READ_LONG 0x6a fx_off
+          READ_SHORT (ab_off + a * 0x28 + 0x1e) n
+          READ_SHORT (ab_off + a * 0x28 + 0x20) first
+          FOR (i = n - 1; i >= 0; --i) BEGIN
+            SET fx = fx_off + (first + i) * 0x30
+            READ_SHORT fx op
+            READ_LONG (fx + 0x08) p2
+            PATCH_IF (op = 201) AND (p2 > 4) BEGIN
+              LPF cie_spl_delete_effect INT_VAR index = (first + i) END
+            END
+          END
+        END
+      END
+    BUT_ONLY
+    OUTER_SET str_spwi318 = RESOLVE_STR_REF (@1204)
+    LAF cie_write_spell_text INT_VAR text = str_spwi318 STR_VAR spell = ~SPWI318~ END
+  END
+
+  // 3. Spirit Armor (SPWI414), Reflected Image (SPWI120), Mirror Image (SPWI212, SPWI298)
+  ACTION_IF FILE_EXISTS_IN_GAME ~spwi414.spl~ BEGIN
+    COPY_EXISTING ~spwi414.spl~ ~override~
+      LPF cie_spl_valid RET valid reason END
+      PATCH_IF valid BEGIN
+        READ_LONG 0x64 ab_off
+        READ_SHORT 0x68 ab_cnt
+        FOR (a = 0; a < ab_cnt; ++a) BEGIN
+          LPF cie_remove_op321_res INT_VAR ability = a STR_VAR res = ~SPWI414~ END
+          LPF cie_spl_insert_effect INT_VAR ability = a position = 0 opcode = 321 target = 2
+            timing = 1 power = 0 resist_dispel = 0 duration = 0 STR_VAR resource = ~SPWI414~ END
+        END
+      END
+    BUT_ONLY
+  END
+
+  ACTION_IF FILE_EXISTS_IN_GAME ~spwi120.spl~ BEGIN
+    COPY_EXISTING ~spwi120.spl~ ~override~
+      LPF cie_spl_valid RET valid reason END
+      PATCH_IF valid BEGIN
+        READ_LONG 0x64 ab_off
+        READ_SHORT 0x68 ab_cnt
+        FOR (a = 0; a < ab_cnt; ++a) BEGIN
+          LPF cie_remove_op321_res INT_VAR ability = a STR_VAR res = ~SPWI120~ END
+          LPF cie_spl_insert_effect INT_VAR ability = a position = 0 opcode = 321 target = 1
+            timing = 1 power = 0 resist_dispel = 0 duration = 0 STR_VAR resource = ~SPWI120~ END
+        END
+      END
+    BUT_ONLY
+  END
+
+  OUTER_SET has_298 = FILE_EXISTS_IN_GAME ~spwi298.spl~
+  ACTION_FOR_EACH img_spl IN ~SPWI212~ ~SPWI298~ BEGIN
+    ACTION_IF FILE_EXISTS_IN_GAME ~%img_spl%.spl~ BEGIN
+      COPY_EXISTING ~%img_spl%.spl~ ~override~
+        LPF cie_spl_valid RET valid reason END
+        PATCH_IF valid BEGIN
+          READ_LONG 0x64 ab_off
+          READ_SHORT 0x68 ab_cnt
+          FOR (a = 0; a < ab_cnt; ++a) BEGIN
+            READ_LONG 0x64 ab_off
+            READ_LONG 0x6a fx_off
+            READ_SHORT (ab_off + a * 0x28 + 0x1e) n
+            READ_SHORT (ab_off + a * 0x28 + 0x20) first
+            SET img_dur = 54 + a * 18
+            FOR (i = 0; i < n; ++i) BEGIN
+              SET fx = fx_off + (first + i) * 0x30
+              READ_SHORT fx op
+              PATCH_IF (op = 119) BEGIN
+                READ_LONG (fx + 0x0e) img_dur
+              END
+            END
+            // Remove previous op321 for SPWI120/SPWI212/SPWI298 and previous op206 SPWI120
+            FOR (i = n - 1; i >= 0; --i) BEGIN
+              READ_LONG 0x64 ab_off
+              READ_LONG 0x6a fx_off
+              READ_SHORT (ab_off + a * 0x28 + 0x20) first
+              SET fx = fx_off + (first + i) * 0x30
+              READ_SHORT fx op
+              READ_ASCII (fx + 0x14) r (8) NULL
+              PATCH_IF ((op = 321) AND (~%r%~ STRING_EQUAL_CASE ~SPWI120~ OR ~%r%~ STRING_EQUAL_CASE ~SPWI212~ OR ~%r%~ STRING_EQUAL_CASE ~SPWI298~))
+                    OR ((op = 206) AND (~%r%~ STRING_EQUAL_CASE ~SPWI120~)) BEGIN
+                LPF cie_spl_delete_effect INT_VAR index = (first + i) END
+              END
+            END
+            LPF cie_spl_insert_effect INT_VAR ability = a position = 0 opcode = 321 target = 1
+              timing = 1 power = 0 resist_dispel = 0 duration = 0 STR_VAR resource = ~SPWI120~ END
+            PATCH_IF has_298 BEGIN
+              LPF cie_spl_insert_effect INT_VAR ability = a position = 1 opcode = 321 target = 1
+                timing = 1 power = 0 resist_dispel = 0 duration = 0 STR_VAR resource = ~SPWI298~ END
+            END
+            LPF cie_spl_insert_effect INT_VAR ability = a position = 0 opcode = 321 target = 1
+              timing = 1 power = 0 resist_dispel = 0 duration = 0 STR_VAR resource = ~SPWI212~ END
+            READ_LONG 0x64 ab_off
+            READ_SHORT (ab_off + a * 0x28 + 0x1e) n_now
+            LPF cie_spl_insert_effect INT_VAR ability = a position = n_now opcode = 206 target = 1
+              timing = 0 power = 0 parameter1 = (0 - 1) resist_dispel = 3 duration = img_dur STR_VAR resource = ~SPWI120~ END
+          END
+        END
+      BUT_ONLY
+    END
+  END
+
+  // 4. AoE damage projectiles (.PRO type = 3) bypass Mirror Image (save_type bit 24 = 0x01000000)
+  ACTION_IF FILE_EXISTS_IN_GAME ~projectl.ids~ BEGIN
+    ACTION_CLEAR_ARRAY cie_aoe_pro_names
+    COPY_EXISTING_REGEXP GLOB ~^.+\.pro$~ ~override~
+      PATCH_IF (BUFFER_LENGTH >= 0x10) BEGIN
+        READ_ASCII 0 sig (4)
+        READ_SHORT 0x08 ptype
+        PATCH_IF (~%sig%~ STRING_EQUAL ~PRO ~) AND (ptype = 3) BEGIN
+          SPRINT pname ~%SOURCE_RES%~
+          TO_UPPER pname
+          SET $cie_aoe_pro_names(~%pname%~) = 1
+        END
+      END
+    BUT_ONLY
+
+    ACTION_CLEAR_ARRAY cie_aoe_proj_ids
+    COPY_EXISTING - ~projectl.ids~ nowhere
+      COUNT_2DA_ROWS 2 pids_rows
+      FOR (r = 0; r < pids_rows; ++r) BEGIN
+        READ_2DA_ENTRY r 0 2 pnum
+        READ_2DA_ENTRY r 1 2 psym
+        PATCH_IF IS_AN_INT ~%pnum%~ BEGIN
+          TO_UPPER psym
+          PATCH_IF VARIABLE_IS_SET $cie_aoe_pro_names(~%psym%~) BEGIN
+            SET spl_proj = pnum + 1
+            SET $cie_aoe_proj_ids(~%spl_proj%~) = 1
+          END
+        END
+      END
+
+    COPY_EXISTING_REGEXP GLOB ~^SP\(WI\|PR\|IN\).+\.spl$~ ~override~
+      PATCH_IF (BUFFER_LENGTH >= 0x72) BEGIN
+        READ_ASCII 0 sig (8)
+        PATCH_IF (~%sig%~ STRING_EQUAL ~SPL V1  ~) BEGIN
+          READ_LONG 0x64 ab_off
+          READ_SHORT 0x68 ab_cnt
+          READ_LONG 0x6a fx_off
+          FOR (a = 0; a < ab_cnt; ++a) BEGIN
+            SET ab = ab_off + a * 0x28
+            PATCH_IF (ab + 0x28 <= BUFFER_LENGTH) BEGIN
+              READ_SHORT (ab + 0x26) proj
+              PATCH_IF VARIABLE_IS_SET $cie_aoe_proj_ids(~%proj%~) BEGIN
+                READ_SHORT (ab + 0x1e) n
+                READ_SHORT (ab + 0x20) first
+                FOR (i = 0; i < n; ++i) BEGIN
+                  SET fx = fx_off + (first + i) * 0x30
+                  PATCH_IF (fx + 0x30 <= BUFFER_LENGTH) BEGIN
+                    READ_SHORT fx op
+                    READ_BYTE (fx + 0x02) tgt
+                    PATCH_IF (op = 12) AND (tgt = 2) BEGIN
+                      READ_LONG (fx + 0x24) svt
+                      PATCH_IF !(svt BAND 0x01000000) BEGIN
+                        WRITE_LONG (fx + 0x24) (svt BOR 0x01000000)
+                      END
+                    END
+                  END
+                END
+              END
+            END
+          END
+        END
+      END
+    BUT_ONLY
+  END
+
+  // 5. Logical creature & True Seeing immunities on Web, Grease, Stinking Cloud, Spook, Horror
+  LAF cie_splprot_row INT_VAR stat = 0x10b value = 4 relation = 1 RET row_undead = row END
+  LAF cie_splprot_row INT_VAR stat = 0x10c value = 144 relation = 1 RET row_golem = row END
+  LAF cie_splprot_row INT_VAR stat = 0x10c value = (0 - 1) relation = 1 RET row_race_n = row END
+  LAF cie_splprot_row INT_VAR stat = 118 value = 0 relation = 3 RET row_true_sight = row END
+
+  // Web (SPWI215)
+  ACTION_IF (row_race_n >= 0) AND FILE_EXISTS_IN_GAME ~spwi215.spl~ BEGIN
+    COPY_EXISTING ~spwi215.spl~ ~override~
+      LPF cie_spl_valid RET valid reason END
+      PATCH_IF valid BEGIN
+        PATCH_FOR_EACH race_sym IN HARPY WYVERN DRAGON SHADOW WRAITH SPECTRE ELEMENTAL SLIME SPIDER BEGIN
+          SET rid = IDS_OF_SYMBOL (~race~ ~%race_sym%~)
+          PATCH_IF (rid >= 0) BEGIN
+            LPF cie_ensure_op324_guard INT_VAR p1 = rid p2 = row_race_n STR_VAR self_res = ~SPWI215~ END
+          END
+        END
+      END
+    BUT_ONLY
+  END
+
+  // Grease (SPWI101)
+  ACTION_IF (row_race_n >= 0) AND FILE_EXISTS_IN_GAME ~spwi101.spl~ BEGIN
+    COPY_EXISTING ~spwi101.spl~ ~override~
+      LPF cie_spl_valid RET valid reason END
+      PATCH_IF valid BEGIN
+        PATCH_FOR_EACH race_sym IN HARPY WYVERN DRAGON SHADOW WRAITH SPECTRE ELEMENTAL SLIME BEGIN
+          SET rid = IDS_OF_SYMBOL (~race~ ~%race_sym%~)
+          PATCH_IF (rid >= 0) BEGIN
+            LPF cie_ensure_op324_guard INT_VAR p1 = rid p2 = row_race_n STR_VAR self_res = ~SPWI101~ END
+          END
+        END
+      END
+    BUT_ONLY
+  END
+
+  // Stinking Cloud (SPWI213)
+  ACTION_IF FILE_EXISTS_IN_GAME ~spwi213.spl~ BEGIN
+    COPY_EXISTING ~spwi213.spl~ ~override~
+      LPF cie_spl_valid RET valid reason END
+      PATCH_IF valid BEGIN
+        PATCH_IF (row_race_n >= 0) BEGIN
+          PATCH_FOR_EACH race_sym IN SLIME ELEMENTAL BEGIN
+            SET rid = IDS_OF_SYMBOL (~race~ ~%race_sym%~)
+            PATCH_IF (rid >= 0) BEGIN
+              LPF cie_ensure_op324_guard INT_VAR p1 = rid p2 = row_race_n STR_VAR self_res = ~SPWI213~ END
+            END
+          END
+        END
+        PATCH_IF (row_golem >= 0) BEGIN
+          LPF cie_ensure_op324_guard INT_VAR p1 = 0 p2 = row_golem STR_VAR self_res = ~SPWI213~ END
+        END
+        PATCH_IF (row_undead >= 0) BEGIN
+          LPF cie_ensure_op324_guard INT_VAR p1 = 0 p2 = row_undead STR_VAR self_res = ~SPWI213~ END
+        END
+      END
+    BUT_ONLY
+  END
+
+  // Spook (SPWI125) & Horror (SPWI205)
+  ACTION_IF FILE_EXISTS_IN_GAME ~spwi125.spl~ BEGIN
+    COPY_EXISTING ~spwi125.spl~ ~override~
+      LPF cie_spl_valid RET valid reason END
+      PATCH_IF valid BEGIN
+        PATCH_IF (row_true_sight >= 0) BEGIN
+          LPF cie_ensure_op324_guard INT_VAR p1 = 0 p2 = row_true_sight STR_VAR self_res = ~SPWI125~ END
+        END
+        PATCH_IF (row_golem >= 0) BEGIN
+          LPF cie_ensure_op324_guard INT_VAR p1 = 0 p2 = row_golem STR_VAR self_res = ~SPWI125~ END
+        END
+        PATCH_IF (row_undead >= 0) BEGIN
+          LPF cie_ensure_op324_guard INT_VAR p1 = 0 p2 = row_undead STR_VAR self_res = ~SPWI125~ END
+        END
+      END
+    BUT_ONLY
+  END
+
+  ACTION_IF FILE_EXISTS_IN_GAME ~spwi205.spl~ BEGIN
+    COPY_EXISTING ~spwi205.spl~ ~override~
+      LPF cie_spl_valid RET valid reason END
+      PATCH_IF valid BEGIN
+        PATCH_IF (row_golem >= 0) BEGIN
+          LPF cie_ensure_op324_guard INT_VAR p1 = 0 p2 = row_golem STR_VAR self_res = ~SPWI205~ END
+        END
+        PATCH_IF (row_undead >= 0) BEGIN
+          LPF cie_ensure_op324_guard INT_VAR p1 = 0 p2 = row_undead STR_VAR self_res = ~SPWI205~ END
+        END
+      END
+    BUT_ONLY
+  END
+
+  // 6. Universal school & scroll accessibility (Find Familiar, Sequencers, Contingencies, Wish)
+  OUTER_SET $cie_univ_tra(~SPWI123~) = 1205
+  OUTER_SET $cie_univ_tra(~SPWI420~) = 1206
+  OUTER_SET $cie_univ_tra(~SPWI617~) = 1207
+  OUTER_SET $cie_univ_tra(~SPWI710~) = 1208
+  OUTER_SET $cie_univ_tra(~SPWI809~) = 1209
+  OUTER_SET $cie_univ_tra(~SPWI908~) = 1210
+  OUTER_SET $cie_univ_tra(~SPWI919~) = 1211
+
+  ACTION_FOR_EACH usp IN ~SPWI123~ ~SPWI420~ ~SPWI617~ ~SPWI710~ ~SPWI809~ ~SPWI908~ ~SPWI919~ BEGIN
+    ACTION_IF FILE_EXISTS_IN_GAME ~%usp%.spl~ BEGIN
+      COPY_EXISTING ~%usp%.spl~ ~override~
+        PATCH_IF (BUFFER_LENGTH >= 0x26) BEGIN
+          READ_SHORT 0x1e excl
+          WRITE_SHORT 0x1e (excl BAND 0xc03f)
+          WRITE_BYTE 0x25 0
+        END
+      BUT_ONLY
+      LAF cie_scrolls_of STR_VAR spell = EVAL ~%usp%~ RET scrolls END
+      OUTER_PATCH_SAVE rem ~%scrolls%~ BEGIN REPLACE_TEXTUALLY ~^ +~ ~~ END
+      OUTER_WHILE !(~%rem%~ STRING_EQUAL ~~) BEGIN
+        OUTER_PATCH_SAVE sc ~%rem%~ BEGIN REPLACE_TEXTUALLY ~ .*$~ ~~ END
+        OUTER_PATCH_SAVE rem ~%rem%~ BEGIN REPLACE_TEXTUALLY ~^[^ ]+ ?~ ~~ END
+        ACTION_IF FILE_EXISTS_IN_GAME ~%sc%.itm~ BEGIN
+          COPY_EXISTING ~%sc%.itm~ ~override~
+            PATCH_IF (BUFFER_LENGTH >= 0x72) BEGIN
+              READ_BYTE 0x2d k3
+              READ_BYTE 0x2f k4
+              WRITE_BYTE 0x2d (k3 BAND 0xc0)
+              WRITE_BYTE 0x2f (k4 BAND 0x3f)
+            END
+          BUT_ONLY
+        END
+      END
+      OUTER_SET tid = $cie_univ_tra(~%usp%~)
+      OUTER_SET str_u = RESOLVE_STR_REF ((AT tid))
+      LAF cie_write_spell_text INT_VAR text = str_u STR_VAR spell = EVAL ~%usp%~ END
+    END
+  END
+
+  PRINT ~chriz-iwd-encounters: BG spell rules applied (caster-level dispels, Minor Spell Deflection L1-4, non-stacking buffs, AoE Mirror Image bypass, logical immunities, Universal utility schools).~
+END
