@@ -1,64 +1,112 @@
 # Chriz IWD Encounters
 
-Small fight upgrades for **Icewind Dale: Enhanced Edition** on top of Sword Coast
-Stratagems (SCS). Written for the Chriz Easy IWD collection; install it right after
-SCS.
+Tactical encounter upgrades, pacing improvements, and Baldur's Gate spell-rule consistency for
+**Icewind Dale: Enhanced Edition (`2.7.3.0`)** on top of **Sword Coast Stratagems (SCS)**. Built
+for **[Chriz Easy IWD](https://bg.chrizfader.org/iwd)**
+([IWD Rules & Balance](https://bg.chrizfader.org/rules#iwd) |
+[Latest Release](https://github.com/Chrizhermann/chriz-iwd-encounters/releases/latest)).
 
-| Component | What it does |
-|---|---|
-| 100 | Repairs SCS caster AI that misses some IWD:EE casters: two Shadowed Elven Clerics that end up without any AI, and a few shamans and a wizard whose melee script takes over from their spell AI (they walk up to the party and only hit it). |
-| 110 | Party banter starts only between living party members in one area. Stops a crash with the Crossmod Banter Pack, whose banter could pick a dead partner. Needs no other mod and does nothing without that banter; install it after the pack. |
-| 120 | Baldur's Gate spell rules and fixes: BG caster-level Dispel/Remove Magic, Minor Spell Deflection (L1–4 only so Breach/Pierce bypass), non-stacking Spirit Armor / Mirror Image / Reflected Image, AoE damage bypasses Mirror Image, logical Web/Grease/Stinking Cloud/Spook/Horror immunities, and Universal schools for familiar/sequencer/contingency/Wish spells. |
-| 200 | Enemy priests prepare the moment they first see the party: a self-protection on Core Rules (from Hard, SCS precasts its own), a group blessing from Hard up. They use and spend their own memorised spells, like SCS's precasts. |
-| 300 | Belhifet's final fight: restores his original IWD:EE/SoD `BELHIFET` sprite (`0xE256`) and voices over SCS's Pit Fiend replacement, immune to spell levels 1–3 only, +2 weapons hit him, fire immune as in the base game, more hit points from Core Rules up, Improved Invisibility when he appears and Haste for 30 seconds out of every 42, casts level-26 Abjuration Dispel Magic (`CIEBELDI`), his cornugons come as a second wave (a third on Insane), Poquelin's transformation retains its shockwave dispel against entrance pre-buffing. Works with and without SCS. |
-| 310 | Yxunomei and her temple: her three mages come when the fight with her starts and walk to the party (as in the base game only on Hard and Insane), her two champions leave the torture chamber for her side if they still live, two yuan-ti elites come into her room on Hard (three on Insane), casts level-18 Abjuration Dispel Magic (`CIEYXUDI`), the pentagram's traps go off only for the party, and SCS's telekinesis that IWD:EE lacks no longer costs her a round. Works with and without SCS. |
-| 320 | The orog raid on Kuldahar: once one group wakes, all the orogs wake and come for the party; the three leaders charge after a war horn, a bit stronger (70 hit points, two attacks, THAC0 10); the orogs fight back against the town's defenders; no second, living Arundel on the town alarm. Works with and without SCS. |
-| 330 | Joril's throne room: Joril has 185 hit points; he, his bodyguards and his guards use their Berserker rage, the bodyguards cast Hold Person; Gorg's wolves come to him when he turns hostile; no double experience for the peaceful badge. Works with and without SCS. |
-| 340 | Maiden Ilmadia's forge: 135 hit points and her Blackguard abilities (Aura of Despair, Poison Weapon, Absorb Health); her fire giants gather at her side and her drow bless them; the forge no longer turns hostile before her dialogue. Works with and without SCS. |
-| 350 | The Idol: one spell per round on cooldowns, only at targets it can affect, no Power Word: Kill; 225 hit points, it stays on its plinth; its greater mummies and zombie lords come when it is attacked; the zombie lords' aura works again, and the badge counter can no longer lock the way to Poquelin. Works with and without SCS. |
-| 360 | Poquelin in the Ascension Cave: 310 hit points; below three quarters he jumps away, calls Fire Storm and the next wave comes at once; no instant death or removal skips his escape; the escape cutscenes find him. Works with and without SCS. |
-| 370 | Cryshal-Tirith: Pomab's images carry his name, and after every hit on him they all jump and hide again what a revealing spell showed; they keep their distance; his sentries go for whoever attacked him and for enemies close to him, with 240 hit points; every hit on him counts, and downed sentries always stand up again. Works with and without SCS. |
-| 380 | Mebdinga's barrow: her wails come on time and she no longer runs every time she is hit; the nearest barrow wight and drowned dead come to her as an honour guard (two of each on Hard and Insane), hasted by War Cry; a telegraphed Undying Lament below half her hit points on Hard and Insane; hostile before the talk she is mortal; the barrow's difficulty gates work again. Works with and without SCS. |
-| 390 | Icasaracht's lair: 650 hit points for her, 250 for her soul gem; no second gem if she dies without her last cutscene; SCS's second underpriestess repaired. Works with and without SCS. |
-| 400 | Lord Maluradek: his banishment rooms wake their animated plates, which now fight; 350 hit points; all rooms wake below half his hit points; the dancing beholder holds still again and he wears his immunity gloves. Works with and without SCS. |
-| 410 | The Luremaster: he opens with Improved Invisibility, hops away by Dimension Door when an enemy reaches him, and his Dispel Magic works; fallen spectral heroes are replaced again. Works with and without SCS. |
-| 420 | Main campaign overhaul (Chapters 2–6): curated filler thinning, asymmetric lore-grounded squads with Fighter/Mage, Cleric/Mage, Fighter/Cleric & bow/sword multiclasses (`CIE401`–`CIE427`), Kaylessa Lv 15 overhaul, Solonor Tower garrison, `DKAYLESS`/`DEGENIA` quest counter & `AR3301.INI` staircase-respawn fixes, 3-wave `AR3503`, Terikan, Tarnsen, Ginafae. |
-| 500 | Heart of Winter & Trials of the Luremaster: `Polar Bear Spirit` Great Roar fix (`RESIST_FEAR` unconditional block, `-2` save, `-3` STR + log feedback), Burial Isle thinning/`AR9400.INI` respawn fix/rest rates, Gloomfrost Frost Giant War-Shaman plaza (`CIE5GHST` AoE Haste), Sea of Moving Ice & Sahuagin Royal Command, thinned hordes, `AR9602` repair. |
+---
 
-Details per change, written so they can move to the Chriz script engine later:
-[docs/components.md](docs/components.md).
+## Part 1 — For Players
 
-## Install
+### Highlights
 
-Needs IWD:EE (target 2.7.3.0). SCS is recommended and supplies the AI repaired by
-component 100 and prepared by component 200; its installation record is not a gate.
-The two named original priest AIs and encounter components also work without SCS.
-Extract the release zip from the GitHub
-releases into the game folder (it holds `chriz-iwd-encounters/`) and run
-`setup-chriz-iwd-encounters` with WeiDU after SCS.
+- **Upgraded Boss Fights (`300`–`410`):**
+  - Rebuilt signature encounters across the main campaign and expansions—all working with or
+    without SCS.
+  - **Belhifet (`300`):** Restores his authentic IWD/SoD `BELHIFET` sprite (`0xE256`) and voices
+    over SCS's Pit Fiend swap, keeps Poquelin's transformation shockwave dispel, adds Lv-26
+    Abjuration Dispel Magic, Lv 1–3 spell immunity, `+2` weapon threshold, and cornugon waves.
+  - **Main Campaign (`310`–`360`):** **Yxunomei**, **Kuldahar Orog Raid**, **Joril**, **Maiden
+    Ilmadia**, **The Idol**, and **Poquelin** in the Ascension Cave.
+  - **Heart of Winter & Trials (`370`–`410`):** **Pomab** (Cryshal-Tirith), **Mebdinga**,
+    **Icasaracht**, **Lord Maluradek**, and **The Luremaster**.
+- **Trimmed Filler & Asymmetric Elite Squads (`420` & `500`):**
+  - Cuts ~40–50% of repetitive trash mobs across Chapters 2–6, *Heart of Winter*, and *Trials of
+    the Luremaster* while fixing infinite staircase respawns and maintaining chapter XP parity.
+  - Introduces *Drasus*-style named specialist squads across Chapters 2–6 (Talonite Coven, Shadowed
+    Arcane Circle, Pure Orog Shock-Guard, Frostmaiden Sisterhood, Kraken Society Operatives) plus
+    a **Kaylessa** (`AR5401`) overhaul and Solonor Tower garrison.
+  - Adds Gloomfrost's Frost Giant War-Shaman plaza, Sea of Moving Ice Sahuagin Royal Command, and
+    fixes *Polar Bear Spirit*'s Great Roar.
+- **Baldur's Gate Spell Rules on IWD:EE (`120`):**
+  - Uses BG caster-level Dispel/Remove Magic checks (`50%` base, `+5%`/`-10%` per level).
+  - Limits Minor Spell Deflection to levels 1–4 so *Breach* and *Pierce Magic* bypass it cleanly.
+  - Prevents Spirit Armor / Mirror Image / Reflected Image stacking and lets AoE damage bypass
+    Mirror Image.
+  - Adds logical Web, Grease, Stinking Cloud, Spook, and Horror immunities and gives
+    sequencers/contingencies/Wish the Universal school.
+- **SCS Caster Repairs & Priest Sight-Prebuffs (`100` & `200`):**
+  - Restores AI on broken Shadowed Elven Clerics (`SDELFCH2`) and removes/reorders overriding
+    melee scripts on shamans and wizards (`100`).
+  - Lets enemy priests cast memorized self-protections and group blessings on sight from Core
+    Rules up (`200`).
+- **Crossmod Banter Crash Protection (`110`):**
+  - Ensures party banter starts only between living party members in the same area, preventing an
+    `Interact` engine crash with the IWD Crossmod Banter Pack (safe with or without that pack).
 
-## Tests
+### Standalone Install (After SCS)
 
-`tests/check_install.py` reads an installed game and checks what the components
-changed. It never writes to the game. It checks the components the game's `WeiDU.log`
-lists (without a log, the components whose changes it finds), so a listed component
-whose changes are missing fails.
+1. Target **Icewind Dale: Enhanced Edition (`2.7.3.0`)**. **SCS** is recommended for components
+   `100` and `200` (not hard-gated; all other components also work standalone).
+2. Download the archive from
+   **[Latest Release](https://github.com/Chrizhermann/chriz-iwd-encounters/releases/latest)**.
+3. Extract `chriz-iwd-encounters/` into your IWD:EE game folder (next to `chitin.key`).
+4. Run `setup-chriz-iwd-encounters` with WeiDU **after SCS** (and after the Crossmod Banter Pack
+   if installing `110`), then select your components.
 
-`tests/test_banter_guard.py` runs component 110's patch with real WeiDU on script text
-and works out every chance as an exact fraction; it needs no game
-(`python -I tests/test_banter_guard.py <weidu.exe>`).
+---
 
-`python -I tests/test_overwrite.py <weidu.exe> <read-only-reference> <scenario>`
-builds a disposable data-only fixture inside the checkout and installs all 15
-components twice. Scenarios are `base` (BIFF resources), `stack` (effective resources
-with this mod's available backups restored), `edited` (changed values and missing
-blocks, placements and effects), and `embedded` (area-owned creatures). It checks
-the decided output and rejects WeiDU errors and warnings. No game executable runs.
-BIFF and backup fixtures are snapshots, not proof of a pristine game or every stack.
-`python -I tests/test_templates.py` checks the bundled binary records and spawn
-sections without opening a game.
+## Part 2 — Component Reference, Verification & License
 
-## Credits
+### Component Reference
 
-The preparation component follows the precast pattern of David W.'s Sword Coast
-Stratagems; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+| ID | What it does |
+|---:|---|
+| `100` | **SCS Caster-AI Repairs:** Restores AI on broken Shadowed Elven Clerics (`SDELFCH2`) and removes/reorders overriding melee blocks (`GNMMGSGH`, `GNTRPM1`/`CIETMWK`, SCS general AI) above caster scripts. |
+| `110` | **Crossmod Banter Guard:** Rewrites slot-to-slot `Interact` blocks in `baldur.bcs` so both partners must be alive and in the same area while preserving exact random roll weights. |
+| `120` | **Baldur's Gate Spell Rules & Fixes:** BG caster-level Dispels, Minor Spell Deflection L1–4, non-stacking Mirror/Reflected/Spirit Armor, AoE Mirror Image bypass, logical Web/Grease/Stinking Cloud/Spook/Horror immunities, Universal schools. |
+| `200` | **Enemy Priest Sight-Preparation:** Enemy priests cast a memorized self-protection on Core Rules (SCS precasts from Hard up; unhooked `SHELFPS1`/`CAJSHA1M` from Core up) and a group blessing from Hard/Insane up. |
+| `300` | **Belhifet's Final Fight:** Restores `0xE256` `BELHIFET` sprite & voices, Poquelin shockwave dispel, Lv-26 Abjuration Dispel Magic (`CIEBELDI`), Lv 1–3 spell immunity, `+2` weapon threshold, wave pacing, and teleport fix. |
+| `310` | **Yxunomei & Her Temple:** Reinforcements join on fight start, Lv-18 Abjuration Dispel Magic (`CIEYXUDI`), party-only pentagram traps, and removal of non-working IWD telekinesis loops. |
+| `320` | **Orog Raid on Kuldahar:** Shared camp alert, stronger war-horn leaders (`70` HP, `2` APR, `THAC0 10`), retaliating guards, and living Arundel duplicate fix. |
+| `330` | **Joril's Throne Room:** `185` HP Joril, Berserker rage, Hold Person guards, Gorg's wolves rallying, and peaceful-badge XP exploit fix. |
+| `340` | **Maiden Ilmadia's Forge:** `135` HP Blackguard abilities (*Aura of Despair*, *Poison Weapon*, *Absorb Health*), gathering fire giants & drow support, dialogue-safe hostility fix. |
+| `350` | **The Idol:** Cooldown-paced targeting, no *Power Word: Kill*, `225` HP anchored on plinth, rallying greater mummies & zombie lords with restored aura, badge softlock fix. |
+| `360` | **Poquelin (Ascension Cave):** `310` HP, half-HP jump + *Fire Storm* + immediate wave, escape cutscene reliability and instant-death guard. |
+| `370` | **Cryshal-Tirith (Pomab):** Named illusions, hit-triggered teleport/re-hide, `240` HP sentries protecting Pomab and rising again. |
+| `380` | **Mebdinga's Barrow:** Timed wails without hit-fleeing, honour guard wights/drowned dead under War Cry, telegraphed *Undying Lament*, fixed difficulty gates. |
+| `390` | **Icasaracht's Lair:** `650` HP dragon, `250` HP soul gem, duplicate-gem guard, and second underpriestess script fix. |
+| `400` | **Lord Maluradek:** `350` HP, working animated plates, all-rooms rally below 50% HP, restored dancing beholder and immunity gloves. |
+| `410` | **The Luremaster:** Opens with *Improved Invisibility*, Dimension Door escapes, working Dispel Magic, and spectral hero replacements. |
+| `420` | **Main Campaign Overhaul (Chapters 2–6):** ~40–50% filler thinning, 6 asymmetric named squads (`CIE401`–`CIE427`), Kaylessa Lv 15 overhaul, Solonor Tower garrison, `AR3503` 3-wave crypt, Terikan, Tarnsen, quest/staircase-respawn fixes. |
+| `500` | **Heart of Winter & Trials of the Luremaster:** *Polar Bear Spirit* Great Roar fix, Burial Isle thinning & respawn fix, Gloomfrost Frost Giant War-Shaman plaza (`CIE5GHST`), Sea of Moving Ice & Sahuagin Royal Command, `AR9602` repair. |
+
+Full engine-neutral specification (written so rules can move cleanly to future script-engine
+builds): [docs/components.md](docs/components.md) · Change history: [CHANGELOG.md](CHANGELOG.md).
+
+Components follow **We Overwrite**: each component writes its decided actors, fields, scripts, and
+spells regardless of prior edits or mod versions.
+
+### Verification
+
+- `python -I tests/test_templates.py` — validates bundled CRE, placement, and spawn templates
+  offline.
+- `python -I tests/test_banter_guard.py <weidu.exe>` — verifies component `110` script patching
+  and exact roll probabilities without a game folder.
+- `python -I tests/test_overwrite.py <weidu.exe> <read-only-reference> <base|stack|edited|embedded>`
+  — runs twice against disposable data-only fixtures to verify **We Overwrite** behavior cleanly.
+- `python -I tests/check_install.py <game_dir>` — read-only inspection of an installed game's
+  changes.
+
+### Credits
+
+The preparation component (`200`) follows the precast pattern of David W.'s **Sword Coast
+Stratagems**. Built on **Icewind Dale: Enhanced Edition** (Beamdog) and **IESDP** format
+documentation; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for full third-party notices.
+
+### License
+
+Licensed under the **[MIT License](LICENSE)** (`Copyright (c) 2026 Christopher Hermann`) — see
+**[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)** for third-party notices and boundaries.
