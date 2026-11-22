@@ -1107,3 +1107,127 @@ BEGIN
     END
   END
 END
+
+// Set rest-interruption day/night probabilities (ARE V1.0 rest struct at +0xC0).
+DEFINE_PATCH_FUNCTION cie_set_rest_prob
+  INT_VAR day_prob = 2 night_prob = 3
+BEGIN
+  READ_LONG 0xc0 rest_off
+  PATCH_IF (rest_off > 0) AND (rest_off + 0xac <= BUFFER_LENGTH) BEGIN
+    WRITE_SHORT (rest_off + 0xa8) day_prob
+    WRITE_SHORT (rest_off + 0xaa) night_prob
+  END
+END
+
+// Disable any placed actor in the current ARE matching match_name via schedule = 0.
+DEFINE_PATCH_FUNCTION cie_disable_actor_by_name
+  STR_VAR match_name = ~~
+BEGIN
+  READ_LONG  0x54 aoff
+  READ_SHORT 0x58 acnt
+  FOR (i = 0; i < acnt; ++i) BEGIN
+    SET here = aoff + 0x110 * i
+    READ_ASCII here anm (32) NULL
+    PATCH_IF (~%anm%~ STRING_EQUAL_CASE ~%match_name%~) BEGIN
+      WRITE_LONG (here + 0x40) 0
+    END
+  END
+END
+
+// An INI section in the patch buffer: from its "[name]" line to the next section or
+// the end (head -1 when it is missing).
+DEFINE_PATCH_FUNCTION cie_ini_section
+  STR_VAR section = ~~
+  RET head next
+BEGIN
+  SET head = INDEX_BUFFER (CASE_INSENSITIVE EVALUATE_REGEXP ~^\[%section%\]~)
+  SET next = BUFFER_LENGTH
+  PATCH_IF (head >= 0) BEGIN
+    SET next = INDEX_BUFFER (EVALUATE_REGEXP ~^\[~ (head + 1))
+    PATCH_IF (next < 0) BEGIN
+      SET next = BUFFER_LENGTH
+    END
+  END
+END
+
+// Convert an unguarded enter=ENTERSPAWN area INI into a trimmed one-shot spawn
+// armed by parent_area and cleared once by child_area (preserving critter sections
+// and existing script_override keys).
+DEFINE_ACTION_FUNCTION cie_gate_ini_spawn
+  STR_VAR ini = ~~ critters = ~~ event_section = ~~ spec_var = ~~
+          parent_area = ~~ parent_fallback = ~~
+          child_area = ~~ child_fallback = ~~ arm_marker = ~~
+BEGIN
+  ACTION_IF FILE_EXISTS_IN_GAME ~%ini%.ini~ BEGIN
+    COPY_EXISTING ~%ini%.ini~ ~override~
+      REPLACE_TEXTUALLY EXACT_MATCH ~%WNL%~ ~%LNL%~
+      PATCH_FOR_EACH sec IN ~ENTERSPAWN~ ~%event_section%~ BEGIN
+        LPF cie_ini_section STR_VAR section = EVAL ~%sec%~ RET head next END
+        PATCH_IF (head >= 0) BEGIN
+          READ_ASCII head txt (next - head)
+          INNER_PATCH_SAVE txt ~%txt%~ BEGIN
+            REPLACE_TEXTUALLY CASE_INSENSITIVE ~^critters[ %TAB%]*=[^%LNL%]*~ ~critters=%critters%~
+            PATCH_IF (~%sec%~ STRING_EQUAL_CASE ~%event_section%~) BEGIN
+              REPLACE_TEXTUALLY CASE_INSENSITIVE ~^interval[ %TAB%]*=[^%LNL%]*~ ~interval=2~
+            END ELSE BEGIN
+              REPLACE_TEXTUALLY CASE_INSENSITIVE ~^interval[ %TAB%]*=[^%LNL%]*~ ~interval=1~
+            END
+          END
+          LPF cie_replace_text INT_VAR start = head length = (next - head) STR_VAR text = EVAL ~%txt%~ END
+        END
+      END
+      SET pos = 0
+      WHILE (pos >= 0) AND (pos < BUFFER_LENGTH) BEGIN
+        SET h = INDEX_BUFFER (CASE_SENSITIVE EVALUATE_REGEXP ~^\[[^]]+\]~ pos)
+        PATCH_IF (h < 0) BEGIN
+          SET pos = 0 - 1
+        END ELSE BEGIN
+          SET rb = INDEX_BUFFER (CASE_SENSITIVE EXACT_MATCH ~]~ h)
+          READ_ASCII (h + 1) sec_name (rb - h - 1)
+          SET nxt = INDEX_BUFFER (EVALUATE_REGEXP ~^\[~ (h + 1))
+          PATCH_IF (nxt < 0) BEGIN SET nxt = BUFFER_LENGTH END
+          PATCH_IF !(~%sec_name%~ STRING_EQUAL_CASE ~locals~)
+               AND !(~%sec_name%~ STRING_EQUAL_CASE ~spawn_main~)
+               AND !(~%sec_name%~ STRING_EQUAL_CASE ~ENTERSPAWN~)
+               AND !(~%sec_name%~ STRING_EQUAL_CASE ~%event_section%~) BEGIN
+            READ_ASCII h sec_txt (nxt - h)
+            INNER_PATCH_SAVE sec_txt ~%sec_txt%~ BEGIN
+              REPLACE_TEXTUALLY CASE_INSENSITIVE ~^spec_var[ %TAB%]*=[^%LNL%]*[%LNL%]*~ ~~
+              REPLACE_TEXTUALLY ~^\(\[[^]]*\]\)~ ~\1%LNL%spec_var=%spec_var%~
+            END
+            LPF cie_replace_text INT_VAR start = h length = (nxt - h) STR_VAR text = EVAL ~%sec_txt%~ END
+            SET pos = h + (STRING_LENGTH ~%sec_txt%~)
+          END ELSE BEGIN
+            SET pos = nxt
+          END
+        END
+      END
+    BUT_ONLY
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~%parent_area%.are~ BEGIN
+    LAF cie_area_script STR_VAR area = EVAL ~%parent_area%~ fallback = EVAL ~%parent_fallback%~ RET pscr = script END
+    LAF cie_write_script_blocks STR_VAR script = EVAL ~%pscr%~ marker = EVAL ~%arm_marker%~
+      source = ~chriz-iwd-encounters/baf/cie_ini_arm.baf~ END
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~%child_area%.are~ BEGIN
+    LAF cie_area_script STR_VAR area = EVAL ~%child_area%~ fallback = EVAL ~%child_fallback%~ RET cscr = script END
+    LAF cie_write_script_blocks STR_VAR script = EVAL ~%cscr%~ marker = EVAL ~%arm_marker%~
+      source = ~chriz-iwd-encounters/baf/cie_ini_disarm.baf~ END
+  END
+END
+
+// Grant a spell to CRE known + memorized slots if present (idempotent).
+DEFINE_PATCH_FUNCTION cie_ensure_spell
+  INT_VAR lvl = 1 cnt = 1
+  STR_VAR spell = ~~ stype = ~wizard~
+BEGIN
+  PATCH_IF FILE_EXISTS_IN_GAME ~%spell%.spl~ BEGIN
+    REMOVE_KNOWN_SPELL ~%spell%~
+    REMOVE_MEMORIZED_SPELL ~%spell%~
+    PATCH_IF (lvl >= 1) AND (lvl <= 7) BEGIN
+      SET slot_lvl = lvl - 1
+      ADD_KNOWN_SPELL ~%spell%~ (slot_lvl) ~%stype%~
+      ADD_MEMORIZED_SPELL ~%spell%~ (slot_lvl) ~%stype%~ (cnt)
+    END
+  END
+END

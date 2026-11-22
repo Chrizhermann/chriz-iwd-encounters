@@ -362,12 +362,11 @@ SCS, and with a real party.
   `INNATE_FLASH_DESTROY_SUMMON_BELHIFET`) dispels everyone around Poquelin without a
   roll (opcode 58 mode 0), takes summoned weapons and magical berries from them,
   destroys illusions and shows "Dispel Effects". The cutscene `EEPOQCNG` also forces
-  Dispel Magic on the nearest party member (WeiDU prints the line with
-  `WIZARD_REMOVE_MAGIC`, a name that shares the spell's number on IWD:EE).
-- **Change:** those effects go; so does every spell the cutscene forces on someone
-  other than Poquelin that dispels (opcode 58), found by its effects, not its name.
-  The transformation, its visuals and sound, and Poquelin's replacement by Belhifet
-  stay. Christopher, 2026-10-28: the dispel goes.
+  Dispel Magic on the nearest party member.
+- **Change (v0.3.2):** the base-game entrance shockwave dispel (`SPIN183` /
+  `EEPOQCNG`) is kept intact so parties cannot pre-buff safely outside the church before
+  triggering the encounter, while Belhifet's active fight dispel runs through `CIEBELDI`
+  (`Abjuration` Lv 26).
 - **Not changed:** the finale area's six proximity traps (`Trigger Point 1`–`6`,
   script `GNT2010`, detection 95, removal 100, they reset) cast `SPWI010` on whoever
   enters: a dispel without a roll (opcode 58 mode 0). Both are base game. In the lab
@@ -1003,9 +1002,16 @@ Works with and without SCS across Chapters 2–6 (`AR3101`–`AR8007`):
   Palace (24 of 29 `LDDTHIE2`/`LDDTHIE3` thieves removed, `AR6001.INI` myconids 63 to 33,
   halved `AR5002` worg/goblin spawns, empty dead-end alcoves), while keeping every quest
   NPC, dialog actor, `#PRST_DV`, `#5104_DV`, `WTVERBET`, `NEOOROGC`, and `Genek` intact.
+- **Quest & spawn fixes:** `AR3301.INI` infinite staircase respawn is gated on
+  `CIE_AR3301_SPAWN`; `DKAYLESS.DLG` lowers its `ELVEN_SOLDIER` threshold (`>24 -> >14`);
+  `DEGENIA.DLG`, `DCALLIAN.DLG`, `DCAPVIL2.DLG`, `DCAPKID2.DLG`, `AR4001.BCS`, and
+  `AR4003.BCS` lower `SPRITE_IS_DEADTalonite` thresholds (`>9/<10 -> >7/<8`).
 - **Kresselack's Antechamber (`AR3503`):** preserves all 52 undead in 3 timed waves (Wave 1
   immediately, Wave 2 `GNTEAM3M`–`6M` at 27 s, Wave 3 `GNTEAM7M` at 54 s, or immediately if
   spotted or attacked) so `Shout(89)` never pulls all 52 at once.
+- **Kaylessa (`AR5401`):** upgraded to level 15 (`175` HP, `AC -6`, `THAC0 2`, `4 APR`,
+  bow+sword weapon switching via `DWGNMB0`/`CIE4SWP`, `CIE4KAYP` without retreat kiting,
+  keeping `MINHPN9`, `PIECE1`, `EA = 128`).
 - **Terikan (`AR6005`/`AR6006`):** raises HP to 115, keeps vanilla `60 s`/`120 s` phylactery
   respawns (`LICH` remains 0 XP; `LICH2` yields 18,000 XP), grants innate level 1–3 spell
   immunity (`CIELICIM`) so Lv 4+ Secret Word / Breach pierce him cleanly, fires immediate
@@ -1014,37 +1020,47 @@ Works with and without SCS across Chapters 2–6 (`AR3101`–`AR8007`):
 - **Tarnsen & Ginafae repairs:** `TARNSEN` swaps `GNMBG9GH` and throwing axe `AX1H04` for
   melee AI (`DWMESVGE`/`GNMMG9GH`) and `AX1H01`; `DGINA2.DLG` state 19 checks
   `SPRITE_IS_DEADMarketh` instead of `Marketh_Dead`.
-- **Upgraded regulars & 5 named elite squads (`CIE401`–`CIE429`):** stronger Severed Hand
-  fighters/officers/Lv 10–11 tower casters, 2-APR `GIANTFN`, stronger `WYRM`/`BIKNIGHT`,
-  and 5 *Drasus*/*Iron Throne*-style squads (Talonite Inner Circle `AR4002`, Fallen Elven
-  War Council `AR5104`, Orog Warlord Command `AR6003`, Kontik's Aurilite Specialists
-  `AR7004` starting neutral on `GNTEAM2`, and Kraken Society Elite `AR8007`) balancing each
-  chapter within ±2 % net XP.
+- **Upgraded regulars & 6 asymmetric lore-grounded squads (`CIE401`–`CIE427`):** stronger
+  Severed Hand fighters/officers/Lv 10–11 tower casters, 2-APR `GIANTFN`, stronger
+  `WYRM`/`BIKNIGHT`, and 6 asymmetric encounters using real multiclasses and SCS AI:
+  Talonite Plague Coven (`AR4002`, `Talonite` DV), Labelas Tower Shadowed Arcane Circle
+  (`AR5104`, preserving `#5104_DV` guards), Solonor Tower Martial Garrison (`AR5403`,
+  `ELVEN_SOLDIER` DV, `CIE4FC1` w/ *Dispel Magic*), Pure Orog Shock-Guard (`AR6003`),
+  Kontik's Frostmaiden Sisterhood (`AR7004`, `NEUTRAL` on `GNTEAM2`), and Kraken Society
+  Operatives (`AR8007`).
 
 ## 500: Heart of Winter and Trials of the Luremaster expansion overhaul
 
-Works with and without SCS. Covers the Gloomfrost, Sea of Moving Ice, Castle Maluradek,
-Watchknight Crypts, Dungeon Trial Arenas, and Jackal Caverns (`AR9500`–`AR9801`).
+Works with and without SCS across the Burial Isle, Gloomfrost, Sea of Moving Ice, Castle
+Maluradek, Watchknight Crypts, Dungeon Trial Arenas, and Jackal Caverns (`AR9300`–`AR9801`):
 
+- **Polar Bear Spirit Great Roar (`SPIN119` / `SPIN119A` / `IDPBSPRT`):** makes all
+  `opcode 324` immunity checks unconditional (`savingthrow = 0`) and includes `RESIST_FEAR` so
+  *Remove Fear* / *Resist Fear* blocks the roar cleanly; reduces save penalty (`-5 -> -2`)
+  and Strength drain (`-5 -> -3`); announces the roar (`@540`) and Strength reduction
+  (`@541`) in the combat log.
+- **Burial Isle (`AR9300` / `AR9400` / `AR9400.INI`):** thins ~40 % of repetitive
+  `WIGHTBA`/`DROWNED` (preserving `Hjollder`, `Skaldar`, `PBSPIR`, `YOUNGNED`, `SHAMGN`,
+  `SHAMGHO`, `MEBDING`, `VEXING`, and Mebdinga's honour guard), upgrades `SHAMGHO`, reduces
+  rest interruption probabilities (`2/3`), and gates `AR9400.INI` spawns on `CIE_AR9400_SPAWN`
+  while keeping all Component `380` difficulty gates (`CIEMG*`).
 - **Repair of `AR9602` (SCS 35.21 Smarter Priests):** SCS component 6040 overwrites the
   creature resref of all 64 placed actors in `AR9602.ARE` with `XACTILE`. Every non-Xactile
-  row is restored by coordinate to its Ice Temple creature (`DLSCRAG`, `DLSNOTR`,
-  `DLICETR`, `DLBONEC`, `DLCLD*`, `DLFZNBNE`, `DLICE*`, `DLBNEGRD`, `DLWATER`) and combat
-  script, while row 60 (`[1078.2266]`) keeps `XACTILE` and `ILXACTIL`.
-- **Full spellbooks preserved:** both existing expansion casters and all bespoke caster
-  clones (`CIE501`–`CIE533`) keep their complete unstripped spellbooks (including high-level
-  save-or-die, banishment and power-word magic).
-- **Horde compression and spawn pacing:** 359 generic placed filler actors across 16 areas
-  (`AR9500`–`AR9603`, `AR9700`, `AR9702`, `AR9712`, `AR9714`, `AR9716`–`AR9718`, `AR9800`,
-  `AR9801`) have their appearance schedule set to `0`, leaving every quest NPC, dialogue
-  actor, duel participant, boss, and quest-item carrier untouched. `AR9700.INI` trims each
-  repeating harpy pack from five to three, and `AR9801.INI` slows Stone Nuisance spawns
-  from 10 minutes to 8 hours with five critters instead of ten.
-- **Regulars and mini-bosses:** Spectral Guards (`CKSPGRD*`, `RNDSPG`) gain 5/2 attacks
-  per round and THAC0 1 at 115 hit points; `SAPRINCE`, `WYVMAT`, `CPMUMG`, `HARALD`,
-  `GIANTFRO`, `FROSTSAL` and `SAEGUARD` receive expansion-tier accuracy, attacks and hit
-  points. In `AR9704`, turning `Harald` hostile raises the shades of his three fallen
-  comrades (`CIE527`–`CIE529`) once (`CIE5_HARALD_SHADES`).
-- **Curated setpiece encounters (`CIE501`–`CIE533`):** 46 placed bespoke champions,
-  skirmishers, assassins, constructs and plot-sanitised casters (`CIE5CS1`–`CIE5CS9`)
-  replace the removed filler XP across `AR9500`–`AR9801` (~1.07M removed vs ~1.11M added).
+  row is restored by coordinate to its Ice Temple creature and combat script (and further
+  thinned to remove repetitive filler), while row 60 (`[1078.2266]`) keeps `XACTILE` and
+  `ILXACTIL`.
+- **Gloomfrost & Sea of Moving Ice (`AR9500`–`AR9603`):** deeper filler thinning and lower
+  rest rates (`AR9500` `2/2`, `AR9501`–`AR9502` `3/3`, `AR9601` `2/2`); rebuilds `CIE501`
+  into a `Frost Giant War-Shaman` (`Fighter/Cleric` L15/15, `GIANT_FROST` `0xE24F`)
+  casting AoE War-Chant Haste (`CIE5GHST`, `@542`) alongside two `Frost Giant Jarls`
+  (`CIE502`) on `AR9500`'s glacier plaza; replaces misplaced humans with `Broodmother
+  Remorhaz` (`AR9501`), `Hoarfrost Elder Yeti` (`CIE510` in `AR9601`), and the 4-member
+  `Sahuagin` Royal Command (`CIE512`–`CIE514` in `AR9603` before `AR9604`).
+- **Regulars & Watchtower / Maluradek encounters:** Spectral Guards (`CKSPGRD*`, `RNDSPG`)
+  gain 5/2 APR and THAC0 1 at 115 HP; `SAPRINCE`, `WYVMAT`, `CPMUMG`, `HARALD`,
+  `GIANTFRO`, `FROSTSAL`, `SHAMGHO`, and `SAEGUARD` receive expansion-tier accuracy,
+  attacks and hit points; in `AR9704`, turning `Harald` hostile raises the shades of his
+  three fallen comrades (`CIE527`–`CIE529`) once (`CIE5_HARALD_SHADES`).
+- **Curated setpiece encounters (`CIE501`–`CIE533`, 31 active templates):** bespoke
+  champions, skirmishers, assassins, constructs and plot-sanitised casters (`CIE5CS1`–`CIE5CS9`,
+  `CIE5FC1`) replace the removed filler across `AR9300`–`AR9801`.

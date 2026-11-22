@@ -1,0 +1,19 @@
+IF
+  Global("%arm_marker%","GLOBAL",0)
+THEN
+  RESPONSE #100
+    SetGlobal("%arm_marker%","GLOBAL",1)
+    SetGlobal("%spec_var%","GLOBAL",1)
+    SetGlobalTimer("%arm_marker%_T","MYAREA",4)
+    Continue()
+END
+
+IF
+  Global("%spec_var%","GLOBAL",1)
+  !GlobalTimerNotExpired("%arm_marker%_T","MYAREA")
+THEN
+  RESPONSE #100
+    SetGlobal("%spec_var%","GLOBAL",0)
+    SetGlobal("%arm_marker%","GLOBAL",2)
+    Continue()
+END

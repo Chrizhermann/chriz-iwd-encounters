@@ -1,0 +1,20 @@
+IF
+  !GlobalTimerNotExpired("castspell","LOCALS")
+  Global("instantprep","LOCALS",1)
+  Allegiance(Myself,ENEMY)
+  HaveSpell(CLERIC_DISPEL_MAGIC)
+  !HaveSpell(CLERIC_RECITATION)
+  See([PC])
+  OR(4)
+    StateCheck(LastSeenBy(Myself),STATE_HASTED)
+    StateCheck(LastSeenBy(Myself),STATE_MIRRORIMAGE)
+    StateCheck(LastSeenBy(Myself),STATE_IMPROVEDINVISIBILITY)
+    CheckStatGT(LastSeenBy(Myself),0,STONESKINS)
+  !Range(LastSeenBy(Myself),12)
+  !StateCheck(Myself,STATE_SILENCED)
+  !CheckStatGT(Myself,50,SPELLFAILUREPRIEST)
+THEN
+  RESPONSE #100
+    SetGlobalTimer("castspell","LOCALS",ONE_ROUND)
+    Spell(LastSeenBy(Myself),CLERIC_DISPEL_MAGIC)
+END

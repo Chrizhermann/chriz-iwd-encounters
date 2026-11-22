@@ -665,19 +665,8 @@ def main():
             c.check(b"cie_cornugon_3" in c.script("EEBELKIL"), "EEBELKIL kills the third cornugon")
         spell = res.get("SPIN183", "SPL")
         if spell is not None and any(e[0] == 151 and e[3] == "BELHIF" for e in spl_ability_effects(spell)):
-            c.check(not [e for e in spl_ability_effects(spell) if e[0] == 58], "Poquelin's transformation does not dispel")
-        # ForceSpell (113) and ReallyForceSpell (181) in the transformation cutscene:
-        # none casts a dispelling spell on anyone but Poquelin himself (first object
-        # parameter: identifier 1 = Myself)
-        dispels = []
-        for fields, number in forced_spells(c.script("EEPOQCNG")):
-            if is_myself(fields):
-                continue
-            name = spell_resref(number)
-            data = res.get(name, "SPL") if name else None
-            if data and any(e[0] == 58 for e in spl_ability_effects(data)):
-                dispels.append(name)
-        c.check(not dispels, "the transformation cutscene forces no dispel on the party (%s)" % (", ".join(dispels) or "ok"))
+            c.check(any(e[0] == 58 for e in spl_ability_effects(spell)),
+                    "Poquelin's transformation shockwave (SPIN183) dispels pre-buffs")
 
     # 310: Yxunomei and her temple (only when installed: it brings CIEYXPUR)
     area = res.get("AR4005", "ARE")
@@ -1086,12 +1075,29 @@ def main():
 
     # 420: Main campaign overhaul (Chapters 2-6)
     if expect(420, cres.get("CIE401") is not None):
-        cie4_expected = [401, 402, 403, 404, 410, 411, 412, 413, 414, 415, 416, 417, 418, 420, 421, 422, 425, 426, 427, 428, 429]
+        cie4_expected = [401, 402, 403, 410, 411, 412, 413, 414, 416, 417, 420, 421, 425, 426, 427]
         missing4 = ["CIE%d" % n for n in cie4_expected if "CIE%d" % n not in cres]
-        c.check(not missing4, "all 21 CIE4xx squad elites exist (%s)" % (", ".join(missing4) or "ok"))
-        for n in (420, 421, 422):
+        c.check(not missing4, "all 15 CIE4xx asymmetric squad elites exist (%s)" % (", ".join(missing4) or "ok"))
+        for n in (420, 421):
             cd = cres.get("CIE%d" % n)
             c.check(cd is not None and cd[0x270] == 128, "CIE%d starts NEUTRAL (128) for Kontik's talk" % n)
+        for n in (401, 402, 403):
+            cd = cres.get("CIE%d" % n)
+            dv = cd[0x280:0x2A0].split(b"\0")[0].decode("latin-1").upper() if cd else ""
+            c.check(dv == "TALONITE", "CIE%d carries death variable TALONITE (%s)" % (n, dv))
+        for n in (413, 414):
+            cd = cres.get("CIE%d" % n)
+            dv = cd[0x280:0x2A0].split(b"\0")[0].decode("latin-1").upper() if cd else ""
+            c.check(dv == "ELVEN_SOLDIER", "CIE%d carries death variable ELVEN_SOLDIER (%s)" % (n, dv))
+        kay = cres.get("KAYLESSA")
+        if kay:
+            kay_items = set(cre_items(kay))
+            c.check(struct.unpack_from("<H", kay, 0x26)[0] == 175 and kay[0x270] == 128
+                    and {"PIECE1", "MINHPN9"} <= kay_items,
+                    "Kaylessa is Lv15 175 HP neutral with PIECE1 and MINHPN9")
+        ini3301 = (res.get("AR3301", "INI") or b"").decode("latin-1")
+        if ini3301:
+            c.check("CIE_AR3301_SPAWN" in ini3301, "AR3301.INI gates staircase respawn on CIE_AR3301_SPAWN")
         tarnsen = cres.get("TARNSEN")
         if tarnsen:
             ts_scripts = [slot(tarnsen, o) for o in CRE_SLOTS if o]
@@ -1145,9 +1151,9 @@ def main():
 
     # 500: Heart of Winter & Trials of the Luremaster expansion overhaul
     if expect(500, cres.get("CIE501") is not None):
-        cie5_names = ["CIE%d" % n for n in range(501, 534)]
+        cie5_names = ["CIE%d" % n for n in range(501, 534) if n not in (505, 511)]
         missing_cre = [n for n in cie5_names if n not in cres]
-        c.check(not missing_cre, "all 33 CIE501-CIE533 creatures are installed (%s)" % (", ".join(missing_cre) or "ok"))
+        c.check(not missing_cre, "all 31 active CIE5xx creatures are installed (%s)" % (", ".join(missing_cre) or "ok"))
         bad_fx, bad_scripts = [], []
         for n in cie5_names:
             d = cres.get(n)
@@ -1169,7 +1175,25 @@ def main():
             if not t or b'"myarea' in t or b"ac\n120ob" in t or b"ac\n121ob" in t or b"ac\n198ob" in t or b"tr\n16441 " in t or b"malavon" in t:
                 dirty_cs.append(cs)
         c.check(not dirty_cs, "CIE5CS1-CIE5CS9 are clean of plot/cutscene/MYAREA blocks (%s)" % (", ".join(dirty_cs) or "ok"))
-        c.check(cres["CIE501"][0x271] != 4 and cres["CIE508"][0x271] != 4, "CIE501 and CIE508 are living humanoids, not undead")
+        c.check(struct.unpack_from("<I", cres["CIE501"], 0x28)[0] == 0xE24F and cres["CIE501"][0x271] != 4 and cres["CIE508"][0x271] != 4,
+                "CIE501 uses GIANT_FROST animation (0xE24F) and neither CIE501 nor CIE508 is undead")
+        resist_fear = ids_numbers(res.get("SPLSTATE", "IDS")).get("RESIST_FEAR")
+        sp119 = res.get("SPIN119", "SPL")
+        if sp119:
+            rows119 = spl_effect_rows(sp119)
+            op324 = [r for r in rows119 if r["opcode"] == 324]
+            c.check(op324 and all(r["save_type"] == 0 for r in op324)
+                    and (resist_fear is None or any(r["p1"] == resist_fear for r in op324)),
+                    "SPIN119 Great Roar checks fear immunity unconditionally including RESIST_FEAR")
+        sp119a = res.get("SPIN119A", "SPL")
+        if sp119a:
+            rows119a = spl_effect_rows(sp119a)
+            c.check(any(r["opcode"] == 44 and r["p1"] == -3 for r in rows119a)
+                    and any(r["opcode"] == 139 for r in rows119a),
+                    "SPIN119A Great Roar applies -3 STR with combat-log string feedback")
+        ini9400 = (res.get("AR9400", "INI") or b"").decode("latin-1")
+        if ini9400:
+            c.check("CIE_AR9400_SPAWN" in ini9400, "AR9400.INI gates barrow respawn on CIE_AR9400_SPAWN")
         # AR9602 repair: only 1 XACTILE remains when AR9602 has its full table
         a9602 = res.get("AR9602", "ARE")
         if a9602:

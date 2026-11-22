@@ -50,14 +50,8 @@ BEGIN
     REMOVE_CRE_ITEM ~%item%~
     PATCH_IF (~%equip%~ STRING_EQUAL_CASE ~EQUIP~) BEGIN
       ADD_CRE_ITEM ~%item%~ #0 #0 #0 ~NONE~ ~%slot%~ EQUIP
-    END ELSE PATCH_IF (q1 = 40) BEGIN
-      ADD_CRE_ITEM ~%item%~ #40 #0 #0 ~NONE~ ~%slot%~
-    END ELSE PATCH_IF (q1 = 2) BEGIN
-      ADD_CRE_ITEM ~%item%~ #2 #0 #0 ~NONE~ ~%slot%~
-    END ELSE PATCH_IF (q1 = 1) BEGIN
-      ADD_CRE_ITEM ~%item%~ #1 #0 #0 ~NONE~ ~%slot%~
     END ELSE BEGIN
-      ADD_CRE_ITEM ~%item%~ #0 #0 #0 ~NONE~ ~%slot%~
+      ADD_CRE_ITEM ~%item%~ (q1) (q2) (q3) ~NONE~ ~%slot%~
     END
   END
 END
@@ -67,32 +61,7 @@ DEFINE_PATCH_FUNCTION cie420_ensure_spell
   INT_VAR lvl = 1 cnt = 1
   STR_VAR spell = ~~ stype = ~wizard~
 BEGIN
-  PATCH_IF FILE_EXISTS_IN_GAME ~%spell%.spl~ BEGIN
-    REMOVE_KNOWN_SPELL ~%spell%~
-    REMOVE_MEMORIZED_SPELL ~%spell%~
-    PATCH_IF (lvl = 1) BEGIN
-      ADD_KNOWN_SPELL ~%spell%~ #0 ~%stype%~
-      ADD_MEMORIZED_SPELL ~%spell%~ #0 ~%stype%~ (cnt)
-    END ELSE PATCH_IF (lvl = 2) BEGIN
-      ADD_KNOWN_SPELL ~%spell%~ #1 ~%stype%~
-      ADD_MEMORIZED_SPELL ~%spell%~ #1 ~%stype%~ (cnt)
-    END ELSE PATCH_IF (lvl = 3) BEGIN
-      ADD_KNOWN_SPELL ~%spell%~ #2 ~%stype%~
-      ADD_MEMORIZED_SPELL ~%spell%~ #2 ~%stype%~ (cnt)
-    END ELSE PATCH_IF (lvl = 4) BEGIN
-      ADD_KNOWN_SPELL ~%spell%~ #3 ~%stype%~
-      ADD_MEMORIZED_SPELL ~%spell%~ #3 ~%stype%~ (cnt)
-    END ELSE PATCH_IF (lvl = 5) BEGIN
-      ADD_KNOWN_SPELL ~%spell%~ #4 ~%stype%~
-      ADD_MEMORIZED_SPELL ~%spell%~ #4 ~%stype%~ (cnt)
-    END ELSE PATCH_IF (lvl = 6) BEGIN
-      ADD_KNOWN_SPELL ~%spell%~ #5 ~%stype%~
-      ADD_MEMORIZED_SPELL ~%spell%~ #5 ~%stype%~ (cnt)
-    END ELSE PATCH_IF (lvl = 7) BEGIN
-      ADD_KNOWN_SPELL ~%spell%~ #6 ~%stype%~
-      ADD_MEMORIZED_SPELL ~%spell%~ #6 ~%stype%~ (cnt)
-    END
-  END
+  LPF cie_ensure_spell INT_VAR lvl cnt STR_VAR spell stype END
 END
 
 // Create a squad elite CRE from the first available donor, inheriting visual/voice looks.
@@ -101,7 +70,7 @@ DEFINE_ACTION_FUNCTION cie420_create_elite
           class_id = 0 - 1 race_id = 0 - 1 anim_override = 0 - 1 mr = 0
           rfir = 0 rcld = 0 rele = 0 racd = 0
           sv1 = 6 sv2 = 7 sv3 = 7 sv4 = 8 sv5 = 7
-  STR_VAR target = ~~ donor = ~~ fallback = ~~ look = ~~ s_def = ~~
+  STR_VAR target = ~~ donor = ~~ fallback = ~~ look = ~~ s_cls = ~~ s_def = ~~ dv = ~~
 BEGIN
   OUTER_SPRINT chosen ~~
   ACTION_IF FILE_EXISTS_IN_GAME ~%donor%.cre~ BEGIN
@@ -114,7 +83,10 @@ BEGIN
       SAY NAME1 (AT tra_id)
       SAY NAME2 (AT tra_id)
       LPF cie_set_core INT_VAR xp hp ac thac0 apr ea lvl1 lvl2 mr rfir rcld rele racd sv1 sv2 sv3 sv4 sv5 clear_items = 1
-        STR_VAR s_ovr = ~~ s_cls = ~~ s_rac = ~~ s_gen = ~~ s_def = EVAL ~%s_def%~ END
+        STR_VAR s_ovr = ~~ s_cls = EVAL ~%s_cls%~ s_rac = ~~ s_gen = ~~ s_def = EVAL ~%s_def%~ END
+      PATCH_IF (~%dv%~ STRING_COMPARE ~~) BEGIN
+        WRITE_ASCIIE 0x280 ~%dv%~ #32
+      END
       PATCH_IF (class_id >= 0) BEGIN WRITE_BYTE 0x273 class_id END
       PATCH_IF (race_id >= 0) BEGIN WRITE_BYTE 0x272 race_id END
     BUT_ONLY
@@ -513,173 +485,317 @@ DEFINE_ACTION_FUNCTION cie420_upgrade_regulars BEGIN
   LAF cie420_upgrade_cre INT_VAR xp = 13500 STR_VAR cre = ~KONTIK~ END
 END
 
-// 6. Build Ch. 2-6 Drasus/Iron-Throne-style named specialist squads and place via actors_420.
+// 6. Repair quest kill-counters affected by thinning & stop AR3301.INI infinite staircase respawn.
+DEFINE_ACTION_FUNCTION cie420_fix_quests_and_spawns BEGIN
+  // DKAYLESS.DLG: 16 active ELVEN_SOLDIERs remain (7 AR5402 + 5 AR5403 + 4 CIE413/414) -> >14 instead of >24
+  ACTION_IF FILE_EXISTS_IN_GAME ~dkayless.dlg~ BEGIN
+    COPY_EXISTING ~dkayless.dlg~ ~override~
+      DECOMPILE_AND_PATCH BEGIN
+        REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~GlobalGT("SPRITE_IS_DEADELVEN_SOLDIER","GLOBAL",24)~ ~GlobalGT("SPRITE_IS_DEADELVEN_SOLDIER","GLOBAL",14)~
+      END
+    BUT_ONLY
+  END
+  // Dragon's Eye Lv 2 Talonite captives/area scripts: 11 active Talonite DVs remain -> >7 / <8 instead of >9 / <10
+  ACTION_FOR_EACH dlgn IN ~degenia~ ~dcallian~ ~dcapvil2~ ~dcapkid2~ BEGIN
+    ACTION_IF FILE_EXISTS_IN_GAME ~%dlgn%.dlg~ BEGIN
+      COPY_EXISTING ~%dlgn%.dlg~ ~override~
+        DECOMPILE_AND_PATCH BEGIN
+          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~GlobalGT("SPRITE_IS_DEADTalonite","GLOBAL",9)~ ~GlobalGT("SPRITE_IS_DEADTalonite","GLOBAL",7)~
+          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~GlobalLT("SPRITE_IS_DEADTalonite","GLOBAL",10)~ ~GlobalLT("SPRITE_IS_DEADTalonite","GLOBAL",8)~
+        END
+      BUT_ONLY
+    END
+  END
+  ACTION_FOR_EACH bcsn IN ~ar4001~ ~ar4003~ BEGIN
+    ACTION_IF FILE_EXISTS_IN_GAME ~%bcsn%.bcs~ BEGIN
+      COPY_EXISTING ~%bcsn%.bcs~ ~override~
+        DECOMPILE_AND_PATCH BEGIN
+          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~GlobalGT("SPRITE_IS_DEADTalonite","GLOBAL",9)~ ~GlobalGT("SPRITE_IS_DEADTalonite","GLOBAL",7)~
+          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~GlobalLT("SPRITE_IS_DEADTalonite","GLOBAL",10)~ ~GlobalLT("SPRITE_IS_DEADTalonite","GLOBAL",8)~
+        END
+      BUT_ONLY
+    END
+  END
+  // AR3301.INI: eliminate infinite staircase re-entry respawn by gating SKL1..12 on CIE_AR3301_SPAWN
+  LAF cie_gate_ini_spawn
+    STR_VAR ini = ~ar3301~ critters = ~SKL1,SKL3,SKL5,SKL7,SKL9,SKL11~
+            event_section = ~8_HOURS~ spec_var = ~CIE_AR3301_SPAWN~
+            parent_area = ~ar3000~ parent_fallback = ~AR3000~
+            child_area = ~ar3301~ child_fallback = ~AR3301~
+            arm_marker = ~CIE_AR3301_ARMED~
+  END
+END
+
+// 7. Upgrade Kaylessa (AR5401) into a true Lv 15 Elven Weapons Master with bow+sword switching.
+DEFINE_ACTION_FUNCTION cie420_upgrade_kaylessa BEGIN
+  OUTER_SPRINT kay_swp ~DWGNMB0~
+  ACTION_IF !FILE_EXISTS_IN_GAME ~dwgnmb0.bcs~ BEGIN OUTER_SPRINT kay_swp ~CIE4SWP~ END
+  ACTION_IF FILE_EXISTS_IN_GAME ~shkayles.bcs~ BEGIN
+    COPY_EXISTING ~shkayles.bcs~ ~override/CIE4KAYP.bcs~
+      DECOMPILE_AND_PATCH BEGIN
+        LPF cie_remove_baf_blocks STR_VAR text = ~RunAwayFromNoLeaveArea(LastSeenBy(Myself),45)~ RET removed END
+        SET from = 0
+        WHILE (from >= 0) BEGIN
+          LPF cie_find_baf_block INT_VAR from STR_VAR text = ~MOVEMENT_LIST_0_LOC~ RET start end END
+          PATCH_IF (start < 0) BEGIN
+            SET from = 0 - 1
+          END ELSE BEGIN
+            READ_ASCII start blk (end - start)
+            INNER_PATCH_SAVE blk ~%blk%~ BEGIN
+              PATCH_IF (INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~!Allegiance(Myself,ENEMY)~) < 0) BEGIN
+                REPLACE_TEXTUALLY ~^IF~ ~IF%LNL%  !Allegiance(Myself,ENEMY)~
+              END
+            END
+            LPF cie_replace_text INT_VAR start length = (end - start) STR_VAR text = EVAL ~%blk%~ END
+            SET from = start + STRING_LENGTH ~%blk%~
+          END
+        END
+      END
+  END ELSE BEGIN
+    COPY ~chriz-iwd-encounters/baf/cie_empty.baf~ ~override/CIE4KAYP.bcs~ COMPILE_BAF_TO_BCS
+  END
+
+  ACTION_IF FILE_EXISTS_IN_GAME ~kaylessa.cre~ BEGIN
+    COPY_EXISTING ~kaylessa.cre~ ~override~
+      PATCH_IF (BUFFER_LENGTH >= 0x2d4) BEGIN
+        WRITE_LONG  0x14 14000
+        WRITE_SHORT 0x24 175
+        WRITE_SHORT 0x26 175
+        WRITE_SHORT 0x46 (0 - 6)
+        WRITE_SHORT 0x48 (0 - 6)
+        WRITE_BYTE  0x52 2
+        WRITE_BYTE  0x53 4
+        WRITE_BYTE  0x54 3
+        WRITE_BYTE  0x55 5
+        WRITE_BYTE  0x56 4
+        WRITE_BYTE  0x57 4
+        WRITE_BYTE  0x58 5
+        WRITE_BYTE  0x234 15
+        WRITE_BYTE  0x238 18
+        WRITE_BYTE  0x239 95
+        WRITE_BYTE  0x23c 20
+        WRITE_BYTE  0x23d 17
+        SET_BG2_PROFICIENCY 104 5
+        SET_BG2_PROFICIENCY 90  5
+        LPF cie420_ensure_item INT_VAR q1 = 80 STR_VAR item = ~FARROW~ slot = ~QUIVER1~ END
+        LPF cie420_ensure_item INT_VAR q1 = 2  STR_VAR item = ~EXTHEAL~ slot = ~QITEM1~ END
+      END
+    BUT_ONLY
+  END
+
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar5401.are~ BEGIN
+    COPY_EXISTING ~ar5401.are~ ~override~
+      GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+      PHP_EACH actors AS idx => actor BEGIN
+        READ_ASCII (actor + 0x80) cre (8) NULL
+        PATCH_IF (~%cre%~ STRING_EQUAL_CASE ~KAYLESSA~) BEGIN
+          WRITE_ASCIIE (actor + 0x58) ~CIE4KAYP~ #8
+          WRITE_ASCIIE (actor + 0x60) ~%kay_swp%~ #8
+        END
+      END
+    BUT_ONLY
+  END
+END
+
+// 8. Build Ch. 2-6 asymmetric, lore-grounded squads & place via actors_420.
 DEFINE_ACTION_FUNCTION cie420_build_squads BEGIN
+  OUTER_SPRINT ptn_spd ~POTN14~
+  OUTER_SPRINT ptn_inv ~POTN10~
+  ACTION_IF FILE_EXISTS_IN_GAME ~dw#ptn14.itm~ BEGIN OUTER_SPRINT ptn_spd ~DW#PTN14~ END
+  ACTION_IF FILE_EXISTS_IN_GAME ~dw#ptn10.itm~ BEGIN OUTER_SPRINT ptn_inv ~DW#PTN10~ END
+
   LAF cie420_build_combat_script STR_VAR src = ~DWMESMGE~ dst = ~CIE4MEL~ END
-  LAF cie420_build_combat_script STR_VAR src = ~GNMBG9GH~ dst = ~CIE4ARC~ END
-  LAF cie420_build_combat_script STR_VAR src = ~DWLDTH0~  dst = ~CIE4TH0~ END
-  LAF cie420_build_combat_script STR_VAR src = ~DWLDTH1~  dst = ~CIE4TH1~ END
+  ACTION_IF FILE_EXISTS_IN_GAME ~dwmebrbe.bcs~ BEGIN
+    COPY_EXISTING ~dwmebrbe.bcs~ ~override/CIE4BERS.bcs~
+  END ELSE ACTION_IF FILE_EXISTS_IN_GAME ~dwmebrge.bcs~ BEGIN
+    COPY_EXISTING ~dwmebrge.bcs~ ~override/CIE4BERS.bcs~
+  END ELSE BEGIN
+    COPY ~chriz-iwd-encounters/baf/cie_melee.baf~ ~override/CIE4BERS.bcs~ COMPILE_BAF_TO_BCS
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~dwgnmb0.bcs~ BEGIN
+    COPY_EXISTING ~dwgnmb0.bcs~ ~override/CIE4SWP.bcs~
+  END ELSE BEGIN
+    COPY ~chriz-iwd-encounters/baf/cie_sw_fb.baf~ ~override/CIE4SWP.bcs~ COMPILE_BAF_TO_BCS
+  END
+  ACTION_IF FILE_EXISTS_IN_GAME ~dwmethas.bcs~ BEGIN
+    COPY_EXISTING ~dwmethas.bcs~ ~override/CIE4TH0.bcs~
+  END ELSE BEGIN
+    LAF cie420_build_combat_script STR_VAR src = ~DWLDTH1~ dst = ~CIE4TH0~ END
+  END
 
-  LAF cie_build_caster_script STR_VAR donor = ~DWTGAC0~ fallback_baf = ~cie5_priest_fb~ target = ~CIE403~ END
-  LAF cie_build_caster_script STR_VAR donor = ~DWD4YU0~ fallback_baf = ~cie5_mage_fb~   target = ~CIE404~ END
-  LAF cie_build_caster_script STR_VAR donor = ~DWSHSH0~ fallback_baf = ~cie5_mage_fb~   target = ~CIE411~ END
-  LAF cie_build_caster_script STR_VAR donor = ~DWSHEL0~ fallback_baf = ~cie5_priest_fb~ target = ~CIE413~ END
-  LAF cie_build_caster_script STR_VAR donor = ~DWSHOR0~ fallback_baf = ~cie5_priest_fb~ target = ~CIE417~ END
-  LAF cie_build_caster_script STR_VAR donor = ~DWUDDR6~ fallback_baf = ~cie5_mage_fb~   target = ~CIE421~ END
-  LAF cie_build_caster_script STR_VAR donor = ~DWUDDR6~ fallback_baf = ~cie5_mage_fb~   target = ~CIE425~ END
-  LAF cie_build_caster_script STR_VAR donor = ~DWIDGS0~ fallback_baf = ~cie5_priest_fb~ target = ~CIE427~ END
+  LAF cie_build_caster_script STR_VAR donor = ~DWTGAC0~  fallback_baf = ~cie5_priest_fb~ target = ~CIE403~ END
+  LAF cie_build_caster_script STR_VAR donor = ~DWSHSH0~  fallback_baf = ~cie5_mage_fb~   target = ~CIE411~ END
+  LAF cie_build_caster_script STR_VAR donor = ~UDDROW1~  fallback_baf = ~cie_fm_fb~      target = ~CIE4FM1~ END
+  LAF cie_build_caster_script STR_VAR donor = ~DW#LDDR2~ fallback_baf = ~cie_cm_fb~      target = ~CIE4CM1~ END
+  LAF cie_build_caster_script STR_VAR donor = ~DUHERO5~  fallback_baf = ~cie5_priest_fb~ target = ~CIE4DR1~ END
+  LAF cie_build_caster_script STR_VAR donor = ~UDBANDOF~ fallback_baf = ~cie5_mage_fb~   target = ~CIE425~ END
 
-  // AR4002 Talonite Inner Circle (CIE401-404)
-  LAF cie420_create_elite INT_VAR tra_id = 4201 xp = 6500 hp = 98 ac = (0 - 1) thac0 = 7 apr = 2 lvl1 = 9 class_id = 2 race_id = 1 anim_override = 0x6100
-    STR_VAR target = ~CIE401~ donor = ~BIKNIGHT~ fallback = ~TARNSEN~ look = ~TALONAM~ s_def = ~CIE4MEL~ END
+  OUTER_SET fc_scs = 0
+  ACTION_IF FILE_EXISTS_IN_GAME ~cajsha1.bcs~ BEGIN
+    COPY_EXISTING - ~cajsha1.bcs~ nowhere
+      PATCH_IF (INDEX_BUFFER (CASE_INSENSITIVE EXACT_MATCH ~instantprep~) >= 0) BEGIN
+        SET fc_scs = 1
+      END
+  END
+  ACTION_IF fc_scs BEGIN
+    LAF cie_build_caster_script STR_VAR donor = ~CAJSHA1~ fallback_baf = ~cie_fc_fb~ target = ~CIE4FC1~ END
+    EXTEND_TOP ~CIE4FC1.bcs~ ~chriz-iwd-encounters/baf/cie_fc_dispel.baf~
+  END ELSE BEGIN
+    COPY ~chriz-iwd-encounters/baf/cie_fc_fb.baf~ ~override/CIE4FC1.bcs~ COMPILE_BAF_TO_BCS
+  END
+
+  // AR4002 Talonite Plague Coven (CIE401-403, all DV=Talonite)
+  LAF cie420_create_elite INT_VAR tra_id = 4201 xp = 7500 hp = 88 ac = (0 - 1) thac0 = 9 apr = 1 lvl1 = 10 class_id = 3 race_id = 1 anim_override = 0x6010
+    STR_VAR target = ~CIE401~ donor = ~DWTALONF~ fallback = ~TALONAF~ look = ~TALONAF~ s_def = ~CIE403~ dv = ~Talonite~ END
   ACTION_IF FILE_EXISTS_IN_GAME ~cie401.cre~ BEGIN
     COPY_EXISTING ~cie401.cre~ ~override~
-      LPF cie420_ensure_item STR_VAR item = ~PLAT01~ slot = ~ARMOR~ END
-      LPF cie420_ensure_item STR_VAR item = ~SHLD04~ slot = ~SHIELD~ END
-      LPF cie420_ensure_item STR_VAR item = ~HELM01~ slot = ~HELMET~ END
-      LPF cie420_ensure_item STR_VAR item = ~SW1H05~ slot = ~WEAPON1~ equip = ~EQUIP~ END
-      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~EXTHEAL~ slot = ~QITEM1~ END
-    BUT_ONLY
-  END
-
-  LAF cie420_create_elite INT_VAR tra_id = 4202 xp = 5500 hp = 84 ac = 1 thac0 = 7 apr = 2 lvl1 = 8 class_id = 12 race_id = 1 anim_override = 0x6100
-    STR_VAR target = ~CIE402~ donor = ~LDDARCHR~ fallback = ~BIKNIGHT~ look = ~TALONAM~ s_def = ~CIE4ARC~ END
-  ACTION_IF FILE_EXISTS_IN_GAME ~cie402.cre~ BEGIN
-    COPY_EXISTING ~cie402.cre~ ~override~
-      LPF cie420_ensure_item STR_VAR item = ~LEAT05~ slot = ~ARMOR~ END
-      LPF cie420_ensure_item STR_VAR item = ~BOW03~  slot = ~WEAPON1~ equip = ~EQUIP~ END
-      LPF cie420_ensure_item INT_VAR q1 = 40 STR_VAR item = ~AROW02~ slot = ~QUIVER1~ END
-      LPF cie420_ensure_item STR_VAR item = ~SW1H02~ slot = ~WEAPON2~ END
-      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~EXTHEAL~ slot = ~QITEM1~ END
-    BUT_ONLY
-  END
-
-  LAF cie420_create_elite INT_VAR tra_id = 4203 xp = 7000 hp = 80 ac = 0 thac0 = 10 apr = 1 lvl1 = 9 class_id = 3 race_id = 1 anim_override = 0x6010
-    STR_VAR target = ~CIE403~ donor = ~DWTALONF~ fallback = ~TALONAF~ look = ~TALONAF~ s_def = ~CIE403~ END
-  ACTION_IF FILE_EXISTS_IN_GAME ~cie403.cre~ BEGIN
-    COPY_EXISTING ~cie403.cre~ ~override~
       LPF cie420_ensure_item STR_VAR item = ~CHAN05~ slot = ~ARMOR~ END
       LPF cie420_ensure_item STR_VAR item = ~SHLD04~ slot = ~SHIELD~ END
       LPF cie420_ensure_item STR_VAR item = ~BLUN05~ slot = ~WEAPON1~ equip = ~EQUIP~ END
-      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~EXTHEAL~ slot = ~QITEM1~ END
+      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~POTN52~ slot = ~QITEM1~ END
       LPF cie420_ensure_spell INT_VAR lvl = 2 cnt = 2 STR_VAR spell = ~SPPR214~ stype = ~priest~ END
       LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 1 STR_VAR spell = ~SPPR303~ stype = ~priest~ END
       LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 1 STR_VAR spell = ~SPPR313~ stype = ~priest~ END
       LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR401~ stype = ~priest~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR405~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR403~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR411~ stype = ~priest~ END
       LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPPR503~ stype = ~priest~ END
       LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPPR509~ stype = ~priest~ END
       LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPPR511~ stype = ~priest~ END
     BUT_ONLY
   END
 
-  LAF cie420_create_elite INT_VAR tra_id = 4204 xp = 7000 hp = 56 ac = 3 thac0 = 15 apr = 1 lvl1 = 9 class_id = 1 race_id = 1 anim_override = 0x6200
-    STR_VAR target = ~CIE404~ donor = ~DWSDEL0~ fallback = ~SDELFWZ1~ look = ~TALONAM~ s_def = ~CIE404~ END
-  ACTION_IF FILE_EXISTS_IN_GAME ~cie404.cre~ BEGIN
-    COPY_EXISTING ~cie404.cre~ ~override~
-      LPF cie420_ensure_item STR_VAR item = ~STAF02~ slot = ~WEAPON1~ equip = ~EQUIP~ END
-      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~EXTHEAL~ slot = ~QITEM1~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 1 cnt = 3 STR_VAR spell = ~SPWI112~ stype = ~wizard~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 2 cnt = 2 STR_VAR spell = ~SPWI212~ stype = ~wizard~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 1 STR_VAR spell = ~SPWI302~ stype = ~wizard~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 1 STR_VAR spell = ~SPWI304~ stype = ~wizard~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPWI401~ stype = ~wizard~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPWI408~ stype = ~wizard~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPWI505~ stype = ~wizard~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPWI513~ stype = ~wizard~ END
+  LAF cie420_create_elite INT_VAR tra_id = 4202 xp = 7500 hp = 104 ac = (0 - 2) thac0 = 6 apr = 8 lvl1 = 9 lvl2 = 9 class_id = 8 race_id = 1 anim_override = 0x6000
+    STR_VAR target = ~CIE402~ donor = ~MYTOS~ fallback = ~TALONAM~ look = ~TALONAM~ s_def = ~CIE4FC1~ dv = ~Talonite~ END
+  ACTION_IF FILE_EXISTS_IN_GAME ~cie402.cre~ BEGIN
+    COPY_EXISTING ~cie402.cre~ ~override~
+      LPF cie420_ensure_item STR_VAR item = ~PLAT01~ slot = ~ARMOR~ END
+      LPF cie420_ensure_item STR_VAR item = ~SHLD04~ slot = ~SHIELD~ END
+      LPF cie420_ensure_item STR_VAR item = ~HELM01~ slot = ~HELMET~ END
+      LPF cie420_ensure_item STR_VAR item = ~BLUN03~ slot = ~WEAPON1~ equip = ~EQUIP~ END
+      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~POTN52~ slot = ~QITEM1~ END
+      LPF cie420_ensure_item INT_VAR q1 = 1 STR_VAR item = ~EXTHEAL~ slot = ~QITEM2~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 1 cnt = 1 STR_VAR spell = ~SPPR101~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 2 cnt = 2 STR_VAR spell = ~SPPR214~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 1 STR_VAR spell = ~SPPR303~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 1 STR_VAR spell = ~SPPR316~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR403~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR421~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPPR503~ stype = ~priest~ END
     BUT_ONLY
   END
 
-  // AR5104 Fallen Elven War Council (CIE410-415)
-  LAF cie420_create_elite INT_VAR tra_id = 4210 xp = 9000 hp = 122 ac = (0 - 2) thac0 = 6 apr = 8 lvl1 = 11 class_id = 2 race_id = 2 anim_override = 0x6121
-    STR_VAR target = ~CIE410~ donor = ~SDELFSW5~ fallback = ~BIKNIGHT~ look = ~SDELFSW5~ s_def = ~CIE4MEL~ END
+  ACTION_IF FILE_EXISTS_IN_GAME ~trollt.cre~ BEGIN
+    COPY_EXISTING ~trollt.cre~ ~override/cie403.cre~
+      SAY NAME1 @4203
+      SAY NAME2 @4203
+      LPF cie_set_core INT_VAR xp = 6500 hp = 136 ac = 0 thac0 = 6 apr = 3 lvl1 = 11 lvl2 = 1 clear_items = 0
+        STR_VAR s_ovr = ~EFTROLG~ s_cls = ~~ s_rac = ~~ s_gen = ~~ s_def = ~CIE4MEL~ END
+      WRITE_ASCII 0x280 ~Talonite~ #32
+    BUT_ONLY
+  END
+
+  // AR5104 Labelas Tower Shadowed Arcane Circle (CIE410-412: 2x F/M Bladesinger, 1x Archmage, 1x C/M Lorekeeper)
+  LAF cie420_create_elite INT_VAR tra_id = 4210 xp = 11500 hp = 108 ac = (0 - 3) thac0 = 5 apr = 8 lvl1 = 10 lvl2 = 11 class_id = 7 race_id = 2 anim_override = 0x6121
+    STR_VAR target = ~CIE410~ donor = ~DROWSPE~ fallback = ~SDELFSW5~ look = ~SDELFSW5~ s_def = ~CIE4FM1~ END
   ACTION_IF FILE_EXISTS_IN_GAME ~cie410.cre~ BEGIN
     COPY_EXISTING ~cie410.cre~ ~override~
-      LPF cie420_ensure_item STR_VAR item = ~PLAT04~ slot = ~ARMOR~ END
-      LPF cie420_ensure_item STR_VAR item = ~SHLD06~ slot = ~SHIELD~ END
-      LPF cie420_ensure_item STR_VAR item = ~HELM01~ slot = ~HELMET~ END
+      LPF cie420_ensure_item STR_VAR item = ~CHAN05~ slot = ~ARMOR~ END
       LPF cie420_ensure_item STR_VAR item = ~SW1H05~ slot = ~WEAPON1~ equip = ~EQUIP~ END
-      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~EXTHEAL~ slot = ~QITEM1~ END
-      LPF cie420_ensure_item INT_VAR q1 = 1 STR_VAR item = ~POTN14~ slot = ~QITEM2~ END
+      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~POTN52~ slot = ~QITEM1~ END
+      LPF cie420_ensure_item INT_VAR q1 = 1 STR_VAR item = ~EXTHEAL~ slot = ~QITEM2~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 1 cnt = 3 STR_VAR spell = ~SPWI112~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 2 cnt = 2 STR_VAR spell = ~SPWI212~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 1 STR_VAR spell = ~SPWI303~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 1 STR_VAR spell = ~SPWI305~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 1 STR_VAR spell = ~SPWI308~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 2 STR_VAR spell = ~SPWI408~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPWI403~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPWI503~ stype = ~wizard~ END
     BUT_ONLY
   END
 
-  LAF cie420_create_elite INT_VAR tra_id = 4211 xp = 10000 hp = 68 ac = 1 thac0 = 13 apr = 1 lvl1 = 11 class_id = 1 race_id = 2 anim_override = 0x6221
+  LAF cie420_create_elite INT_VAR tra_id = 4211 xp = 13000 hp = 76 ac = 1 thac0 = 12 apr = 1 lvl1 = 12 class_id = 1 race_id = 2 anim_override = 0x6221
     STR_VAR target = ~CIE411~ donor = ~DWSDEL0~ fallback = ~SDELFWZ1~ look = ~SDELFWZ1~ s_def = ~CIE411~ END
   ACTION_IF FILE_EXISTS_IN_GAME ~cie411.cre~ BEGIN
     COPY_EXISTING ~cie411.cre~ ~override~
       LPF cie420_ensure_item STR_VAR item = ~STAF02~ slot = ~WEAPON1~ equip = ~EQUIP~ END
-      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~EXTHEAL~ slot = ~QITEM1~ END
+      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~POTN52~ slot = ~QITEM1~ END
       LPF cie420_ensure_spell INT_VAR lvl = 1 cnt = 3 STR_VAR spell = ~SPWI112~ stype = ~wizard~ END
       LPF cie420_ensure_spell INT_VAR lvl = 2 cnt = 2 STR_VAR spell = ~SPWI212~ stype = ~wizard~ END
       LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 2 STR_VAR spell = ~SPWI302~ stype = ~wizard~ END
       LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPWI401~ stype = ~wizard~ END
       LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 2 STR_VAR spell = ~SPWI408~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPWI412~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPWI508~ stype = ~wizard~ END
       LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPWI513~ stype = ~wizard~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPWI522~ stype = ~wizard~ END
       LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPWI523~ stype = ~wizard~ END
       LPF cie420_ensure_spell INT_VAR lvl = 6 cnt = 1 STR_VAR spell = ~SPWI605~ stype = ~wizard~ END
     BUT_ONLY
   END
 
-  LAF cie420_create_elite INT_VAR tra_id = 4212 xp = 8000 hp = 98 ac = 0 thac0 = 6 apr = 8 lvl1 = 10 class_id = 12 race_id = 2 anim_override = 0x6131
-    STR_VAR target = ~CIE412~ donor = ~SDELFBW1~ fallback = ~LDDARCHR~ look = ~SDELFBW1~ s_def = ~CIE4ARC~ END
+  LAF cie420_create_elite INT_VAR tra_id = 4212 xp = 12500 hp = 88 ac = (0 - 1) thac0 = 8 apr = 1 lvl1 = 10 lvl2 = 11 class_id = 14 race_id = 2 anim_override = 0x6021
+    STR_VAR target = ~CIE412~ donor = ~PRESIO~ fallback = ~DROWPM~ look = ~SDELFCL~ s_def = ~CIE4CM1~ END
   ACTION_IF FILE_EXISTS_IN_GAME ~cie412.cre~ BEGIN
     COPY_EXISTING ~cie412.cre~ ~override~
-      LPF cie420_ensure_item STR_VAR item = ~LEAT05~ slot = ~ARMOR~ END
-      LPF cie420_ensure_item STR_VAR item = ~BOW05~  slot = ~WEAPON1~ equip = ~EQUIP~ END
-      LPF cie420_ensure_item INT_VAR q1 = 40 STR_VAR item = ~AROW05~ slot = ~QUIVER1~ END
-      LPF cie420_ensure_item STR_VAR item = ~SW1H02~ slot = ~WEAPON2~ END
-      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~EXTHEAL~ slot = ~QITEM1~ END
+      LPF cie420_ensure_item STR_VAR item = ~HELM01~ slot = ~HELMET~ END
+      LPF cie420_ensure_item STR_VAR item = ~STAF02~ slot = ~WEAPON1~ equip = ~EQUIP~ END
+      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~POTN52~ slot = ~QITEM1~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 2 cnt = 1 STR_VAR spell = ~SPPR214~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 1 STR_VAR spell = ~SPPR316~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR401~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR403~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR421~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPPR503~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 1 cnt = 2 STR_VAR spell = ~SPWI112~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 2 cnt = 2 STR_VAR spell = ~SPWI212~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 2 cnt = 1 STR_VAR spell = ~SPWI215~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 1 STR_VAR spell = ~SPWI312~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 2 STR_VAR spell = ~SPWI408~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPWI508~ stype = ~wizard~ END
     BUT_ONLY
   END
 
-  LAF cie420_create_elite INT_VAR tra_id = 4213 xp = 9500 hp = 92 ac = (0 - 1) thac0 = 9 apr = 1 lvl1 = 10 class_id = 3 race_id = 2 anim_override = 0x6031
-    STR_VAR target = ~CIE413~ donor = ~DWSDEL4~ fallback = ~SDELFCL~ look = ~SDELFCL~ s_def = ~CIE413~ END
+  // AR5403 Solonor Tower Martial Garrison (CIE413-414: 3x Bow/Sword Rangers + 1x F/C War-Priest, DV=ELVEN_SOLDIER)
+  LAF cie420_create_elite INT_VAR tra_id = 4213 xp = 7500 hp = 118 ac = (0 - 3) thac0 = 4 apr = 3 lvl1 = 11 class_id = 12 race_id = 2 anim_override = 0x6121
+    STR_VAR target = ~CIE413~ donor = ~SDELFBW1~ fallback = ~SDELFSW5~ look = ~SDELFBW1~ s_def = ~CIE4SWP~ dv = ~ELVEN_SOLDIER~ END
   ACTION_IF FILE_EXISTS_IN_GAME ~cie413.cre~ BEGIN
     COPY_EXISTING ~cie413.cre~ ~override~
-      LPF cie420_ensure_item STR_VAR item = ~PLAT01~ slot = ~ARMOR~ END
-      LPF cie420_ensure_item STR_VAR item = ~SHLD04~ slot = ~SHIELD~ END
-      LPF cie420_ensure_item STR_VAR item = ~BLUN05~ slot = ~WEAPON1~ equip = ~EQUIP~ END
+      WRITE_BYTE 0x23c 19 // DEX 19
+      LPF cie420_ensure_item STR_VAR item = ~CHAN05~ slot = ~ARMOR~ END
+      LPF cie420_ensure_item STR_VAR item = ~BOW01~  slot = ~WEAPON1~ equip = ~EQUIP~ END
+      LPF cie420_ensure_item INT_VAR q1 = 40 STR_VAR item = ~AROW11~ slot = ~QUIVER1~ END
+      LPF cie420_ensure_item INT_VAR q1 = 40 STR_VAR item = ~AROW02~ slot = ~QUIVER2~ END
+      LPF cie420_ensure_item STR_VAR item = ~SW1H05~ slot = ~WEAPON2~ END
       LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~EXTHEAL~ slot = ~QITEM1~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 1 STR_VAR spell = ~SPPR303~ stype = ~priest~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 1 STR_VAR spell = ~SPPR313~ stype = ~priest~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR401~ stype = ~priest~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR405~ stype = ~priest~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPPR503~ stype = ~priest~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPPR509~ stype = ~priest~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPPR511~ stype = ~priest~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 6 cnt = 1 STR_VAR spell = ~SPPR603~ stype = ~priest~ END
     BUT_ONLY
   END
 
-  LAF cie420_create_elite INT_VAR tra_id = 4214 xp = 8500 hp = 88 ac = 0 thac0 = 8 apr = 2 lvl1 = 9 lvl2 = 9 class_id = 4 race_id = 2 anim_override = 0x6301
-    STR_VAR target = ~CIE414~ donor = ~LDDTHIE3~ fallback = ~SDELFSW5~ look = ~SDELFSW5~ s_def = ~CIE4TH1~ END
+  LAF cie420_create_elite INT_VAR tra_id = 4214 xp = 9500 hp = 112 ac = (0 - 3) thac0 = 5 apr = 8 lvl1 = 10 lvl2 = 10 class_id = 8 race_id = 2 anim_override = 0x6021
+    STR_VAR target = ~CIE414~ donor = ~MYTOS~ fallback = ~SDELFCL~ look = ~SDELFCL~ s_def = ~CIE4FC1~ dv = ~ELVEN_SOLDIER~ END
   ACTION_IF FILE_EXISTS_IN_GAME ~cie414.cre~ BEGIN
     COPY_EXISTING ~cie414.cre~ ~override~
-      LPF cie420_ensure_item STR_VAR item = ~LEAT05~ slot = ~ARMOR~ END
-      LPF cie420_ensure_item STR_VAR item = ~SW1H08~ slot = ~WEAPON1~ equip = ~EQUIP~ END
-      LPF cie420_ensure_item STR_VAR item = ~DAGG02~ slot = ~WEAPON2~ END
-      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~POTN10~ slot = ~QITEM1~ END
-      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~EXTHEAL~ slot = ~QITEM2~ END
-    BUT_ONLY
-  END
-
-  LAF cie420_create_elite INT_VAR tra_id = 4215 xp = 8000 hp = 110 ac = (0 - 1) thac0 = 7 apr = 2 lvl1 = 10 class_id = 2 race_id = 2 anim_override = 0x6121
-    STR_VAR target = ~CIE415~ donor = ~SDELFSW5~ fallback = ~BIKNIGHT~ look = ~SDELFSW5~ s_def = ~CIE4MEL~ END
-  ACTION_IF FILE_EXISTS_IN_GAME ~cie415.cre~ BEGIN
-    COPY_EXISTING ~cie415.cre~ ~override~
       LPF cie420_ensure_item STR_VAR item = ~PLAT01~ slot = ~ARMOR~ END
       LPF cie420_ensure_item STR_VAR item = ~SHLD04~ slot = ~SHIELD~ END
       LPF cie420_ensure_item STR_VAR item = ~HELM01~ slot = ~HELMET~ END
-      LPF cie420_ensure_item STR_VAR item = ~SW1H05~ slot = ~WEAPON1~ equip = ~EQUIP~ END
-      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~EXTHEAL~ slot = ~QITEM1~ END
+      LPF cie420_ensure_item STR_VAR item = ~HAMM03~ slot = ~WEAPON1~ equip = ~EQUIP~ END
+      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~POTN52~ slot = ~QITEM1~ END
+      LPF cie420_ensure_item INT_VAR q1 = 1 STR_VAR item = ~EXTHEAL~ slot = ~QITEM2~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 1 cnt = 1 STR_VAR spell = ~SPPR101~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 2 cnt = 2 STR_VAR spell = ~SPPR214~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 2 STR_VAR spell = ~SPPR303~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 1 STR_VAR spell = ~SPPR316~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR403~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR406~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR421~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPPR503~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPPR513~ stype = ~priest~ END
     BUT_ONLY
   END
 
-  // AR6003 Orog Warlord Command (CIE416-418)
-  LAF cie420_create_elite INT_VAR tra_id = 4216 xp = 9500 hp = 132 ac = (0 - 2) thac0 = 5 apr = 8 lvl1 = 11 class_id = 2
-    STR_VAR target = ~CIE416~ donor = ~NEOOROGG~ fallback = ~BIKNIGHT~ look = ~NEOOROGG~ s_def = ~CIE4MEL~ END
+  // AR6003 Pure Orog Warlord / Berserker Shock-Guard (CIE416-417)
+  LAF cie420_create_elite INT_VAR tra_id = 4216 xp = 9500 hp = 148 ac = (0 - 3) thac0 = 4 apr = 3 lvl1 = 12 class_id = 2
+    STR_VAR target = ~CIE416~ donor = ~NEOOROGG~ fallback = ~BIKNIGHT~ look = ~NEOOROGG~ s_def = ~CIE4BERS~ END
   ACTION_IF FILE_EXISTS_IN_GAME ~cie416.cre~ BEGIN
     COPY_EXISTING ~cie416.cre~ ~override~
       LPF cie420_ensure_item STR_VAR item = ~PLAT04~ slot = ~ARMOR~ END
@@ -687,81 +803,66 @@ DEFINE_ACTION_FUNCTION cie420_build_squads BEGIN
       LPF cie420_ensure_item STR_VAR item = ~HELM01~ slot = ~HELMET~ END
       LPF cie420_ensure_item STR_VAR item = ~AX1H03~ slot = ~WEAPON1~ equip = ~EQUIP~ END
       LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~EXTHEAL~ slot = ~QITEM1~ END
+      LPF cie420_ensure_item INT_VAR q1 = 1 STR_VAR item = EVAL ~%ptn_spd%~ slot = ~QITEM2~ END
     BUT_ONLY
   END
 
-  LAF cie420_create_elite INT_VAR tra_id = 4217 xp = 9000 hp = 98 ac = 0 thac0 = 9 apr = 1 lvl1 = 10 class_id = 3
-    STR_VAR target = ~CIE417~ donor = ~DWSDEL4~ fallback = ~NEOOROGG~ look = ~NEOOROGG~ s_def = ~CIE417~ END
+  LAF cie420_create_elite INT_VAR tra_id = 4217 xp = 7500 hp = 134 ac = (0 - 1) thac0 = 5 apr = 8 lvl1 = 11 class_id = 2
+    STR_VAR target = ~CIE417~ donor = ~NEOOROGG~ fallback = ~BIKNIGHT~ look = ~NEOOROGG~ s_def = ~CIE4BERS~ END
   ACTION_IF FILE_EXISTS_IN_GAME ~cie417.cre~ BEGIN
     COPY_EXISTING ~cie417.cre~ ~override~
       LPF cie420_ensure_item STR_VAR item = ~CHAN05~ slot = ~ARMOR~ END
-      LPF cie420_ensure_item STR_VAR item = ~SHLD04~ slot = ~SHIELD~ END
-      LPF cie420_ensure_item STR_VAR item = ~HAMM02~ slot = ~WEAPON1~ equip = ~EQUIP~ END
+      LPF cie420_ensure_item STR_VAR item = ~HELM01~ slot = ~HELMET~ END
+      LPF cie420_ensure_item STR_VAR item = ~AX1H03~ slot = ~WEAPON1~ equip = ~EQUIP~ END
       LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~EXTHEAL~ slot = ~QITEM1~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 1 STR_VAR spell = ~SPPR303~ stype = ~priest~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR401~ stype = ~priest~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR405~ stype = ~priest~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPPR503~ stype = ~priest~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPPR509~ stype = ~priest~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPPR511~ stype = ~priest~ END
+      LPF cie420_ensure_item INT_VAR q1 = 1 STR_VAR item = EVAL ~%ptn_spd%~ slot = ~QITEM2~ END
     BUT_ONLY
   END
 
-  LAF cie420_create_elite INT_VAR tra_id = 4218 xp = 8500 hp = 106 ac = 0 thac0 = 6 apr = 2 lvl1 = 10 class_id = 12
-    STR_VAR target = ~CIE418~ donor = ~LDDARCHR~ fallback = ~NEOOROGG~ look = ~NEOOROGG~ s_def = ~CIE4ARC~ END
-  ACTION_IF FILE_EXISTS_IN_GAME ~cie418.cre~ BEGIN
-    COPY_EXISTING ~cie418.cre~ ~override~
-      LPF cie420_ensure_item STR_VAR item = ~CHAN05~ slot = ~ARMOR~ END
-      LPF cie420_ensure_item STR_VAR item = ~XBOW05~ slot = ~WEAPON1~ equip = ~EQUIP~ END
-      LPF cie420_ensure_item INT_VAR q1 = 40 STR_VAR item = ~BOLT04~ slot = ~QUIVER1~ END
-      LPF cie420_ensure_item STR_VAR item = ~AX1H02~ slot = ~WEAPON2~ END
-      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~EXTHEAL~ slot = ~QITEM1~ END
-    BUT_ONLY
-  END
-
-  // AR7004 Kontik's Aurilite Specialists (CIE420-422) -> EA = 128 NEUTRAL so they turn hostile with Kontik
-  LAF cie420_create_elite INT_VAR tra_id = 4220 xp = 13000 hp = 138 ac = (0 - 3) thac0 = 4 apr = 8 ea = 128 lvl1 = 12 class_id = 2 race_id = 1 anim_override = 0x6100
-    STR_VAR target = ~CIE420~ donor = ~BIKNIGHT~ fallback = ~TARNSEN~ look = ~BIKNIGHT~ s_def = ~CIE4MEL~ END
+  // AR7004 Kontik's Frostmaiden Sisterhood (CIE420-421) -> EA = 128 NEUTRAL on GNTEAM2
+  LAF cie420_create_elite INT_VAR tra_id = 4220 xp = 14500 hp = 96 ac = (0 - 2) thac0 = 8 apr = 1 ea = 128 lvl1 = 11 lvl2 = 11 rcld = 100 class_id = 14 race_id = 1 anim_override = 0x6210
+    STR_VAR target = ~CIE420~ donor = ~PRESIO~ fallback = ~DROWPM~ look = ~KONTIK~ s_def = ~CIE4CM1~ END
   ACTION_IF FILE_EXISTS_IN_GAME ~cie420.cre~ BEGIN
     COPY_EXISTING ~cie420.cre~ ~override~
-      LPF cie420_ensure_item STR_VAR item = ~PLAT04~ slot = ~ARMOR~ END
-      LPF cie420_ensure_item STR_VAR item = ~SHLD06~ slot = ~SHIELD~ END
-      LPF cie420_ensure_item STR_VAR item = ~HELM01~ slot = ~HELMET~ END
-      LPF cie420_ensure_item STR_VAR item = ~SW1H10~ slot = ~WEAPON1~ equip = ~EQUIP~ END
-      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~POTN52~ slot = ~QITEM1~ END
-    BUT_ONLY
-  END
-
-  LAF cie420_create_elite INT_VAR tra_id = 4221 xp = 14500 hp = 82 ac = 0 thac0 = 12 apr = 1 ea = 128 lvl1 = 12 rcld = 75 class_id = 1 race_id = 1 anim_override = 0x6200
-    STR_VAR target = ~CIE421~ donor = ~DWDROW0~ fallback = ~SDELFWZ1~ look = ~BIKNIGHT~ s_def = ~CIE421~ END
-  ACTION_IF FILE_EXISTS_IN_GAME ~cie421.cre~ BEGIN
-    COPY_EXISTING ~cie421.cre~ ~override~
       LPF cie420_ensure_item STR_VAR item = ~STAF02~ slot = ~WEAPON1~ equip = ~EQUIP~ END
       LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~POTN52~ slot = ~QITEM1~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 1 STR_VAR spell = ~SPPR316~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR403~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR421~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPPR503~ stype = ~priest~ END
       LPF cie420_ensure_spell INT_VAR lvl = 1 cnt = 3 STR_VAR spell = ~SPWI112~ stype = ~wizard~ END
       LPF cie420_ensure_spell INT_VAR lvl = 2 cnt = 2 STR_VAR spell = ~SPWI212~ stype = ~wizard~ END
       LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 2 STR_VAR spell = ~SPWI302~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 2 STR_VAR spell = ~SPWI404~ stype = ~wizard~ END
       LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 2 STR_VAR spell = ~SPWI408~ stype = ~wizard~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 2 STR_VAR spell = ~SPWI508~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 2 STR_VAR spell = ~SPWI503~ stype = ~wizard~ END
       LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPWI513~ stype = ~wizard~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 6 cnt = 1 STR_VAR spell = ~SPWI615~ stype = ~wizard~ END
     BUT_ONLY
   END
 
-  LAF cie420_create_elite INT_VAR tra_id = 4222 xp = 12500 hp = 112 ac = (0 - 1) thac0 = 5 apr = 8 ea = 128 lvl1 = 11 class_id = 12 race_id = 1 anim_override = 0x6100
-    STR_VAR target = ~CIE422~ donor = ~LDDARCHR~ fallback = ~BIKNIGHT~ look = ~LDDARCHR~ s_def = ~CIE4ARC~ END
-  ACTION_IF FILE_EXISTS_IN_GAME ~cie422.cre~ BEGIN
-    COPY_EXISTING ~cie422.cre~ ~override~
+  LAF cie420_create_elite INT_VAR tra_id = 4221 xp = 13500 hp = 104 ac = (0 - 2) thac0 = 6 apr = 1 ea = 128 lvl1 = 12 rcld = 100 class_id = 11 race_id = 1 anim_override = 0x6010
+    STR_VAR target = ~CIE421~ donor = ~TRSPH5~ fallback = ~ARUNDEL~ look = ~TALONAF~ s_def = ~CIE4DR1~ END
+  ACTION_IF FILE_EXISTS_IN_GAME ~cie421.cre~ BEGIN
+    COPY_EXISTING ~cie421.cre~ ~override~
+      LPF DELETE_CRE_EFFECT INT_VAR opcode_to_delete = 342 END
       LPF cie420_ensure_item STR_VAR item = ~LEAT05~ slot = ~ARMOR~ END
-      LPF cie420_ensure_item STR_VAR item = ~BOW05~  slot = ~WEAPON1~ equip = ~EQUIP~ END
-      LPF cie420_ensure_item INT_VAR q1 = 40 STR_VAR item = ~AROW11~ slot = ~QUIVER1~ END
-      LPF cie420_ensure_item STR_VAR item = ~SW1H05~ slot = ~WEAPON2~ END
+      LPF cie420_ensure_item STR_VAR item = ~SHLD04~ slot = ~SHIELD~ END
+      LPF cie420_ensure_item STR_VAR item = ~SPER02~ slot = ~WEAPON1~ equip = ~EQUIP~ END
       LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~POTN52~ slot = ~QITEM1~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 2 cnt = 1 STR_VAR spell = ~SPPR202~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 1 STR_VAR spell = ~SPPR302~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 1 STR_VAR spell = ~SPPR319~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 1 STR_VAR spell = ~SPPR325~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR401~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR406~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPPR517~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPPR519~ stype = ~priest~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 6 cnt = 1 STR_VAR spell = ~SPPR615~ stype = ~priest~ END
     BUT_ONLY
   END
 
-  // AR8007 Marketh's Kraken Society Elite (CIE425-429) -> EA = 255 ENEMY
-  LAF cie420_create_elite INT_VAR tra_id = 4225 xp = 16000 hp = 88 ac = 0 thac0 = 11 apr = 1 lvl1 = 13 mr = 20 class_id = 1 race_id = 2 anim_override = 0x6201
+  // AR8007 Marketh's Kraken Society Operatives (CIE425-427: Archmage + F/M Bodyguard + 2x F/T Nightblades)
+  LAF cie420_create_elite INT_VAR tra_id = 4225 xp = 16500 hp = 88 ac = 0 thac0 = 11 apr = 1 lvl1 = 13 mr = 20 class_id = 1 race_id = 2 anim_override = 0x6201
     STR_VAR target = ~CIE425~ donor = ~DWDROW0~ fallback = ~DROWSOR~ look = ~DROWSOR~ s_def = ~CIE425~ END
   ACTION_IF FILE_EXISTS_IN_GAME ~cie425.cre~ BEGIN
     COPY_EXISTING ~cie425.cre~ ~override~
@@ -770,72 +871,77 @@ DEFINE_ACTION_FUNCTION cie420_build_squads BEGIN
       LPF cie420_ensure_spell INT_VAR lvl = 1 cnt = 3 STR_VAR spell = ~SPWI112~ stype = ~wizard~ END
       LPF cie420_ensure_spell INT_VAR lvl = 2 cnt = 2 STR_VAR spell = ~SPWI212~ stype = ~wizard~ END
       LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 2 STR_VAR spell = ~SPWI302~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPWI401~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPWI405~ stype = ~wizard~ END
       LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 2 STR_VAR spell = ~SPWI408~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPWI412~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPWI505~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPWI506~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPWI508~ stype = ~wizard~ END
       LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPWI513~ stype = ~wizard~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPWI522~ stype = ~wizard~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPWI523~ stype = ~wizard~ END
       LPF cie420_ensure_spell INT_VAR lvl = 6 cnt = 1 STR_VAR spell = ~SPWI605~ stype = ~wizard~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 6 cnt = 1 STR_VAR spell = ~SPWI615~ stype = ~wizard~ END
     BUT_ONLY
   END
 
-  LAF cie420_create_elite INT_VAR tra_id = 4226 xp = 14000 hp = 148 ac = (0 - 3) thac0 = 4 apr = 3 lvl1 = 13 class_id = 2 race_id = 1 anim_override = 0x6100
-    STR_VAR target = ~CIE426~ donor = ~BIKNIGHT~ fallback = ~TARNSEN~ look = ~TARNSEN~ s_def = ~CIE4MEL~ END
+  LAF cie420_create_elite INT_VAR tra_id = 4226 xp = 15500 hp = 122 ac = (0 - 4) thac0 = 4 apr = 8 lvl1 = 11 lvl2 = 12 class_id = 7 race_id = 1 anim_override = 0x6100
+    STR_VAR target = ~CIE426~ donor = ~DROWSPE~ fallback = ~TARNSEN~ look = ~TARNSEN~ s_def = ~CIE4FM1~ END
   ACTION_IF FILE_EXISTS_IN_GAME ~cie426.cre~ BEGIN
     COPY_EXISTING ~cie426.cre~ ~override~
-      LPF cie420_ensure_item STR_VAR item = ~PLAT04~ slot = ~ARMOR~ END
-      LPF cie420_ensure_item STR_VAR item = ~SHLD06~ slot = ~SHIELD~ END
+      LPF cie420_ensure_item STR_VAR item = ~CHAN05~ slot = ~ARMOR~ END
       LPF cie420_ensure_item STR_VAR item = ~HELM01~ slot = ~HELMET~ END
       LPF cie420_ensure_item STR_VAR item = ~SW1H10~ slot = ~WEAPON1~ equip = ~EQUIP~ END
       LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~POTN52~ slot = ~QITEM1~ END
-      LPF cie420_ensure_item INT_VAR q1 = 1 STR_VAR item = ~POTN14~ slot = ~QITEM2~ END
+      LPF cie420_ensure_item INT_VAR q1 = 1 STR_VAR item = ~EXTHEAL~ slot = ~QITEM2~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 1 cnt = 3 STR_VAR spell = ~SPWI112~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 2 cnt = 2 STR_VAR spell = ~SPWI212~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 1 STR_VAR spell = ~SPWI302~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 1 STR_VAR spell = ~SPWI305~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 2 STR_VAR spell = ~SPWI408~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPWI418~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPWI503~ stype = ~wizard~ END
+      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPWI513~ stype = ~wizard~ END
     BUT_ONLY
   END
 
-  LAF cie420_create_elite INT_VAR tra_id = 4227 xp = 14000 hp = 108 ac = (0 - 2) thac0 = 8 apr = 1 lvl1 = 12 class_id = 3 race_id = 1 anim_override = 0x6000
-    STR_VAR target = ~CIE427~ donor = ~DWSDEL4~ fallback = ~TALONAM~ look = ~TALONAM~ s_def = ~CIE427~ END
+  LAF cie420_create_elite INT_VAR tra_id = 4227 xp = 14500 hp = 110 ac = (0 - 3) thac0 = 4 apr = 8 lvl1 = 11 lvl2 = 12 class_id = 9 race_id = 1 anim_override = 0x6300
+    STR_VAR target = ~CIE427~ donor = ~SETHH~ fallback = ~LDDTHIE3~ look = ~LDDTHIE3~ s_def = ~CIE4TH0~ END
   ACTION_IF FILE_EXISTS_IN_GAME ~cie427.cre~ BEGIN
     COPY_EXISTING ~cie427.cre~ ~override~
-      LPF cie420_ensure_item STR_VAR item = ~PLAT04~ slot = ~ARMOR~ END
-      LPF cie420_ensure_item STR_VAR item = ~SHLD04~ slot = ~SHIELD~ END
-      LPF cie420_ensure_item STR_VAR item = ~BLUN05~ slot = ~WEAPON1~ equip = ~EQUIP~ END
-      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~POTN52~ slot = ~QITEM1~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 3 cnt = 2 STR_VAR spell = ~SPPR303~ stype = ~priest~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR401~ stype = ~priest~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 4 cnt = 1 STR_VAR spell = ~SPPR405~ stype = ~priest~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPPR503~ stype = ~priest~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPPR509~ stype = ~priest~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 5 cnt = 1 STR_VAR spell = ~SPPR511~ stype = ~priest~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 6 cnt = 1 STR_VAR spell = ~SPPR603~ stype = ~priest~ END
-      LPF cie420_ensure_spell INT_VAR lvl = 6 cnt = 1 STR_VAR spell = ~SPPR607~ stype = ~priest~ END
-    BUT_ONLY
-  END
-
-  LAF cie420_create_elite INT_VAR tra_id = 4228 xp = 13000 hp = 104 ac = (0 - 1) thac0 = 6 apr = 8 lvl1 = 11 lvl2 = 12 class_id = 4 race_id = 1 anim_override = 0x6300
-    STR_VAR target = ~CIE428~ donor = ~LDDTHIE3~ fallback = ~BIKNIGHT~ look = ~LDDTHIE3~ s_def = ~CIE4TH0~ END
-  ACTION_IF FILE_EXISTS_IN_GAME ~cie428.cre~ BEGIN
-    COPY_EXISTING ~cie428.cre~ ~override~
-      LPF cie420_ensure_item STR_VAR item = ~LEAT05~ slot = ~ARMOR~ END
+      WRITE_BYTE 0x45 120 // Hide in Shadows
+      WRITE_BYTE 0x68 120 // Move Silently
+      SET_BG2_PROFICIENCY 91 2
+      LPF cie420_ensure_item STR_VAR item = ~LEAT07~ slot = ~ARMOR~ END
       LPF cie420_ensure_item STR_VAR item = ~SW1H08~ slot = ~WEAPON1~ equip = ~EQUIP~ END
-      LPF cie420_ensure_item STR_VAR item = ~DAGG02~ slot = ~WEAPON2~ END
-      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~POTN10~ slot = ~QITEM1~ END
-      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~POTN52~ slot = ~QITEM2~ END
+      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = EVAL ~%ptn_inv%~ slot = ~QITEM1~ END
+      LPF cie420_ensure_item INT_VAR q1 = 1 STR_VAR item = EVAL ~%ptn_spd%~ slot = ~QITEM2~ END
+      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~EXTHEAL~ slot = ~QITEM3~ END
     BUT_ONLY
   END
 
-  LAF cie420_create_elite INT_VAR tra_id = 4229 xp = 13000 hp = 118 ac = (0 - 1) thac0 = 5 apr = 8 lvl1 = 12 class_id = 12 race_id = 1 anim_override = 0x6100
-    STR_VAR target = ~CIE429~ donor = ~LDDARCHR~ fallback = ~BIKNIGHT~ look = ~LDDARCHR~ s_def = ~CIE4ARC~ END
-  ACTION_IF FILE_EXISTS_IN_GAME ~cie429.cre~ BEGIN
-    COPY_EXISTING ~cie429.cre~ ~override~
-      LPF cie420_ensure_item STR_VAR item = ~CHAN05~ slot = ~ARMOR~ END
-      LPF cie420_ensure_item STR_VAR item = ~XBOW05~ slot = ~WEAPON1~ equip = ~EQUIP~ END
-      LPF cie420_ensure_item INT_VAR q1 = 40 STR_VAR item = ~BOLT06~ slot = ~QUIVER1~ END
-      LPF cie420_ensure_item STR_VAR item = ~SW1H05~ slot = ~WEAPON2~ END
-      LPF cie420_ensure_item INT_VAR q1 = 2 STR_VAR item = ~POTN52~ slot = ~QITEM1~ END
-    BUT_ONLY
+  // Disable any legacy v0.3.0/v0.3.1 squad names if present on a pre-existing save/fixture
+  ACTION_FOR_EACH spec IN
+    ~ar4002=>CIE401 Vanguard~ ~ar4002=>CIE402 Venom Archer~ ~ar4002=>CIE403 Stormcaller~ ~ar4002=>CIE404 War-Mage~
+    ~ar5104=>CIE410 Blade-Captain~ ~ar5104=>CIE411 High Battlemage~ ~ar5104=>CIE412 Deadeye Sniper~
+    ~ar5104=>CIE413 Hierophant~ ~ar5104=>CIE414 Shadowblade~ ~ar5104=>CIE415 Ward-Guard~
+    ~ar6003=>CIE417 Orog War-Shaman~ ~ar6003=>CIE418 Orog Skullsplitter~
+    ~ar7004=>CIE420 Frostblade Champ~ ~ar7004=>CIE422 Icebow Stalker~
+    ~ar8007=>CIE425 Kraken Archmage~ ~ar8007=>CIE426 Kraken Enforcer~
+    ~ar8007=>CIE427 Deep Inquisitor~ ~ar8007=>CIE428 Nightblade~ ~ar8007=>CIE429 Marksman~
+  BEGIN
+    OUTER_PATCH ~%spec%~ BEGIN
+      REPLACE_EVALUATE ~^\([^=]+\)=>\(.+\)$~ BEGIN
+        SPRINT rem_are ~%MATCH1%~
+        SPRINT rem_nam ~%MATCH2%~
+      END ~~
+    END
+    ACTION_IF FILE_EXISTS_IN_GAME ~%rem_are%.are~ BEGIN
+      COPY_EXISTING ~%rem_are%.are~ ~override~
+        LPF cie_disable_actor_by_name STR_VAR match_name = EVAL ~%rem_nam%~ END
+      BUT_ONLY
+    END
   END
 
-  ACTION_FOR_EACH area IN ~ar4002~ ~ar5104~ ~ar6003~ ~ar7004~ ~ar8007~ BEGIN
+  ACTION_FOR_EACH area IN ~ar4002~ ~ar5104~ ~ar5403~ ~ar6003~ ~ar7004~ ~ar8007~ BEGIN
     LAF cie_place_area_actors STR_VAR folder = ~actors_420~ area END
   END
 END
@@ -847,6 +953,8 @@ DEFINE_ACTION_FUNCTION cie_main_campaign BEGIN
   LAF cie420_terikan END
   LAF cie_main_disable_fillers END
   LAF cie420_upgrade_regulars END
+  LAF cie420_fix_quests_and_spawns END
+  LAF cie420_upgrade_kaylessa END
   LAF cie420_build_squads END
-  PRINT ~chriz-iwd-encounters: Main campaign overhaul applied (Tarnsen, DGINA2, AR3503 3-wave crypt, Terikan 115HP+CIELICIM+rally, Ch.2-6 thinning, Severed Hand/Giant/Wyrm upgrades, and 5 Drasus/Iron-Throne-style elite squads).~
+  PRINT ~chriz-iwd-encounters: Main campaign overhaul applied (Tarnsen, DGINA2, DKAYLESS/DEGENIA, Kaylessa, AR3301.INI, AR3503 3-wave crypt, Terikan, Ch.2-6 thinning, Severed Hand/Giant/Wyrm upgrades, and 6 asymmetric lore-grounded squads).~
 END

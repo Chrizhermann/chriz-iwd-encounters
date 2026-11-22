@@ -358,19 +358,3 @@ DEFINE_ACTION_FUNCTION cie_mebdinga_gates BEGIN
     PRINT ~chriz-iwd-encounters: AR9400.INI is absent; the placed honour guard and Mebdinga are installed.~
   END
 END
-
-// An INI section in the patch buffer: from its "[name]" line to the next section or
-// the end (head -1 when it is missing).
-DEFINE_PATCH_FUNCTION cie_ini_section
-  STR_VAR section = ~~
-  RET head next
-BEGIN
-  SET head = INDEX_BUFFER (CASE_INSENSITIVE EVALUATE_REGEXP ~^\[%section%\]~)
-  SET next = BUFFER_LENGTH
-  PATCH_IF (head >= 0) BEGIN
-    SET next = INDEX_BUFFER (EVALUATE_REGEXP ~^\[~ (head + 1))
-    PATCH_IF (next < 0) BEGIN
-      SET next = BUFFER_LENGTH
-    END
-  END
-END

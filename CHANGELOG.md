@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.3.2 (2026-11-22)
+
+- **300 (Belhifet's final fight):** Restores Poquelin's base-game transformation shockwave dispel (`SPIN183` / `EEPOQCNG`) so parties cannot trivialize the finale by pre-buffing outside the church, while keeping Belhifet's Lv-26 Abjuration Dispel Magic (`CIEBELDI`), `0xE256` `BELHIFET` sprite, Lv 1–3 spell immunity (`CIEBELPR`), HP scaling, wave pacing, and teleport fix.
+- **420 (Main campaign overhaul, Chapters 2–6):**
+  - Replaces cookie-cutter 5-man squads with 6 asymmetric, lore-grounded encounters (`CIE401`–`CIE427`) using real multiclasses and SCS caster/combat AI: Talonite Plague Coven (`AR4002`: Cleric + 2x F/C + Venom-Troll with `Talonite` DV), Labelas Tower Shadowed Arcane Circle (`AR5104`: 2x F/M Bladesingers + Archmage + C/M Lorekeeper), Solonor Tower Martial Garrison (`AR5403`: 3x bow/sword Rangers + F/C War-Priest w/ *Dispel Magic*, `ELVEN_SOLDIER` DV), Pure Orog Shock-Guard (`AR6003`: 1x Warlord + 3x Berserkers), Kontik's Frostmaiden Sisterhood (`AR7004`: C/M + Druid starting `NEUTRAL` on `GNTEAM2`), and Kraken Society Operatives (`AR8007`: Illusionist-Envoy + F/M Spellsword + 2x F/T Nightblades).
+  - Overhauls Kaylessa (`AR5401`) into a Lv 15 Elven Weapons Master (`175` HP, `AC -6`, `THAC0 2`, `4 APR`, bow+sword switching, `MINHPN9`), lowers quest kill thresholds (`DKAYLESS.DLG` >14, `DEGENIA`/`DCALLIAN`/`DCAPVIL2`/`DCAPKID2`/`AR4001`/`AR4003` >7/<8), and fixes `AR3301.INI` infinite staircase respawn (`CIE_AR3301_SPAWN`).
+- **500 (Heart of Winter & Trials of the Luremaster):**
+  - Repairs `Polar Bear Spirit` (`SPIN119`/`SPIN119A`/`IDPBSPRT`): makes `op324` unconditional (never gated behind `-5` save) including `RESIST_FEAR`, lowers save penalty `-5 -> -2` and Strength drain `-5 -> -3`, and adds full roar/Strength-drain feedback in the combat log (`@540`/`@541`).
+  - Burial Isle (`AR9300`–`AR9400`): thins ~40% of repetitive `WIGHTBA`/`DROWNED` (sparing `Hjollder`, `Skaldar`, `Polar Bear Spirit`, `Young Ned`, `SHAMGHO`, `SHAMGN`, `Mebdinga`, `Vexing Thoughts`, and Mebdinga's honour guard), upgrades `SHAMGHO`, lowers rest interruption rates (`2/3`), and eliminates `AR9400.INI` infinite staircase respawns (`CIE_AR9400_SPAWN`) while preserving component `380` difficulty gates.
+  - Gloomfrost & Sea of Moving Ice (`AR9500`–`AR9603`): deeper filler thinning and lower rest rates; rebuilds `CIE501` into a `Frost Giant War-Shaman` (`Fighter/Cleric` L15/15 in `GIANT_FROST` `0xE24F` look) casting AoE War-Chant Haste (`CIE5GHST`) alongside two `Frost Giant Jarls` (`CIE502`) on `AR9500`'s wide glacier plaza; replaces out-of-place humans in `AR9501`/`AR9601`/`AR9602`/`AR9603` with `Broodmother Remorhaz`, `Hoarfrost Elder Yeti` (`CIE510`), and a `Sahuagin` Royal Command (`CIE512`–`CIE514`) before `AR9604`.
+
 ## v0.3.1 (2026-11-22)
 
 - **300 (Belhifet's final fight):** Restores Belhifet's base-game / IWD:EE / Siege of Dragonspear `BELHIFET` sprite (`0xE256`, `E256.INI`) and `belhif*` voice lines on `BELHIF.CRE`, overriding SCS 35.21 component `6510`'s Pit Fiend (`0x7F2E`) sprite swap.

@@ -1,6 +1,6 @@
 BACKUP ~weidu_external/backup/chriz-iwd-encounters~
 AUTHOR ~Christopher Hermann (github.com/Chrizhermann/chriz-iwd-encounters)~
-VERSION ~v0.3.1~
+VERSION ~v0.3.2~
 
 ALWAYS
   INCLUDE ~chriz-iwd-encounters/lib/cie_shared.tpa~
@@ -30,8 +30,8 @@ LANGUAGE ~English~ ~english~ ~chriz-iwd-encounters/languages/english/setup.tra~
 // 360 Poquelin in the Ascension Cave (works with and without SCS)
 // 370-410 Heart of Winter & Trials of the Luremaster boss encounters
 // 420 Main campaign overhaul (Chapters 2-6: curated thinning, Severed Hand/Terikan/AR3503/
-//     Tarnsen/DGINA2 fixes, 5 Drasus/Iron-Throne-style elite squads with XP parity)
-// 500 Heart of Winter & Trials of the Luremaster overhaul
+//     Tarnsen/DGINA2/DKAYLESS/DEGENIA fixes, AR3301.INI one-shot fix, asymmetric squads + Kaylessa)
+// 500 Heart of Winter & Trials of the Luremaster overhaul (incl. Burial Isle & Great Roar fixes)
 //
 // Boss fights follow from 300 on, one component each, so a later version can add
 // one at the end of an existing install.
