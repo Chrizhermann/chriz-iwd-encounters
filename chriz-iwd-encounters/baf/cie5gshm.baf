@@ -1,0 +1,11 @@
+IF
+  Global("CIE5_GIANT_HASTE","LOCALS",0)
+  See(NearestEnemyOf(Myself))
+  !StateCheck(Myself,STATE_REALLY_DEAD)
+THEN
+  RESPONSE #100
+    SetGlobal("CIE5_GIANT_HASTE","LOCALS",1)
+    DisplayStringHead(Myself,%cie5_ghst_str%)
+    ReallyForceSpellRES("CIE5GHST",Myself)
+    Continue()
+END

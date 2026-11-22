@@ -92,7 +92,7 @@ class Overwrite(unittest.TestCase):
     def mutate(cls):
         # Different values, strings, extra/missing effects, missing placements,
         # empty slots and a changed script layout in one hostile input fixture.
-        for name in ["joril", "ilmadia", "idol", "icasa", "dlsgem", "lordm", "kaorog", "kaoroge", "belhif", "harald", "cpmumg"]:
+        for name in ["joril", "ilmadia", "idol", "icasa", "dlsgem", "lordm", "kaorog", "kaoroge", "belhif", "harald", "cpmumg", "kaylessa"]:
             p = cls.ov / (name + ".cre")
             d = bytearray(p.read_bytes())
             struct.pack_into("<HH", d, 0x24, 999, 999)
@@ -105,6 +105,35 @@ class Overwrite(unittest.TestCase):
                 # Delete the old effect table. The owned movement effect must return.
                 struct.pack_into("<I", d, 0x2c8, 0)
             p.write_bytes(d)
+        p = cls.ov / "spin119.spl"
+        if p.exists():
+            d = bytearray(p.read_bytes())
+            ab_off, ab_cnt = long(d, 0x64), word(d, 0x68)
+            fx_off = long(d, 0x6a)
+            for a in range(ab_cnt):
+                n, first = word(d, ab_off + a * 0x28 + 0x1e), word(d, ab_off + a * 0x28 + 0x20)
+                for i in range(n):
+                    fx = fx_off + (first + i) * 0x30
+                    if word(d, fx) == 324:
+                        struct.pack_into("<Ii", d, fx + 0x24, 1, -5)
+                    elif word(d, fx) == 44:
+                        struct.pack_into("<i", d, fx + 0x04, -5)
+            p.write_bytes(d)
+        p = cls.ov / "spin119a.spl"
+        if p.exists():
+            d = bytearray(p.read_bytes())
+            ab_off, ab_cnt = long(d, 0x64), word(d, 0x68)
+            fx_off = long(d, 0x6a)
+            for a in range(ab_cnt):
+                n, first = word(d, ab_off + a * 0x28 + 0x1e), word(d, ab_off + a * 0x28 + 0x20)
+                for i in range(n):
+                    fx = fx_off + (first + i) * 0x30
+                    if word(d, fx) == 44:
+                        struct.pack_into("<i", d, fx + 0x04, -5)
+            p.write_bytes(d)
+        p = cls.ov / "ar3301.ini"
+        if p.exists():
+            p.write_text(re.sub(r"(?im)^spec_var\s*=[^\r\n]*", "spec_var=EDITED", p.read_text()))
         for name in ("lich", "lich2"):
             p = cls.ov / (name + ".cre")
             if p.exists():
@@ -391,7 +420,7 @@ END
         for name, hp in [("JORIL",185),("ILMADIA",135),("IDOL",225),("ICASA",650),
                          ("DLSGEM",250),("LORDM",350),("KAOROG",45),("KAOROGE",70),
                          ("HARALD",185),("CPMUMG",215),("CIEPOQ",310),("CIESENTR",240),
-                         ("LICH",115),("LICH2",115)]:
+                         ("LICH",115),("LICH2",115),("KAYLESSA",175)]:
             with self.subTest(name=name):
                 d = self.res.get(name,"CRE")
                 self.assertEqual((word(d,0x24), word(d,0x26)), (hp,hp))
@@ -451,7 +480,8 @@ END
                         name = "TEST_RENAMED_PRIEST"
                     self.assertIn(name,actors)
             if SCENARIO=="edited": self.assertEqual(d[0xe4:0xe4+len(self.sentinel)],self.sentinel)
-        for folder in (ROOT/"chriz-iwd-encounters/actors_500").iterdir():
+        for folder in (*(ROOT / "chriz-iwd-encounters/actors_420").iterdir(),
+                       *(ROOT / "chriz-iwd-encounters/actors_500").iterdir()):
             d=self.res.get(folder.name,"ARE"); actors=check.are_actors(d)
             for p in folder.glob("*.actor"):
                 name=p.read_bytes()[:32].split(b"\0")[0].decode().upper()
@@ -554,13 +584,15 @@ END
             rows = actor_rows(self.res.get(folder.name, "ARE"))
             areas[folder.name] = rows
             scripts.update(check.slot(row, at) for row in rows for at in range(0x50, 0x80, 8))
-        for extra_area in ("ar3503", "ar6005", "ar6006", "ar8001", "ar9602", "ar9704"):
+        for extra_area in ("ar3301", "ar3503", "ar5401", "ar6005", "ar6006", "ar8001", "ar9300", "ar9400", "ar9602", "ar9704"):
             rows = actor_rows(self.res.get(extra_area, "ARE"))
             areas[extra_area] = rows
             scripts.update(check.slot(row, at) for row in rows for at in range(0x50, 0x80, 8))
         scripts.update(f"CIE5CS{i}" for i in range(1, 10))
-        scripts.update({"AR9704", "AR3503", "AR6005", "AR6006", "UDLICH1", "CIE35W2", "CIE35W3"})
-        for name in ("KEANIMPH", "KEANIMP2", "EEPOMAB", "BELHIF", "TANARRI", "TARNSEN"):
+        scripts.update({"AR3000", "AR3301", "AR9300", "AR9400", "AR9704", "AR3503", "AR6005", "AR6006",
+                        "UDLICH1", "CIE35W2", "CIE35W3", "CIE4FM1", "CIE4FC1", "CIE4CM1", "CIE4DR1",
+                        "CIE4SWP", "CIE4KAYP", "CIE5FC1", "CIE5GSHM", "IDPBSPRT"})
+        for name in ("KEANIMPH", "KEANIMP2", "EEPOMAB", "BELHIF", "TANARRI", "TARNSEN", "KAYLESSA"):
             data = self.res.get(name, "CRE")
             scripts.update(check.slot(data, at) for at in range(0x248, 0x270, 8))
         return areas, {s: script_blocks(self.res.get(s, "BCS") or b"") for s in scripts if s}
@@ -578,9 +610,19 @@ END
         self.assertEqual(sorted(r["p1"] for r in check.spl_effect_rows(clicim) if r["opcode"] == 102), [1, 2, 3])
         self.assertEqual(self.res.get("CIE420", "CRE")[0x270], 128)
         self.assertEqual(self.res.get("CIE401", "CRE")[0x270], 255)
+        self.assertEqual(long(self.res.get("CIE501", "CRE"), 0x28), 0xE24F)
+        sp119_rows = check.spl_effect_rows(self.res.get("SPIN119", "SPL"))
+        self.assertTrue(all(r["save_type"] == 0 for r in sp119_rows if r["opcode"] == 324))
+        sp119a = self.res.get("SPIN119A", "SPL")
+        if sp119a is not None:
+            self.assertTrue(any(r["opcode"] == 44 and r["p1"] == -3 for r in check.spl_effect_rows(sp119a)))
+        else:
+            self.assertTrue(any(r["opcode"] == 44 and r["p1"] == -3 for r in sp119_rows))
+        self.assertIn("CIE_AR3301_SPAWN", (self.res.get("AR3301", "INI") or b"").decode("latin-1"))
+        self.assertIn("CIE_AR9400_SPAWN", (self.res.get("AR9400", "INI") or b"").decode("latin-1"))
 
     def test_12_second_install(self):
-        before={n:self.res.get(n,"SPL") for n in ["CIEBELPR","CIEBELHA","CIEPOMRC","CIEPOMIL","CIELICIM","SPWI302","SPWI318"]}
+        before={n:self.res.get(n,"SPL") for n in ["CIEBELPR","CIEBELHA","CIEPOMRC","CIEPOMIL","CIELICIM","CIE5GHST","SPIN119","SPWI302","SPWI318"]}
         actors, scripts = self.actor_script_snapshot()
         self.install()
         self.test_01_no_warning_or_refusal()

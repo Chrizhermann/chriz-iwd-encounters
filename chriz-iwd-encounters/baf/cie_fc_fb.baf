@@ -1,0 +1,54 @@
+IF
+  See(NearestEnemyOf(Myself))
+  HaveSpell(CLERIC_RECITATION)
+THEN
+  RESPONSE #100
+    Spell(Myself,CLERIC_RECITATION)
+END
+
+IF
+  Allegiance(Myself,ENEMY)
+  HaveSpell(CLERIC_DISPEL_MAGIC)
+  See([PC])
+  OR(4)
+    StateCheck(LastSeenBy(Myself),STATE_HASTED)
+    StateCheck(LastSeenBy(Myself),STATE_MIRRORIMAGE)
+    StateCheck(LastSeenBy(Myself),STATE_IMPROVEDINVISIBILITY)
+    CheckStatGT(LastSeenBy(Myself),0,STONESKINS)
+  !Range(LastSeenBy(Myself),12)
+THEN
+  RESPONSE #100
+    Spell(LastSeenBy(Myself),CLERIC_DISPEL_MAGIC)
+END
+
+IF
+  See(NearestEnemyOf(Myself))
+  HaveSpell(CLERIC_PRAYER)
+THEN
+  RESPONSE #100
+    Spell(Myself,CLERIC_PRAYER)
+END
+
+IF
+  See(NearestEnemyOf(Myself))
+  HaveSpell(CLERIC_DRAW_UPON_HOLY_MIGHT)
+THEN
+  RESPONSE #100
+    Spell(Myself,CLERIC_DRAW_UPON_HOLY_MIGHT)
+END
+
+IF
+  See(NearestEnemyOf(Myself))
+  HaveSpell(CLERIC_FLAME_STRIKE)
+THEN
+  RESPONSE #100
+    Spell(NearestEnemyOf(Myself),CLERIC_FLAME_STRIKE)
+END
+
+IF
+  See(NearestEnemyOf(Myself))
+THEN
+  RESPONSE #100
+    EquipMostDamagingMelee()
+    AttackReevaluate(NearestEnemyOf(Myself),30)
+END

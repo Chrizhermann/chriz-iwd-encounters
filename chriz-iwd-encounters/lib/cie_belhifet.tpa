@@ -19,7 +19,9 @@
 //   - Keeps Belhifet's original BELHIFET (0xE256) sprite and E256.INI voice lines
 //     instead of SCS 6510's RAVER/Pit Fiend replacement (0x7F2E) (Christopher,
 //     2026-11-22).
-//   - Poquelin's transformation no longer dispels the party.
+//   - Keeps the base game's Poquelin transformation shockwave dispel (SPIN183 /
+//     EEPOQCNG) against pre-buffed parties alongside Belhifet's active Lv-26
+//     Abjuration Dispel Magic (CIEBELDI) (Christopher, 2026-11-22).
 //   - SCS 35.21's pause between his teleports works.
 // docs/components.md describes each change in engine-neutral terms.
 
@@ -43,7 +45,6 @@ DEFINE_ACTION_FUNCTION cie_belhifet BEGIN
   LAF cie_belhifet_hit_points_and_prep END
   LAF cie_belhifet_haste END
   LAF cie_belhifet_ending END
-  LAF cie_belhifet_no_dispel END
   LAF cie_belhifet_teleport_pause END
   LAF cie_belhifet_second_wave END
   LAF cie_belhifet_dispel END
@@ -482,139 +483,6 @@ DEFINE_ACTION_FUNCTION cie_belhifet_ending BEGIN
   END
   EXTEND_TOP ~%cie_bel_script%.bcs~ ~chriz-iwd-encounters/baf/cie_belhifet_end_guard.baf~
   PRINT ~chriz-iwd-encounters: Belhifet's ending removes his protections.~
-END
-
-// Poquelin's transformation into Belhifet (the base game's SPIN183,
-// INNATE_FLASH_DESTROY_SUMMON_BELHIFET) dispels everyone around him without a
-// roll (opcode 58 mode 0), takes summoned weapons and magical berries from them,
-// destroys illusions and shows "Dispel Effects". The cutscene that runs it
-// (EEPOQCNG) also forces Dispel Magic on the nearest party member. Christopher,
-// 2026-10-28: the dispel goes. The transformation itself, its visuals and its
-// sound stay.
-DEFINE_ACTION_FUNCTION cie_belhifet_no_dispel BEGIN
-  OUTER_SET number = IDS_OF_SYMBOL (~spell~ ~INNATE_FLASH_DESTROY_SUMMON_BELHIFET~)
-  LAF cie_spell_resref INT_VAR number RET resref END
-  ACTION_IF (~%resref%~ STRING_EQUAL ~~) BEGIN OUTER_SPRINT resref ~SPIN183~ END
-  OUTER_SET found = 0
-  ACTION_IF (~%resref%~ STRING_COMPARE ~~) AND (FILE_EXISTS_IN_GAME ~%resref%.spl~) BEGIN
-    COPY_EXISTING ~%resref%.spl~ ~override~
-      SET found = 1
-      PATCH_IF 1 BEGIN
-        // dispel, item removal (twice), display string, destroy illusions,
-        // remove portrait icons; and the dispel visual on the targets
-        PATCH_FOR_EACH op IN 58 112 123 139 177 240 BEGIN
-          LPF DELETE_EFFECT INT_VAR check_globals = 0 match_opcode = op END
-        END
-        LPF DELETE_EFFECT INT_VAR check_globals = 0 match_opcode = 215 STR_VAR match_resource = ~SPDISPMA~ END
-      END
-    BUT_ONLY
-  END
-  ACTION_IF found BEGIN
-    PRINT ~chriz-iwd-encounters: Poquelin's transformation (%resref%) no longer dispels the party.~
-  END ELSE BEGIN
-    PRINT ~chriz-iwd-encounters: the transformation spell %resref%.spl is absent.~
-  END
-  // The cutscene's own dispel: every spell it forces on someone other than Poquelin
-  // that dispels (opcode 58) goes. The spell is checked by its effects, not by its
-  // IDS name: names that share a number decompile under either (IWD:EE prints
-  // the base game's line as WIZARD_REMOVE_MAGIC).
-  OUTER_SET cie_forced_removed = 0
-  ACTION_IF FILE_EXISTS_IN_GAME ~eepoqcng.bcs~ BEGIN
-    ACTION_CLEAR_ARRAY cie_forced
-    OUTER_PATCH ~~ BEGIN
-      INNER_PATCH_FILE ~eepoqcng.bcs~ BEGIN
-        DECOMPILE_BCS_TO_BAF
-        REPLACE_EVALUATE CASE_INSENSITIVE ~\(Really\)?ForceSpell(\([^,()]+\),\([A-Z0-9_#]+\))~ BEGIN
-          SPRINT target ~%MATCH2%~
-          PATCH_IF (~%target%~ STRING_COMPARE_CASE ~Myself~) BEGIN
-            SPRINT $cie_forced(~%MATCH0%~) ~%MATCH3%~
-          END
-        END ~%MATCH0%~
-      END
-    END
-    ACTION_PHP_EACH cie_forced AS line => symbol BEGIN
-      OUTER_SET number = IDS_OF_SYMBOL (~spell~ ~%symbol%~)
-      LAF cie_spell_resref INT_VAR number RET resref END
-      OUTER_SET dispels = 0
-      ACTION_IF (~%resref%~ STRING_COMPARE ~~) AND (FILE_EXISTS_IN_GAME ~%resref%.spl~) BEGIN
-        COPY_EXISTING ~%resref%.spl~ ~override~
-          LPF cie_spell_has_opcode INT_VAR match_opcode = 58 RET dispels = found END
-        BUT_ONLY
-      END
-      ACTION_IF dispels BEGIN
-        COPY_EXISTING ~eepoqcng.bcs~ ~override~
-          DECOMPILE_AND_PATCH BEGIN
-            SET before = BUFFER_LENGTH
-            REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~%line%~ ~~
-            PATCH_IF (BUFFER_LENGTH < before) BEGIN
-              SET cie_forced_removed += 1
-            END
-          END
-        BUT_ONLY
-      END
-    END
-  END
-  ACTION_IF cie_forced_removed BEGIN
-    PRINT ~chriz-iwd-encounters: the transformation cutscene no longer forces a dispel on the party (%cie_forced_removed% line(s)).~
-  END
-END
-
-// True if one of the current spell's abilities has an effect with this opcode.
-DEFINE_PATCH_FUNCTION cie_spell_has_opcode
-  INT_VAR match_opcode = 0
-  RET found
-BEGIN
-  SET found = 0
-  READ_LONG  0x64 ability_offset
-  READ_SHORT 0x68 ability_count
-  READ_LONG  0x6a fx_offset
-  FOR (a = 0; a < ability_count; ++a) BEGIN
-    SET ability = ability_offset + a * 0x28
-    PATCH_IF (ability + 0x28 <= BUFFER_LENGTH) BEGIN
-      READ_SHORT (ability + 0x1e) fx_count
-      READ_SHORT (ability + 0x20) fx_first
-      FOR (i = 0; i < fx_count; ++i) BEGIN
-        SET fx = fx_offset + (fx_first + i) * 0x30
-        PATCH_IF (fx + 0x30 <= BUFFER_LENGTH) BEGIN
-          READ_SHORT fx opcode
-          PATCH_IF (opcode = match_opcode) BEGIN
-            SET found = 1
-          END
-        END
-      END
-    END
-  END
-END
-
-// SPELL.IDS number to resref: 1xxx SPPR, 2xxx SPWI, 3xxx SPIN, 4xxx SPCL.
-DEFINE_ACTION_FUNCTION cie_spell_resref
-  INT_VAR number = 0
-  RET resref
-BEGIN
-  OUTER_SPRINT resref ~~
-  OUTER_SET kind = number / 1000
-  OUTER_SET index = number - kind * 1000
-  OUTER_SPRINT prefix ~~
-  ACTION_IF (number > 0) BEGIN
-    ACTION_IF (kind = 1) BEGIN
-      OUTER_SPRINT prefix ~SPPR~
-    END ELSE ACTION_IF (kind = 2) BEGIN
-      OUTER_SPRINT prefix ~SPWI~
-    END ELSE ACTION_IF (kind = 3) BEGIN
-      OUTER_SPRINT prefix ~SPIN~
-    END ELSE ACTION_IF (kind = 4) BEGIN
-      OUTER_SPRINT prefix ~SPCL~
-    END
-  END
-  ACTION_IF (~%prefix%~ STRING_COMPARE ~~) BEGIN
-    ACTION_IF (index < 10) BEGIN
-      OUTER_SPRINT resref ~%prefix%00%index%~
-    END ELSE ACTION_IF (index < 100) BEGIN
-      OUTER_SPRINT resref ~%prefix%0%index%~
-    END ELSE BEGIN
-      OUTER_SPRINT resref ~%prefix%%index%~
-    END
-  END
 END
 
 // SCS 35.21's teleport rule for Belhifet (fiend/ssl/bel_conveyance.ssl, compiled
