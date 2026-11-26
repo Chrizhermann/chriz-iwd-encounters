@@ -1089,6 +1089,22 @@ def main():
             cd = cres.get("CIE%d" % n)
             dv = cd[0x280:0x2A0].split(b"\0")[0].decode("latin-1").upper() if cd else ""
             c.check(dv == "ELVEN_SOLDIER", "CIE%d carries death variable ELVEN_SOLDIER (%s)" % (n, dv))
+        for area_name, expected_cres in (("AR4002", {"CIE401", "CIE402", "CIE403"}),
+                                         ("AR5403", {"CIE413", "CIE414"})):
+            ad = res.get(area_name, "ARE")
+            if ad:
+                off_q, cnt_q = struct.unpack_from("<I", ad, 0x54)[0], struct.unpack_from("<H", ad, 0x58)[0]
+                matched_q = []
+                bad_flag_q = []
+                for i in range(cnt_q):
+                    row = off_q + i * 0x110
+                    if resref(ad, row + 0x80) in expected_cres and struct.unpack_from("<I", ad, row + 0x40)[0] != 0:
+                        matched_q.append(resref(ad, row + 0x80))
+                        if struct.unpack_from("<I", ad, row + 0x28)[0] & 8:
+                            bad_flag_q.append(ad[row:row + 32].split(b"\0")[0].decode("latin-1"))
+                c.check(len(matched_q) == 4 and not bad_flag_q,
+                        "%s squad placements preserve CRE quest death variables without flag 0x8 (found %d, bad: %s)"
+                        % (area_name, len(matched_q), ", ".join(bad_flag_q) or "none"))
         kay = cres.get("KAYLESSA")
         if kay:
             kay_items = set(cre_items(kay))
