@@ -945,12 +945,25 @@ BEGIN
     WRITE_LONG  0x54 aoff
     WRITE_SHORT 0x58 (acnt + 1)
   END
+  SET actor_flags = 9
+  PATCH_IF FILE_EXISTS_IN_GAME ~%wanted_cre%.cre~ BEGIN
+    SPRINT cre_dv ~~
+    INNER_ACTION BEGIN
+      COPY_EXISTING - ~%wanted_cre%.cre~ nowhere
+        PATCH_IF (BUFFER_LENGTH >= 0x2a0) BEGIN
+          READ_ASCII 0x280 cre_dv (32) NULL
+        END
+    END
+    PATCH_IF !(~%cre_dv%~ STRING_EQUAL ~~) AND !(~%cre_dv%~ STRING_EQUAL_CASE ~None~) BEGIN
+      SET actor_flags = 1
+    END
+  END
   WRITE_ASCIIE found ~%wanted_rec%~ (0x110)
   WRITE_SHORT  (found + 0x20) wanted_x
   WRITE_SHORT  (found + 0x22) wanted_y
   WRITE_SHORT  (found + 0x24) wanted_x
   WRITE_SHORT  (found + 0x26) wanted_y
-  WRITE_LONG   (found + 0x28) 9
+  WRITE_LONG   (found + 0x28) actor_flags
   WRITE_LONG   (found + 0x40) 0xffffffff
   WRITE_ASCIIE (found + 0x70) ~%wanted_def%~ #8
   WRITE_ASCIIE (found + 0x80) ~%wanted_cre%~ #8

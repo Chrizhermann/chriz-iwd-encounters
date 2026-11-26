@@ -1025,7 +1025,9 @@ Works with and without SCS across Chapters 2–6 (`AR3101`–`AR8007`):
   `WYRM`/`BIKNIGHT`, and 6 asymmetric encounters using real multiclasses and SCS AI:
   Talonite Plague Coven (`AR4002`, `Talonite` DV), Labelas Tower Shadowed Arcane Circle
   (`AR5104`, preserving `#5104_DV` guards), Solonor Tower Martial Garrison (`AR5403`,
-  `ELVEN_SOLDIER` DV, `CIE4FC1` w/ *Dispel Magic*), Pure Orog Shock-Guard (`AR6003`),
+  `ELVEN_SOLDIER` DV, `CIE4FC1` w/ *Dispel Magic*; both `AR4002` and `AR5403` placements
+  keep the *Override script name* flag clear so quest kill counters increment), Pure Orog
+  Shock-Guard (`AR6003`),
   Kontik's Frostmaiden Sisterhood (`AR7004`, `NEUTRAL` on `GNTEAM2`), and Kraken Society
   Operatives (`AR8007`).
 
