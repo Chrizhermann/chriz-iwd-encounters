@@ -6,27 +6,45 @@ IF
 THEN
   RESPONSE #100
     SetGlobal("CIE_3503_START","MYAREA",1)
-    SetGlobalTimer("CIE_3503_T","MYAREA",27)
+    SetGlobalTimer("CIE_3503_T","MYAREA",48)
+    SetGlobalTimer("CIE_3503_MIN","MYAREA",12)
     Continue()
 END
 
 IF
   Global("CIE_3503_START","MYAREA",1)
   Global("CIE_3503_WAVE","MYAREA",0)
-  GlobalTimerExpired("CIE_3503_T","MYAREA")
+  GlobalTimerExpired("CIE_3503_MIN","MYAREA")
+  OR(2)
+    GlobalTimerExpired("CIE_3503_T","MYAREA")
+    CombatCounter(0)
 THEN
   RESPONSE #100
     SetGlobal("CIE_3503_WAVE","MYAREA",1)
-    SetGlobalTimer("CIE_3503_T","MYAREA",27)
+    SetGlobal("MAP_GROUP_HOSTILE3","MYAREA",1)
+    SetGlobal("MAP_GROUP_HOSTILE4","MYAREA",1)
+    SetGlobal("MAP_GROUP_HOSTILE5","MYAREA",1)
+    SetGlobal("MAP_GROUP_HOSTILE6","MYAREA",1)
+    PlaySoundNotRanged("SKELW01")
+    DisplayStringNoName(Player1,%cie_3503_w2_str%)
+    SetGlobalTimer("CIE_3503_T","MYAREA",54)
+    SetGlobalTimer("CIE_3503_MIN","MYAREA",12)
     Continue()
 END
 
 IF
   Global("CIE_3503_START","MYAREA",1)
   Global("CIE_3503_WAVE","MYAREA",1)
-  GlobalTimerExpired("CIE_3503_T","MYAREA")
+  GlobalTimerExpired("CIE_3503_MIN","MYAREA")
+  OR(2)
+    GlobalTimerExpired("CIE_3503_T","MYAREA")
+    CombatCounter(0)
 THEN
   RESPONSE #100
     SetGlobal("CIE_3503_WAVE","MYAREA",2)
+    SetGlobal("MAP_GROUP_HOSTILE7","MYAREA",1)
+    PlaySoundNotRanged("S_HORN")
+    PlaySoundNotRanged("GHOST08A")
+    DisplayStringNoName(Player1,%cie_3503_w3_str%)
     Continue()
 END

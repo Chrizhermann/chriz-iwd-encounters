@@ -1075,9 +1075,12 @@ def main():
 
     # 420: Main campaign overhaul (Chapters 2-6)
     if expect(420, cres.get("CIE401") is not None):
-        cie4_expected = [401, 402, 403, 410, 411, 412, 413, 414, 416, 417, 420, 421, 425, 426, 427]
+        cie4_expected = [401, 402, 403, 404, 405, 406, 407, 410, 411, 412, 413, 414, 416, 417, 420, 421, 422, 423, 425, 426, 427]
         missing4 = ["CIE%d" % n for n in cie4_expected if "CIE%d" % n not in cres]
-        c.check(not missing4, "all 15 CIE4xx asymmetric squad elites exist (%s)" % (", ".join(missing4) or "ok"))
+        c.check(not missing4, "all 21 CIE4xx squad and apex creatures exist (%s)" % (", ".join(missing4) or "ok"))
+        # Verify zero hidden op233 proficiencies except CIE427 (explicit 2* short sword backstabber)
+        leaked_233 = [f"CIE{n}" for n in cie4_expected if n != 427 and any(op == 233 for op, _, _, _ in cre_effects(cres[f"CIE{n}"]))]
+        c.check(not leaked_233, "no CIE4xx elite leaks hidden donor weapon Grandmastery (%s)" % (", ".join(leaked_233) or "ok"))
         for n in (420, 421):
             cd = cres.get("CIE%d" % n)
             c.check(cd is not None and cd[0x270] == 128, "CIE%d starts NEUTRAL (128) for Kontik's talk" % n)
@@ -1089,8 +1092,8 @@ def main():
             cd = cres.get("CIE%d" % n)
             dv = cd[0x280:0x2A0].split(b"\0")[0].decode("latin-1").upper() if cd else ""
             c.check(dv == "ELVEN_SOLDIER", "CIE%d carries death variable ELVEN_SOLDIER (%s)" % (n, dv))
-        for area_name, expected_cres in (("AR4002", {"CIE401", "CIE402", "CIE403"}),
-                                         ("AR5403", {"CIE413", "CIE414"})):
+        for area_name, expected_cres, exp_cnt in (("AR4002", {"CIE401", "CIE402", "CIE403"}, 3),
+                                                  ("AR5403", {"CIE413", "CIE414"}, 4)):
             ad = res.get(area_name, "ARE")
             if ad:
                 off_q, cnt_q = struct.unpack_from("<I", ad, 0x54)[0], struct.unpack_from("<H", ad, 0x58)[0]
@@ -1102,9 +1105,17 @@ def main():
                         matched_q.append(resref(ad, row + 0x80))
                         if struct.unpack_from("<I", ad, row + 0x28)[0] & 8:
                             bad_flag_q.append(ad[row:row + 32].split(b"\0")[0].decode("latin-1"))
-                c.check(len(matched_q) == 4 and not bad_flag_q,
+                c.check(len(matched_q) == exp_cnt and not bad_flag_q,
                         "%s squad placements preserve CRE quest death variables without flag 0x8 (found %d, bad: %s)"
                         % (area_name, len(matched_q), ", ".join(bad_flag_q) or "none"))
+        # Zero active BEETBOMB in AR4001 and AR4002
+        for b_area in ("AR4001", "AR4002"):
+            bad_b = res.get(b_area, "ARE")
+            if bad_b:
+                bo, bc = struct.unpack_from("<I", bad_b, 0x54)[0], struct.unpack_from("<H", bad_b, 0x58)[0]
+                live_bb = sum(1 for i in range(bc) if resref(bad_b, bo + i * 0x110 + 0x80) == "BEETBOMB"
+                              and struct.unpack_from("<I", bad_b, bo + i * 0x110 + 0x40)[0] != 0)
+                c.check(live_bb == 0, "%s has 0 active Bombardier Beetles (%d)" % (b_area, live_bb))
         kay = cres.get("KAYLESSA")
         if kay:
             kay_items = set(cre_items(kay))
@@ -1178,14 +1189,30 @@ def main():
             if dd:
                 gt_vals = [int(x) for x in re.findall(rb'GlobalGT\("SPRITE_IS_DEADTalonite","GLOBAL",(\d+)\)', dd, re.I)]
                 lt_vals = [int(x) for x in re.findall(rb'GlobalLT\("SPRITE_IS_DEADTalonite","GLOBAL",(\d+)\)', dd, re.I)]
-                c.check(all(v == 6 for v in gt_vals) and all(v == 7 for v in lt_vals) and bool(gt_vals or lt_vals),
-                        "%s.DLG Talonite thresholds are >6/<7 (GT=%s, LT=%s)" % (dlg_name, gt_vals, lt_vals))
+                c.check(all(v == 5 for v in gt_vals) and all(v == 6 for v in lt_vals) and bool(gt_vals or lt_vals),
+                        "%s.DLG Talonite thresholds are >5/<6 (GT=%s, LT=%s)" % (dlg_name, gt_vals, lt_vals))
         for area_bcs in ("AR4001", "AR4003"):
             bt = c.script(area_bcs)
             if bt:
                 t_vals = [int(x) for x in re.findall(rb'tr\n16436 (\d+) [^\n]*"globalsprite_is_deadtalonite"', bt)]
-                c.check(bool(t_vals) and all(v == 6 for v in t_vals),
-                        "%s.BCS Talonite threshold is >6 (%s)" % (area_bcs, t_vals or "none"))
+                c.check(bool(t_vals) and all(v == 5 for v in t_vals),
+                        "%s.BCS Talonite threshold is >5 (%s)" % (area_bcs, t_vals or "none"))
+        bt_8001 = c.script("LDGNDEL2")
+        if bt_8001:
+            s1_vals = [int(x) for x in re.findall(rb'tr\n16436 (\d+) [^\n]*"globalsprite_is_dead8001_salamanders"', bt_8001)]
+            c.check(bool(s1_vals) and all(v == 8 for v in s1_vals),
+                    "LDGNDEL2.BCS 8001_Salamanders threshold is >8 (%s)" % (s1_vals or "none"))
+        bt_8008 = c.script("AR8005")
+        if bt_8008:
+            s8_vals = [int(x) for x in re.findall(rb'tr\n16436 (\d+) [^\n]*"globalsprite_is_dead8008_salamanders"', bt_8008)]
+            c.check(bool(s8_vals) and all(v == 4 for v in s8_vals),
+                    "AR8005.BCS 8008_Salamanders threshold is >4 (%s)" % (s8_vals or "none"))
+        guello_dlg = res.get("DGUELLO", "DLG")
+        if guello_dlg:
+            g_gt = [int(x) for x in re.findall(rb'GlobalGT\("SPRITE_IS_DEAD8008_Salamanders","GLOBAL",(\d+)\)', guello_dlg, re.I)]
+            g_eq = re.findall(rb'Global\("SPRITE_IS_DEAD8008_Salamanders","GLOBAL",\d+\)', guello_dlg, re.I)
+            c.check(bool(g_gt) and all(v == 4 for v in g_gt) and not g_eq,
+                    "DGUELLO.DLG 8008_Salamanders uses GlobalGT >4 (%s)" % (g_gt or "none"))
     if installed is not None and 425 in installed:
         for area_name, expected_cres in (("AR4002", {"CIE401", "CIE402", "CIE403"}),
                                          ("AR5403", {"CIE413", "CIE414"})):
