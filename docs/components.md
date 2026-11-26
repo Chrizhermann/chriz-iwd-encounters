@@ -1003,9 +1003,9 @@ Works with and without SCS across Chapters 2–6 (`AR3101`–`AR8007`):
   halved `AR5002` worg/goblin spawns, empty dead-end alcoves), while keeping every quest
   NPC, dialog actor, `#PRST_DV`, `#5104_DV`, `WTVERBET`, `NEOOROGC`, and `Genek` intact.
 - **Quest & spawn fixes:** `AR3301.INI` infinite staircase respawn is gated on
-  `CIE_AR3301_SPAWN`; `DKAYLESS.DLG` lowers its `ELVEN_SOLDIER` threshold (`>24 -> >14`);
+  `CIE_AR3301_SPAWN`; `DKAYLESS.DLG` lowers its `ELVEN_SOLDIER` threshold (`>24 -> >11`);
   `DEGENIA.DLG`, `DCALLIAN.DLG`, `DCAPVIL2.DLG`, `DCAPKID2.DLG`, `AR4001.BCS`, and
-  `AR4003.BCS` lower `SPRITE_IS_DEADTalonite` thresholds (`>9/<10 -> >7/<8`).
+  `AR4003.BCS` lower `SPRITE_IS_DEADTalonite` thresholds (`>9/<10 -> >6/<7`).
 - **Kresselack's Antechamber (`AR3503`):** preserves all 52 undead in 3 timed waves (Wave 1
   immediately, Wave 2 `GNTEAM3M`–`6M` at 27 s, Wave 3 `GNTEAM7M` at 54 s, or immediately if
   spotted or attacked) so `Shout(89)` never pulls all 52 at once.
@@ -1025,9 +1025,20 @@ Works with and without SCS across Chapters 2–6 (`AR3101`–`AR8007`):
   `WYRM`/`BIKNIGHT`, and 6 asymmetric encounters using real multiclasses and SCS AI:
   Talonite Plague Coven (`AR4002`, `Talonite` DV), Labelas Tower Shadowed Arcane Circle
   (`AR5104`, preserving `#5104_DV` guards), Solonor Tower Martial Garrison (`AR5403`,
-  `ELVEN_SOLDIER` DV, `CIE4FC1` w/ *Dispel Magic*), Pure Orog Shock-Guard (`AR6003`),
+  `ELVEN_SOLDIER` DV, `CIE4FC1` w/ *Dispel Magic*; both `AR4002` and `AR5403` placements
+  keep the *Override script name* flag clear so quest kill counters increment), Pure Orog
+  Shock-Guard (`AR6003`),
   Kontik's Frostmaiden Sisterhood (`AR7004`, `NEUTRAL` on `GNTEAM2`), and Kraken Society
   Operatives (`AR8007`).
+
+## 425: Dragon's Eye & Severed Hand quest counter hotfix
+
+Idempotent additive repair component for existing `v0.3.0`–`v0.3.2` installations (also
+Safe on `v0.3.3+`): lowers `DKAYLESS.DLG` to `GlobalGT("SPRITE_IS_DEADELVEN_SOLDIER","GLOBAL",11)`,
+lowers `DEGENIA.DLG`, `DCALLIAN.DLG`, `DCAPVIL2.DLG`, `DCAPKID2.DLG`, `AR4001.BCS`, and
+`AR4003.BCS` to `>6 / <7`, clears `ARE` actor bit `0x8` (*Override script name*) on any
+`CIE401`–`CIE403` placements in `AR4002` and `CIE413`–`CIE414` placements in `AR5403`, and
+ensures those squad creatures carry `Talonite` / `ELVEN_SOLDIER` death variables.
 
 ## 500: Heart of Winter and Trials of the Luremaster expansion overhaul
 

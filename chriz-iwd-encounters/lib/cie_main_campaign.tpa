@@ -486,22 +486,25 @@ DEFINE_ACTION_FUNCTION cie420_upgrade_regulars BEGIN
 END
 
 // 6. Repair quest kill-counters affected by thinning & stop AR3301.INI infinite staircase respawn.
-DEFINE_ACTION_FUNCTION cie420_fix_quests_and_spawns BEGIN
-  // DKAYLESS.DLG: 16 active ELVEN_SOLDIERs remain (7 AR5402 + 5 AR5403 + 4 CIE413/414) -> >14 instead of >24
+DEFINE_ACTION_FUNCTION cie420_repair_quest_counters BEGIN
+  // DKAYLESS.DLG: >11 (>= 12 ELVEN_SOLDIERs), works for both v0.3.2+ (16 active) and v0.3.0/0.3.1 (12 active)
   ACTION_IF FILE_EXISTS_IN_GAME ~dkayless.dlg~ BEGIN
     COPY_EXISTING ~dkayless.dlg~ ~override~
       DECOMPILE_AND_PATCH BEGIN
-        REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~GlobalGT("SPRITE_IS_DEADELVEN_SOLDIER","GLOBAL",24)~ ~GlobalGT("SPRITE_IS_DEADELVEN_SOLDIER","GLOBAL",14)~
+        REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~GlobalGT("SPRITE_IS_DEADELVEN_SOLDIER","GLOBAL",24)~ ~GlobalGT("SPRITE_IS_DEADELVEN_SOLDIER","GLOBAL",11)~
+        REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~GlobalGT("SPRITE_IS_DEADELVEN_SOLDIER","GLOBAL",14)~ ~GlobalGT("SPRITE_IS_DEADELVEN_SOLDIER","GLOBAL",11)~
       END
     BUT_ONLY
   END
-  // Dragon's Eye Lv 2 Talonite captives/area scripts: 11 active Talonite DVs remain -> >7 / <8 instead of >9 / <10
+  // Dragon's Eye Lv 2 Talonite captives/area scripts: >6 / <7 (>= 7 Talonites), works for both v0.3.2+ (11 active) and v0.3.0/0.3.1 (7 active)
   ACTION_FOR_EACH dlgn IN ~degenia~ ~dcallian~ ~dcapvil2~ ~dcapkid2~ BEGIN
     ACTION_IF FILE_EXISTS_IN_GAME ~%dlgn%.dlg~ BEGIN
       COPY_EXISTING ~%dlgn%.dlg~ ~override~
         DECOMPILE_AND_PATCH BEGIN
-          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~GlobalGT("SPRITE_IS_DEADTalonite","GLOBAL",9)~ ~GlobalGT("SPRITE_IS_DEADTalonite","GLOBAL",7)~
-          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~GlobalLT("SPRITE_IS_DEADTalonite","GLOBAL",10)~ ~GlobalLT("SPRITE_IS_DEADTalonite","GLOBAL",8)~
+          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~GlobalGT("SPRITE_IS_DEADTalonite","GLOBAL",9)~ ~GlobalGT("SPRITE_IS_DEADTalonite","GLOBAL",6)~
+          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~GlobalGT("SPRITE_IS_DEADTalonite","GLOBAL",7)~ ~GlobalGT("SPRITE_IS_DEADTalonite","GLOBAL",6)~
+          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~GlobalLT("SPRITE_IS_DEADTalonite","GLOBAL",10)~ ~GlobalLT("SPRITE_IS_DEADTalonite","GLOBAL",7)~
+          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~GlobalLT("SPRITE_IS_DEADTalonite","GLOBAL",8)~ ~GlobalLT("SPRITE_IS_DEADTalonite","GLOBAL",7)~
         END
       BUT_ONLY
     END
@@ -510,12 +513,18 @@ DEFINE_ACTION_FUNCTION cie420_fix_quests_and_spawns BEGIN
     ACTION_IF FILE_EXISTS_IN_GAME ~%bcsn%.bcs~ BEGIN
       COPY_EXISTING ~%bcsn%.bcs~ ~override~
         DECOMPILE_AND_PATCH BEGIN
-          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~GlobalGT("SPRITE_IS_DEADTalonite","GLOBAL",9)~ ~GlobalGT("SPRITE_IS_DEADTalonite","GLOBAL",7)~
-          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~GlobalLT("SPRITE_IS_DEADTalonite","GLOBAL",10)~ ~GlobalLT("SPRITE_IS_DEADTalonite","GLOBAL",8)~
+          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~GlobalGT("SPRITE_IS_DEADTalonite","GLOBAL",9)~ ~GlobalGT("SPRITE_IS_DEADTalonite","GLOBAL",6)~
+          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~GlobalGT("SPRITE_IS_DEADTalonite","GLOBAL",7)~ ~GlobalGT("SPRITE_IS_DEADTalonite","GLOBAL",6)~
+          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~GlobalLT("SPRITE_IS_DEADTalonite","GLOBAL",10)~ ~GlobalLT("SPRITE_IS_DEADTalonite","GLOBAL",7)~
+          REPLACE_TEXTUALLY CASE_INSENSITIVE EXACT_MATCH ~GlobalLT("SPRITE_IS_DEADTalonite","GLOBAL",8)~ ~GlobalLT("SPRITE_IS_DEADTalonite","GLOBAL",7)~
         END
       BUT_ONLY
     END
   END
+END
+
+DEFINE_ACTION_FUNCTION cie420_fix_quests_and_spawns BEGIN
+  LAF cie420_repair_quest_counters END
   // AR3301.INI: eliminate infinite staircase re-entry respawn by gating SKL1..12 on CIE_AR3301_SPAWN
   LAF cie_gate_ini_spawn
     STR_VAR ini = ~ar3301~ critters = ~SKL1,SKL3,SKL5,SKL7,SKL9,SKL11~
@@ -957,4 +966,69 @@ DEFINE_ACTION_FUNCTION cie_main_campaign BEGIN
   LAF cie420_upgrade_kaylessa END
   LAF cie420_build_squads END
   PRINT ~chriz-iwd-encounters: Main campaign overhaul applied (Tarnsen, DGINA2, DKAYLESS/DEGENIA, Kaylessa, AR3301.INI, AR3503 3-wave crypt, Terikan, Ch.2-6 thinning, Severed Hand/Giant/Wyrm upgrades, and 6 asymmetric lore-grounded squads).~
+END
+
+// 9. Hotpatch component 425: idempotent repair for v0.3.0-v0.3.2 quest counters & AR4002/AR5403 squad flags.
+DEFINE_ACTION_FUNCTION cie_quest_counter_hotfix BEGIN
+  LAF cie420_repair_quest_counters END
+
+  OUTER_SET has_ar4002_squad = 0
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar4002.are~ BEGIN
+    COPY_EXISTING ~ar4002.are~ ~override~
+      GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+      PHP_EACH actors AS idx => actor BEGIN
+        READ_ASCII (actor + 0x80) cre (8) NULL
+        PATCH_IF (~%cre%~ STRING_EQUAL_CASE ~CIE401~)
+              OR (~%cre%~ STRING_EQUAL_CASE ~CIE402~)
+              OR (~%cre%~ STRING_EQUAL_CASE ~CIE403~) BEGIN
+          SET has_ar4002_squad = 1
+          READ_LONG (actor + 0x28) fl
+          PATCH_IF ((fl BAND 8) != 0) BEGIN
+            WRITE_LONG (actor + 0x28) (fl BAND (BNOT 8))
+          END
+        END
+      END
+    BUT_ONLY
+  END
+  ACTION_IF has_ar4002_squad BEGIN
+    ACTION_FOR_EACH c IN ~cie401~ ~cie402~ ~cie403~ BEGIN
+      ACTION_IF FILE_EXISTS_IN_GAME ~%c%.cre~ BEGIN
+        COPY_EXISTING ~%c%.cre~ ~override~
+          PATCH_IF (BUFFER_LENGTH >= 0x2d4) BEGIN
+            WRITE_ASCIIE 0x280 ~Talonite~ #32
+          END
+        BUT_ONLY
+      END
+    END
+  END
+
+  OUTER_SET has_ar5403_squad = 0
+  ACTION_IF FILE_EXISTS_IN_GAME ~ar5403.are~ BEGIN
+    COPY_EXISTING ~ar5403.are~ ~override~
+      GET_OFFSET_ARRAY actors ARE_V10_ACTORS
+      PHP_EACH actors AS idx => actor BEGIN
+        READ_ASCII (actor + 0x80) cre (8) NULL
+        PATCH_IF (~%cre%~ STRING_EQUAL_CASE ~CIE413~)
+              OR (~%cre%~ STRING_EQUAL_CASE ~CIE414~) BEGIN
+          SET has_ar5403_squad = 1
+          READ_LONG (actor + 0x28) fl
+          PATCH_IF ((fl BAND 8) != 0) BEGIN
+            WRITE_LONG (actor + 0x28) (fl BAND (BNOT 8))
+          END
+        END
+      END
+    BUT_ONLY
+  END
+  ACTION_IF has_ar5403_squad BEGIN
+    ACTION_FOR_EACH c IN ~cie413~ ~cie414~ BEGIN
+      ACTION_IF FILE_EXISTS_IN_GAME ~%c%.cre~ BEGIN
+        COPY_EXISTING ~%c%.cre~ ~override~
+          PATCH_IF (BUFFER_LENGTH >= 0x2d4) BEGIN
+            WRITE_ASCIIE 0x280 ~ELVEN_SOLDIER~ #32
+          END
+        BUT_ONLY
+      END
+    END
+  END
+  PRINT ~chriz-iwd-encounters: Quest kill counters repaired (DKAYLESS >11, Talonite >6/<7, AR4002/AR5403 quest-DV flags preserved).~
 END

@@ -20,7 +20,7 @@ spec.loader.exec_module(fixture)
 check = fixture.check
 WEIDU, REFERENCE, SCENARIO = sys.argv[1], Path(sys.argv[2]), sys.argv[3] if len(sys.argv) > 3 else "base"
 sys.argv[1:] = []
-COMPONENTS = [100, 110, 120, 200, *range(300, 421, 10), 500]
+COMPONENTS = [100, 110, 120, 200, *range(300, 421, 10), 425, 500]
 
 
 def word(data, offset):
@@ -406,7 +406,7 @@ END
         code, text = self.results[-1]
         self.assertEqual(code, 0, text[-6000:])
         self.assertNotRegex(text, r"(?i)\b(?:ERROR|WARNING)\b")
-        self.assertEqual(text.count("SUCCESSFULLY INSTALLED"), 18)
+        self.assertEqual(text.count("SUCCESSFULLY INSTALLED"), 19)
         if SCENARIO in {"base","stack"}:
             checked=subprocess.run([sys.executable,"-I",str(ROOT/"tests/check_install.py"),str(self.game)],capture_output=True,text=True)
             (self.folder/("check-%d.log"%len(self.results))).write_text(checked.stdout,encoding="utf-8")

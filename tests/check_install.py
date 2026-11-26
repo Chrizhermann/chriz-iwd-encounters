@@ -1089,6 +1089,22 @@ def main():
             cd = cres.get("CIE%d" % n)
             dv = cd[0x280:0x2A0].split(b"\0")[0].decode("latin-1").upper() if cd else ""
             c.check(dv == "ELVEN_SOLDIER", "CIE%d carries death variable ELVEN_SOLDIER (%s)" % (n, dv))
+        for area_name, expected_cres in (("AR4002", {"CIE401", "CIE402", "CIE403"}),
+                                         ("AR5403", {"CIE413", "CIE414"})):
+            ad = res.get(area_name, "ARE")
+            if ad:
+                off_q, cnt_q = struct.unpack_from("<I", ad, 0x54)[0], struct.unpack_from("<H", ad, 0x58)[0]
+                matched_q = []
+                bad_flag_q = []
+                for i in range(cnt_q):
+                    row = off_q + i * 0x110
+                    if resref(ad, row + 0x80) in expected_cres and struct.unpack_from("<I", ad, row + 0x40)[0] != 0:
+                        matched_q.append(resref(ad, row + 0x80))
+                        if struct.unpack_from("<I", ad, row + 0x28)[0] & 8:
+                            bad_flag_q.append(ad[row:row + 32].split(b"\0")[0].decode("latin-1"))
+                c.check(len(matched_q) == 4 and not bad_flag_q,
+                        "%s squad placements preserve CRE quest death variables without flag 0x8 (found %d, bad: %s)"
+                        % (area_name, len(matched_q), ", ".join(bad_flag_q) or "none"))
         kay = cres.get("KAYLESSA")
         if kay:
             kay_items = set(cre_items(kay))
@@ -1148,6 +1164,40 @@ def main():
             c.check(dv_cnt == 2, "AR5104 preserves 2 active #5104_DV guards (%d)" % dv_cnt)
         gfn = cres.get("GIANTFN")
         c.check(gfn is None or gfn[0x53] == 2, "GIANTFN upgraded to 2 APR")
+
+    # 420 / 425: Dragon's Eye Lv 2 & Severed Hand quest kill-counter thresholds (and 425 hotpatch flag repair)
+    run_q_checks = (bool({420, 425} & installed) if installed is not None else cres.get("CIE401") is not None)
+    if run_q_checks:
+        kay_dlg = res.get("DKAYLESS", "DLG")
+        if kay_dlg:
+            k_vals = [int(x) for x in re.findall(rb'GlobalGT\("SPRITE_IS_DEADELVEN_SOLDIER","GLOBAL",(\d+)\)', kay_dlg, re.I)]
+            c.check(bool(k_vals) and all(v == 11 for v in k_vals),
+                    "DKAYLESS.DLG ELVEN_SOLDIER threshold is >11 (%s)" % (k_vals or "none"))
+        for dlg_name in ("DEGENIA", "DCALLIAN", "DCAPVIL2", "DCAPKID2"):
+            dd = res.get(dlg_name, "DLG")
+            if dd:
+                gt_vals = [int(x) for x in re.findall(rb'GlobalGT\("SPRITE_IS_DEADTalonite","GLOBAL",(\d+)\)', dd, re.I)]
+                lt_vals = [int(x) for x in re.findall(rb'GlobalLT\("SPRITE_IS_DEADTalonite","GLOBAL",(\d+)\)', dd, re.I)]
+                c.check(all(v == 6 for v in gt_vals) and all(v == 7 for v in lt_vals) and bool(gt_vals or lt_vals),
+                        "%s.DLG Talonite thresholds are >6/<7 (GT=%s, LT=%s)" % (dlg_name, gt_vals, lt_vals))
+        for area_bcs in ("AR4001", "AR4003"):
+            bt = c.script(area_bcs)
+            if bt:
+                t_vals = [int(x) for x in re.findall(rb'tr\n16436 (\d+) [^\n]*"globalsprite_is_deadtalonite"', bt)]
+                c.check(bool(t_vals) and all(v == 6 for v in t_vals),
+                        "%s.BCS Talonite threshold is >6 (%s)" % (area_bcs, t_vals or "none"))
+    if installed is not None and 425 in installed:
+        for area_name, expected_cres in (("AR4002", {"CIE401", "CIE402", "CIE403"}),
+                                         ("AR5403", {"CIE413", "CIE414"})):
+            ad = res.get(area_name, "ARE")
+            if ad:
+                off_q, cnt_q = struct.unpack_from("<I", ad, 0x54)[0], struct.unpack_from("<H", ad, 0x58)[0]
+                bad_425 = []
+                for i in range(cnt_q):
+                    row = off_q + i * 0x110
+                    if resref(ad, row + 0x80) in expected_cres and (struct.unpack_from("<I", ad, row + 0x28)[0] & 8):
+                        bad_425.append(ad[row:row + 32].split(b"\0")[0].decode("latin-1"))
+                c.check(not bad_425, "425: %s squad placements clear flag 0x8 (bad: %s)" % (area_name, ", ".join(bad_425) or "none"))
 
     # 500: Heart of Winter & Trials of the Luremaster expansion overhaul
     if expect(500, cres.get("CIE501") is not None):

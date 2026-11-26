@@ -81,6 +81,7 @@ for **[Chriz Easy IWD](https://bg.chrizfader.org/iwd)**
 | `400` | **Lord Maluradek:** `350` HP, working animated plates, all-rooms rally below 50% HP, restored dancing beholder and immunity gloves. |
 | `410` | **The Luremaster:** Opens with *Improved Invisibility*, Dimension Door escapes, working Dispel Magic, and spectral hero replacements. |
 | `420` | **Main Campaign Overhaul (Chapters 2–6):** ~40–50% filler thinning, 6 asymmetric named squads (`CIE401`–`CIE427`), Kaylessa Lv 15 overhaul, Solonor Tower garrison, `AR3503` 3-wave crypt, Terikan, Tarnsen, quest/staircase-respawn fixes. |
+| `425` | **Quest Kill-Counter Hotfix:** Idempotent repair component for existing installations—lowers Dragon's Eye Lv 2 (`>6`/`<7`) and Severed Hand (`>11`) thresholds and preserves `Talonite` / `ELVEN_SOLDIER` quest death variables on `AR4002` & `AR5403` squad placements. |
 | `500` | **Heart of Winter & Trials of the Luremaster:** *Polar Bear Spirit* Great Roar fix, Burial Isle thinning & respawn fix, Gloomfrost Frost Giant War-Shaman plaza (`CIE5GHST`), Sea of Moving Ice & Sahuagin Royal Command, `AR9602` repair. |
 
 Full engine-neutral specification (written so rules can move cleanly to future script-engine
