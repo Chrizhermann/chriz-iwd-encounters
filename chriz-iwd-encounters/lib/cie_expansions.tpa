@@ -22,12 +22,13 @@ END
 
 DEFINE_PATCH_FUNCTION cie500_set_core
   INT_VAR name_tra = 0 xp = 0 hp = 100 ac = 0 thac0 = 5 apr = 2
+          str = 17 str_ex = 0 dex = 13
           sv1 = 5 sv2 = 6 sv3 = 6 sv4 = 7 sv5 = 6
           rfir = 0 rcld = 0 rele = 0 racd = 0 mr = 0 rsl = 0 rcr = 0 rpi = 0 rmi = 0
           lvl1 = 15 lvl2 = 1
   STR_VAR s_ovr = ~~ s_cls = ~~ s_rac = ~~ s_gen = ~~ s_def = ~~
 BEGIN
-  LPF cie_set_core INT_VAR xp hp ac thac0 apr sv1 sv2 sv3 sv4 sv5 rfir rcld rele racd mr rsl rcr rpi rmi lvl1 lvl2
+  LPF cie_set_core INT_VAR xp hp ac thac0 apr str str_ex dex sv1 sv2 sv3 sv4 sv5 rfir rcld rele racd mr rsl rcr rpi rmi lvl1 lvl2
     STR_VAR s_ovr s_cls s_rac s_gen s_def END
 END
 
@@ -362,7 +363,7 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
   OUTER_SPRINT fg_shaman_donor ~jklshm~
   ACTION_IF FILE_EXISTS_IN_GAME ~mytos.cre~ BEGIN OUTER_SPRINT fg_shaman_donor ~mytos~ END
   COPY_EXISTING ~%fg_shaman_donor%.cre~ ~override/cie501.cre~
-    LPF cie500_set_core INT_VAR name_tra = 501 xp = 30000 hp = 190 ac = 0 - 6 thac0 = 0 apr = 8 rcld = 100 mr = 20 lvl1 = 15 lvl2 = 15 STR_VAR s_ovr = ~CIE5GSHM~ s_cls = ~CIE5FC1~ END
+    LPF cie500_set_core INT_VAR name_tra = 501 xp = 30000 hp = 185 ac = 0 - 5 thac0 = 2 apr = 8 str = 19 rcld = 100 mr = 20 lvl1 = 15 lvl2 = 15 STR_VAR s_ovr = ~CIE5GSHM~ s_cls = ~CIE5FC1~ END
     WRITE_BYTE 0x273 8 // FIGHTER_CLERIC
     SAY NAME1 @501
     SAY NAME2 @501
@@ -382,29 +383,27 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
     LPF cie_ensure_spell INT_VAR lvl = 6 cnt = 1 STR_VAR spell = ~SPPR607~ stype = ~priest~ END
     ADD_CRE_ITEM ~WEPGIAN~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
     ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM1~
-    ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM2~
   LAF cie500_apply_look_and_voice INT_VAR anim_override = 0xe24f STR_VAR cre = ~cie501~ visual_donor = ~giantfro~ END
 
   // CIE502: Frost Giant Jarl
   COPY_EXISTING ~giantfro.cre~ ~override/cie502.cre~
-    LPF cie500_set_core INT_VAR name_tra = 502 xp = 22000 hp = 185 ac = 0 - 6 thac0 = 0 - 1 apr = 8 rcld = 100 rcr = 20 lvl1 = 17 STR_VAR s_cls = EVAL ~%cie500_bersk_ai%~ END
+    LPF cie500_set_core INT_VAR name_tra = 502 xp = 22000 hp = 180 ac = 0 - 5 thac0 = 2 apr = 8 str = 19 rcld = 100 rcr = 20 lvl1 = 17 STR_VAR s_cls = EVAL ~%cie500_bersk_ai%~ END
     SAY NAME1 @502
     SAY NAME2 @502
     ADD_CRE_ITEM ~WEPGIAN~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
     ADD_CRE_ITEM ~EXTHEAL~ #1 #0 #0 ~IDENTIFIED~ ~QITEM1~
-    ADD_CRE_ITEM ~EXTHEAL~ #1 #0 #0 ~IDENTIFIED~ ~QITEM2~
     ADD_CRE_ITEM ~%cie500_ptn_spd%~ #1 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~QITEM3~
 
   // CIE503: Hoarfrost Alpha (Ancient Winter Dire-Wolf)
   COPY_EXISTING ~winwolf.cre~ ~override/cie503.cre~
-    LPF cie500_set_core INT_VAR name_tra = 503 xp = 18000 hp = 145 ac = 0 - 6 thac0 = 0 apr = 3 rcld = 100 lvl1 = 14 STR_VAR s_cls = ~EFWINWLF~ s_gen = EVAL ~%cie500_melee_ai%~ END
+    LPF cie500_set_core INT_VAR name_tra = 503 xp = 18000 hp = 140 ac = 0 - 5 thac0 = 2 apr = 3 str = 18 rcld = 100 lvl1 = 14 STR_VAR s_cls = ~EFWINWLF~ s_gen = EVAL ~%cie500_melee_ai%~ END
     SAY NAME1 @503
     SAY NAME2 @503
     ADD_CRE_ITEM ~S1-20M3~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
 
   // CIE504: Broodmother Remorhaz
   COPY_EXISTING ~remorha.cre~ ~override/cie504.cre~
-    LPF cie500_set_core INT_VAR name_tra = 504 xp = 36000 hp = 230 ac = 0 - 6 thac0 = 0 - 2 apr = 2 rfir = 100 rcld = 75 mr = 75 lvl1 = 18 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
+    LPF cie500_set_core INT_VAR name_tra = 504 xp = 36000 hp = 220 ac = 0 - 5 thac0 = 1 apr = 2 str = 19 rfir = 100 rcld = 75 mr = 75 lvl1 = 18 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
     SAY NAME1 @504
     SAY NAME2 @504
     ADD_CRE_ITEM ~REMORHA~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
@@ -412,16 +411,15 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
 
   // CIE506: Hand of the Frostmaiden (Aurilite Cryomancer L16)
   COPY_EXISTING ~kontik.cre~ ~override/cie506.cre~
-    LPF cie500_set_core INT_VAR name_tra = 506 xp = 36000 hp = 115 ac = 0 - 5 thac0 = 5 apr = 1 rcld = 100 mr = 25 lvl1 = 16 STR_VAR s_cls = ~CIE5CS3~ END
+    LPF cie500_set_core INT_VAR name_tra = 506 xp = 36000 hp = 110 ac = 0 - 4 thac0 = 6 apr = 1 rcld = 100 mr = 25 lvl1 = 16 STR_VAR s_cls = ~CIE5CS3~ END
     SAY NAME1 @506
     SAY NAME2 @506
     ADD_CRE_ITEM ~STAF02~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
     ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM1~
-    ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM2~
 
   // CIE507: Black-Ice Juggernaut
   COPY_EXISTING ~biknight.cre~ ~override/cie507.cre~
-    LPF cie500_set_core INT_VAR name_tra = 507 xp = 28000 hp = 175 ac = 0 - 7 thac0 = 0 - 1 apr = 3 rcld = 100 mr = 30 rsl = 25 rcr = 25 rpi = 25 rmi = 40 lvl1 = 16 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
+    LPF cie500_set_core INT_VAR name_tra = 507 xp = 28000 hp = 170 ac = 0 - 6 thac0 = 2 apr = 3 str = 18 str_ex = 76 rcld = 100 mr = 30 rsl = 25 rcr = 25 rpi = 25 rmi = 40 lvl1 = 16 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
     SAY NAME1 @507
     SAY NAME2 @507
     ADD_CRE_ITEM ~RING95~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
@@ -429,18 +427,17 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
 
   // CIE508: Rime-Bound Witch-Doctor (Druid L14)
   COPY_EXISTING ~trsph5.cre~ ~override/cie508.cre~
-    LPF cie500_set_core INT_VAR name_tra = 508 xp = 24000 hp = 120 ac = 0 - 5 thac0 = 4 apr = 2 rcld = 100 lvl1 = 14 STR_VAR s_cls = ~CIE5CS4~ END
+    LPF cie500_set_core INT_VAR name_tra = 508 xp = 24000 hp = 118 ac = 0 - 4 thac0 = 5 apr = 2 rcld = 100 lvl1 = 14 STR_VAR s_cls = ~CIE5CS4~ END
     SAY NAME1 @508
     SAY NAME2 @508
     LPF DELETE_CRE_EFFECT INT_VAR opcode_to_delete = 342 END
     ADD_CRE_ITEM ~STAF02~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
     ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM1~
-    ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM2~
   LAF cie500_apply_look_and_voice INT_VAR anim_override = 0xe248 STR_VAR cre = ~cie508~ visual_donor = ~dlbar1a~ END
 
   // CIE509: Frost-Scarred Reaver (Corrupted Berserker)
   COPY_EXISTING ~dlbar1a.cre~ ~override/cie509.cre~
-    LPF cie500_set_core INT_VAR name_tra = 509 xp = 18000 hp = 160 ac = 0 - 6 thac0 = 0 - 1 apr = 3 rcld = 75 lvl1 = 15 STR_VAR s_cls = EVAL ~%cie500_bersk_ai%~ END
+    LPF cie500_set_core INT_VAR name_tra = 509 xp = 18000 hp = 155 ac = 0 - 5 thac0 = 2 apr = 8 str = 18 str_ex = 51 rcld = 75 lvl1 = 15 STR_VAR s_cls = EVAL ~%cie500_bersk_ai%~ END
     SAY NAME1 @509
     SAY NAME2 @509
     ADD_CRE_ITEM ~AX1H03~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
@@ -450,7 +447,7 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
 
   // CIE510: Hoarfrost Elder Yeti (Yeti Apex)
   COPY_EXISTING ~dlyeti.cre~ ~override/cie510.cre~
-    LPF cie500_set_core INT_VAR name_tra = 510 xp = 26000 hp = 205 ac = 0 - 6 thac0 = 0 - 1 apr = 4 rcld = 100 lvl1 = 16 STR_VAR s_cls = EVAL ~%cie500_bersk_ai%~ END
+    LPF cie500_set_core INT_VAR name_tra = 510 xp = 26000 hp = 195 ac = 0 - 5 thac0 = 2 apr = 3 str = 19 rcld = 100 lvl1 = 16 STR_VAR s_cls = EVAL ~%cie500_bersk_ai%~ END
     SAY NAME1 @510
     SAY NAME2 @510
     ADD_CRE_ITEM ~S1-12M2~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
@@ -460,17 +457,16 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
   OUTER_SPRINT tide_donor ~drowpm~
   ACTION_IF FILE_EXISTS_IN_GAME ~dw#drpm2.cre~ BEGIN OUTER_SPRINT tide_donor ~dw#drpm2~ END
   COPY_EXISTING ~%tide_donor%.cre~ ~override/cie512.cre~
-    LPF cie500_set_core INT_VAR name_tra = 512 xp = 28000 hp = 135 ac = 0 - 5 thac0 = 4 apr = 2 rcld = 100 mr = 25 lvl1 = 14 lvl2 = 14 STR_VAR s_cls = ~CIE5CS5~ END
+    LPF cie500_set_core INT_VAR name_tra = 512 xp = 28000 hp = 130 ac = 0 - 4 thac0 = 5 apr = 2 rcld = 100 mr = 25 lvl1 = 14 lvl2 = 14 STR_VAR s_cls = ~CIE5CS5~ END
     SAY NAME1 @512
     SAY NAME2 @512
     ADD_CRE_ITEM ~SPER02~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
     ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM1~
-    ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM2~
   LAF cie500_apply_look_and_voice INT_VAR anim_override = 0xe261 STR_VAR cre = ~cie512~ visual_donor = ~saking~ END
 
   // CIE513: Sekolah Abyssal Guard
   COPY_EXISTING ~saking.cre~ ~override/cie513.cre~
-    LPF cie500_set_core INT_VAR name_tra = 513 xp = 19000 hp = 155 ac = 0 - 6 thac0 = 0 - 1 apr = 3 rcld = 100 lvl1 = 15 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
+    LPF cie500_set_core INT_VAR name_tra = 513 xp = 19000 hp = 150 ac = 0 - 5 thac0 = 2 apr = 3 str = 18 str_ex = 51 rcld = 100 lvl1 = 15 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
     SAY NAME1 @513
     SAY NAME2 @513
     ADD_CRE_ITEM ~S1-20M3~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
@@ -481,17 +477,16 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
   OUTER_SPRINT swh_donor ~saking~
   ACTION_IF FILE_EXISTS_IN_GAME ~saprince.cre~ BEGIN OUTER_SPRINT swh_donor ~saprince~ END
   COPY_EXISTING ~%swh_donor%.cre~ ~override/cie514.cre~
-    LPF cie500_set_core INT_VAR name_tra = 514 xp = 26000 hp = 195 ac = 0 - 7 thac0 = 0 - 2 apr = 9 rcld = 100 mr = 20 lvl1 = 17 STR_VAR s_cls = EVAL ~%cie500_bersk_ai%~ END
+    LPF cie500_set_core INT_VAR name_tra = 514 xp = 26000 hp = 185 ac = 0 - 6 thac0 = 2 apr = 3 str = 18 str_ex = 76 rcld = 100 mr = 20 lvl1 = 17 STR_VAR s_cls = EVAL ~%cie500_bersk_ai%~ END
     SAY NAME1 @514
     SAY NAME2 @514
     ADD_CRE_ITEM ~SPER03~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
     ADD_CRE_ITEM ~EXTHEAL~ #1 #0 #0 ~IDENTIFIED~ ~QITEM1~
-    ADD_CRE_ITEM ~EXTHEAL~ #1 #0 #0 ~IDENTIFIED~ ~QITEM2~
     ADD_CRE_ITEM ~%cie500_ptn_spd%~ #1 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~QITEM3~
 
   // CIE515: Fallen Wyvern-Knight
   COPY_EXISTING ~biknight.cre~ ~override/cie515.cre~
-    LPF cie500_set_core INT_VAR name_tra = 515 xp = 18000 hp = 165 ac = 0 - 6 thac0 = 0 - 1 apr = 3 rcld = 100 mr = 20 lvl1 = 16 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
+    LPF cie500_set_core INT_VAR name_tra = 515 xp = 18000 hp = 158 ac = 0 - 5 thac0 = 2 apr = 3 str = 18 rcld = 100 mr = 20 lvl1 = 16 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
     SAY NAME1 @515
     SAY NAME2 @515
     ADD_CRE_ITEM ~RING95~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
@@ -501,7 +496,7 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
   OUTER_SPRINT pres_donor ~presio~
   ACTION_IF FILE_EXISTS_IN_GAME ~cdpresio.cre~ BEGIN OUTER_SPRINT pres_donor ~cdpresio~ END
   COPY_EXISTING ~%pres_donor%.cre~ ~override/cie516.cre~
-    LPF cie500_set_core INT_VAR name_tra = 516 xp = 26000 hp = 125 ac = 0 - 6 thac0 = 5 apr = 1 rcld = 100 mr = 25 lvl1 = 12 lvl2 = 12 STR_VAR s_ovr = ~KELURDED~ s_cls = ~CIE5CS7~ END
+    LPF cie500_set_core INT_VAR name_tra = 516 xp = 26000 hp = 120 ac = 0 - 5 thac0 = 6 apr = 1 rcld = 100 mr = 25 lvl1 = 12 lvl2 = 12 STR_VAR s_ovr = ~KELURDED~ s_cls = ~CIE5CS7~ END
     SAY NAME1 @516
     SAY NAME2 @516
     ADD_CRE_ITEM ~RING95~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
@@ -511,7 +506,7 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
 
   // CIE517: Phantom Blademaster (Spectral Duelist)
   COPY_EXISTING ~ckspgrd2.cre~ ~override/cie517.cre~
-    LPF cie500_set_core INT_VAR name_tra = 517 xp = 22000 hp = 165 ac = 0 - 7 thac0 = 0 - 2 apr = 8 rcld = 100 rsl = 25 rpi = 25 rmi = 25 lvl1 = 18 STR_VAR s_ovr = ~KELURDED~ s_cls = EVAL ~%cie500_melee_ai%~ END
+    LPF cie500_set_core INT_VAR name_tra = 517 xp = 22000 hp = 158 ac = 0 - 6 thac0 = 1 apr = 8 str = 18 rcld = 100 rsl = 25 rpi = 25 rmi = 25 lvl1 = 18 STR_VAR s_ovr = ~KELURDED~ s_cls = EVAL ~%cie500_melee_ai%~ END
     SAY NAME1 @517
     SAY NAME2 @517
     ADD_CRE_ITEM ~RING95~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
@@ -520,7 +515,7 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
 
   // CIE518: Ossuary Arch-Necromancer (L18 Archmage)
   COPY_EXISTING ~malavon.cre~ ~override/cie518.cre~
-    LPF cie500_set_core INT_VAR name_tra = 518 xp = 38000 hp = 135 ac = 0 - 5 thac0 = 5 apr = 1 rcld = 100 mr = 35 lvl1 = 18 STR_VAR s_cls = ~CIE5CS8~ END
+    LPF cie500_set_core INT_VAR name_tra = 518 xp = 38000 hp = 128 ac = 0 - 4 thac0 = 6 apr = 1 rcld = 100 mr = 35 lvl1 = 18 STR_VAR s_cls = ~CIE5CS8~ END
     SAY NAME1 @518
     SAY NAME2 @518
     ADD_CRE_ITEM ~RING95~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
@@ -530,7 +525,7 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
 
   // CIE519: Dread Bone-Fiend
   COPY_EXISTING ~bonegard.cre~ ~override/cie519.cre~
-    LPF cie500_set_core INT_VAR name_tra = 519 xp = 24000 hp = 150 ac = 0 - 6 thac0 = 0 apr = 3 rfir = 100 rcld = 50 mr = 35 rsl = 35 rpi = 35 rmi = 50 lvl1 = 15 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
+    LPF cie500_set_core INT_VAR name_tra = 519 xp = 24000 hp = 148 ac = 0 - 5 thac0 = 2 apr = 3 str = 18 rfir = 100 rcld = 50 mr = 35 rsl = 35 rpi = 35 rmi = 50 lvl1 = 15 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
     SAY NAME1 @519
     SAY NAME2 @519
     ADD_CRE_ITEM ~RING95~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
@@ -538,7 +533,7 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
 
   // CIE520: Oathbreaker Watch-Captain
   COPY_EXISTING ~biknight.cre~ ~override/cie520.cre~
-    LPF cie500_set_core INT_VAR name_tra = 520 xp = 28000 hp = 195 ac = 0 - 8 thac0 = 0 - 2 apr = 3 rcld = 100 mr = 25 rsl = 20 rcr = 20 rpi = 20 lvl1 = 18 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
+    LPF cie500_set_core INT_VAR name_tra = 520 xp = 28000 hp = 185 ac = 0 - 6 thac0 = 1 apr = 3 str = 18 str_ex = 76 rcld = 100 mr = 25 rsl = 20 rcr = 20 rpi = 20 lvl1 = 18 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
     SAY NAME1 @520
     SAY NAME2 @520
     ADD_CRE_ITEM ~RING95~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
@@ -548,7 +543,7 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
 
   // CIE521: Sepulchral Arbalest (Spectral Crossbowman w/ Tranquil Bolts)
   COPY_EXISTING ~mercwar1.cre~ ~override/cie521.cre~
-    LPF cie500_set_core INT_VAR name_tra = 521 xp = 18000 hp = 125 ac = 0 - 5 thac0 = 0 apr = 8 rcld = 100 rmi = 30 lvl1 = 15 STR_VAR s_cls = EVAL ~%cie500_ranged_ai%~ END
+    LPF cie500_set_core INT_VAR name_tra = 521 xp = 18000 hp = 120 ac = 0 - 2 thac0 = 2 apr = 2 dex = 17 rcld = 100 rmi = 30 lvl1 = 15 STR_VAR s_cls = EVAL ~%cie500_ranged_ai%~ END
     SAY NAME1 @521
     SAY NAME2 @521
     WRITE_LONG 0x28 0x6120
@@ -562,7 +557,7 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
 
   // CIE522: Anubite Tomb-Warden
   COPY_EXISTING ~jklgtr.cre~ ~override/cie522.cre~
-    LPF cie500_set_core INT_VAR name_tra = 522 xp = 24000 hp = 155 ac = 0 - 6 thac0 = 0 - 1 apr = 3 rcld = 100 mr = 25 lvl1 = 16 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
+    LPF cie500_set_core INT_VAR name_tra = 522 xp = 24000 hp = 150 ac = 0 - 5 thac0 = 2 apr = 3 str = 18 rcld = 100 mr = 25 lvl1 = 16 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
     SAY NAME1 @522
     SAY NAME2 @522
     ADD_CRE_ITEM ~RING95~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
@@ -570,7 +565,7 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
 
   // CIE523: Kargath the Pit-Tyrant (Prize Gladiator Minotaur)
   COPY_EXISTING ~minlrd.cre~ ~override/cie523.cre~
-    LPF cie500_set_core INT_VAR name_tra = 523 xp = 26000 hp = 215 ac = 0 - 7 thac0 = 0 - 2 apr = 9 mr = 20 lvl1 = 20 STR_VAR s_cls = EVAL ~%cie500_bersk_ai%~ END
+    LPF cie500_set_core INT_VAR name_tra = 523 xp = 26000 hp = 205 ac = 0 - 6 thac0 = 2 apr = 3 str = 19 mr = 20 lvl1 = 20 STR_VAR s_cls = EVAL ~%cie500_bersk_ai%~ END
     SAY NAME1 @523
     SAY NAME2 @523
     ADD_CRE_ITEM ~RING09~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
@@ -589,7 +584,7 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
 
   // CIE525: Plague-Alchemist Shade
   COPY_EXISTING ~ilair.cre~ ~override/cie525.cre~
-    LPF cie500_set_core INT_VAR name_tra = 525 xp = 22000 hp = 115 ac = 0 - 5 thac0 = 6 apr = 1 racd = 100 rcld = 100 mr = 25 lvl1 = 16 STR_VAR s_cls = ~CIE5CS2~ END
+    LPF cie500_set_core INT_VAR name_tra = 525 xp = 22000 hp = 115 ac = 0 - 4 thac0 = 6 apr = 1 racd = 100 rcld = 100 mr = 25 lvl1 = 16 STR_VAR s_cls = ~CIE5CS2~ END
     SAY NAME1 @525
     SAY NAME2 @525
     ADD_CRE_ITEM ~RING95~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
@@ -599,7 +594,7 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
 
   // CIE526: Fetid Mound-Horror
   COPY_EXISTING ~cyshamb.cre~ ~override/cie526.cre~
-    LPF cie500_set_core INT_VAR name_tra = 526 xp = 16000 hp = 175 ac = 0 - 4 thac0 = 0 - 1 apr = 3 rfir = 100 rele = 100 racd = 100 rcr = 75 lvl1 = 16 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
+    LPF cie500_set_core INT_VAR name_tra = 526 xp = 16000 hp = 170 ac = 0 - 4 thac0 = 2 apr = 3 str = 18 rfir = 100 rele = 100 racd = 100 rcr = 75 lvl1 = 16 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
     SAY NAME1 @526
     SAY NAME2 @526
     ADD_CRE_ITEM ~FREEACT~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
@@ -607,7 +602,7 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
 
   // CIE527, CIE528, CIE529: Risen Shades of Harald's Comrades (spawned only if Harald turns hostile)
   COPY_EXISTING ~jklshm.cre~ ~override/cie527.cre~
-    LPF cie500_set_core INT_VAR name_tra = 527 xp = 8000 hp = 110 ac = 0 - 5 thac0 = 4 apr = 2 rcld = 100 lvl1 = 13 STR_VAR s_ovr = ~KELURDED~ s_cls = ~CIE5CS1~ END
+    LPF cie500_set_core INT_VAR name_tra = 527 xp = 8000 hp = 110 ac = 0 - 4 thac0 = 5 apr = 2 rcld = 100 lvl1 = 13 STR_VAR s_ovr = ~KELURDED~ s_cls = ~CIE5CS1~ END
     SAY NAME1 @527
     SAY NAME2 @527
     ADD_CRE_ITEM ~RING95~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
@@ -616,7 +611,7 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
   LAF cie500_apply_look_and_voice INT_VAR anim_override = 0x6020 STR_VAR cre = ~cie527~ visual_donor = ~ckspgrd2~ END
 
   COPY_EXISTING ~ckspgrd2.cre~ ~override/cie528.cre~
-    LPF cie500_set_core INT_VAR name_tra = 528 xp = 8000 hp = 145 ac = 0 - 6 thac0 = 0 apr = 3 rcld = 100 lvl1 = 15 STR_VAR s_ovr = ~KELURDED~ s_cls = EVAL ~%cie500_melee_ai%~ END
+    LPF cie500_set_core INT_VAR name_tra = 528 xp = 8000 hp = 140 ac = 0 - 5 thac0 = 2 apr = 3 str = 18 rcld = 100 lvl1 = 15 STR_VAR s_ovr = ~KELURDED~ s_cls = EVAL ~%cie500_melee_ai%~ END
     SAY NAME1 @528
     SAY NAME2 @528
     ADD_CRE_ITEM ~RING95~  #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
@@ -624,7 +619,7 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
     ADD_CRE_ITEM ~CWSPGRD~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
 
   COPY_EXISTING ~mercwar1.cre~ ~override/cie529.cre~
-    LPF cie500_set_core INT_VAR name_tra = 529 xp = 8000 hp = 110 ac = 0 - 5 thac0 = 1 apr = 8 rcld = 100 lvl1 = 14 STR_VAR s_ovr = ~KELURDED~ s_cls = EVAL ~%cie500_ranged_ai%~ END
+    LPF cie500_set_core INT_VAR name_tra = 529 xp = 8000 hp = 110 ac = 0 - 2 thac0 = 3 apr = 2 dex = 17 rcld = 100 lvl1 = 14 STR_VAR s_ovr = ~KELURDED~ s_cls = EVAL ~%cie500_ranged_ai%~ END
     SAY NAME1 @529
     SAY NAME2 @529
     WRITE_LONG 0x28 0x6120
@@ -637,7 +632,7 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
 
   // CIE530: Blood-Moon Alpha (Apex Were-Jackal)
   COPY_EXISTING ~jklgtr.cre~ ~override/cie530.cre~
-    LPF cie500_set_core INT_VAR name_tra = 530 xp = 28000 hp = 190 ac = 0 - 8 thac0 = 0 - 2 apr = 4 mr = 25 lvl1 = 19 STR_VAR s_ovr = ~EFJGAZE~ s_cls = EVAL ~%cie500_bersk_ai%~ END
+    LPF cie500_set_core INT_VAR name_tra = 530 xp = 28000 hp = 180 ac = 0 - 6 thac0 = 1 apr = 3 str = 18 str_ex = 76 mr = 25 lvl1 = 19 STR_VAR s_ovr = ~EFJGAZE~ s_cls = EVAL ~%cie500_bersk_ai%~ END
     SAY NAME1 @530
     SAY NAME2 @530
     ADD_CRE_ITEM ~S1-20M3~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
@@ -646,7 +641,7 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
 
   // CIE531: Shadow-Pelt Stalker (Malarite Backstabber)
   COPY_EXISTING ~mercwar1.cre~ ~override/cie531.cre~
-    LPF cie500_set_core INT_VAR name_tra = 531 xp = 21000 hp = 130 ac = 0 - 6 thac0 = 0 apr = 3 lvl1 = 16 STR_VAR s_cls = EVAL ~%cie500_thief_ai%~ END
+    LPF cie500_set_core INT_VAR name_tra = 531 xp = 21000 hp = 128 ac = 0 - 2 thac0 = 2 apr = 8 dex = 18 lvl1 = 16 STR_VAR s_cls = EVAL ~%cie500_thief_ai%~ END
     SAY NAME1 @531
     SAY NAME2 @531
     WRITE_LONG 0x28  0x6300 // Thief leather figure
@@ -662,7 +657,7 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
 
   // CIE532: Primordial Earth-Titan
   COPY_EXISTING ~shearth.cre~ ~override/cie532.cre~
-    LPF cie500_set_core INT_VAR name_tra = 532 xp = 28000 hp = 220 ac = 0 - 6 thac0 = 0 - 2 apr = 3 rsl = 40 rpi = 40 rmi = 50 mr = 25 lvl1 = 20 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
+    LPF cie500_set_core INT_VAR name_tra = 532 xp = 28000 hp = 210 ac = 0 - 5 thac0 = 1 apr = 3 str = 19 rsl = 40 rpi = 40 rmi = 50 mr = 25 lvl1 = 20 STR_VAR s_cls = EVAL ~%cie500_melee_ai%~ END
     SAY NAME1 @532
     SAY NAME2 @532
     ADD_CRE_ITEM ~FREEACT~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~LRING~ EQUIP
@@ -670,12 +665,11 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
 
   // CIE533: Malarite Fang-Hierophant
   COPY_EXISTING ~jklshm.cre~ ~override/cie533.cre~
-    LPF cie500_set_core INT_VAR name_tra = 533 xp = 26000 hp = 135 ac = 0 - 5 thac0 = 3 apr = 2 mr = 20 lvl1 = 16 STR_VAR s_cls = ~CIE5CS1~ END
+    LPF cie500_set_core INT_VAR name_tra = 533 xp = 26000 hp = 132 ac = 0 - 4 thac0 = 4 apr = 2 mr = 20 lvl1 = 16 STR_VAR s_cls = ~CIE5CS1~ END
     SAY NAME1 @533
     SAY NAME2 @533
     ADD_CRE_ITEM ~STAF02~ #0 #0 #0 ~IDENTIFIED&UNDROPPABLE~ ~WEAPON1~ EQUIP
     ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM1~
-    ADD_CRE_ITEM ~POTN52~ #1 #0 #0 ~IDENTIFIED~ ~QITEM2~
 
   // 6. Upgrade spongy / low-THAC0 regulars & mini-bosses in-place (preserving quest items/DVs!)
   ACTION_FOR_EACH spgrd IN ~ckspgrd~ ~ckspgrd2~ ~ckspgrd3~ ~ckspgrd4~ ~ckspgrd5~ ~ckspgrd6~ ~ckspgrd7~ ~ckspgrdh~ ~rndspg~ BEGIN
@@ -1150,6 +1144,36 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
       LPF cie500_disable_actor_at INT_VAR tx = 2393 ty = 1645 END
       LPF cie500_disable_actor_at INT_VAR tx = 1738 ty = 1922 END
       LPF cie500_disable_actor_at INT_VAR tx = 2298 ty = 1845 END
+      LPF cie500_disable_actor_at INT_VAR tx = 424 ty = 2250 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1554 ty = 1889 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1953 ty = 1227 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1038 ty = 747 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3167 ty = 402 END
+      LPF cie500_disable_actor_at INT_VAR tx = 995 ty = 1674 END
+      LPF cie500_disable_actor_at INT_VAR tx = 184 ty = 428 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3238 ty = 1704 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1445 ty = 2215 END
+      LPF cie500_disable_actor_at INT_VAR tx = 744 ty = 259 END
+      LPF cie500_disable_actor_at INT_VAR tx = 142 ty = 2329 END
+      LPF cie500_disable_actor_at INT_VAR tx = 437 ty = 2844 END
+      LPF cie500_disable_actor_at INT_VAR tx = 108 ty = 707 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1566 ty = 1726 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1165 ty = 2701 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1252 ty = 1184 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2007 ty = 826 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2517 ty = 732 END
+      LPF cie500_disable_actor_at INT_VAR tx = 961 ty = 1424 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2148 ty = 1747 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1251 ty = 524 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3005 ty = 566 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2829 ty = 1388 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2953 ty = 1355 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3080 ty = 2792 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3605 ty = 2560 END
+      LPF cie500_disable_actor_at INT_VAR tx = 3724 ty = 1961 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1837 ty = 1703 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2757 ty = 922 END
+      LPF cie500_disable_actor_at INT_VAR tx = 1645 ty = 168 END
     BUT_ONLY
   END
   ACTION_IF FILE_EXISTS_IN_GAME ~ar9716.are~ BEGIN
@@ -1275,6 +1299,7 @@ DEFINE_ACTION_FUNCTION cie_expansions BEGIN
       LPF cie500_disable_actor_at INT_VAR tx = 1886 ty = 619 END
       LPF cie500_disable_actor_at INT_VAR tx = 2215 ty = 929 END
       LPF cie500_disable_actor_at INT_VAR tx = 2346 ty = 530 END
+      LPF cie500_disable_actor_at INT_VAR tx = 2500 ty = 928 END
     BUT_ONLY
   END
 

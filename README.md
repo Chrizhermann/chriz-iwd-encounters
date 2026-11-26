@@ -22,14 +22,18 @@ for **[Chriz Easy IWD](https://bg.chrizfader.org/iwd)**
     Ilmadia**, **The Idol**, and **Poquelin** in the Ascension Cave.
   - **Heart of Winter & Trials (`370`–`410`):** **Pomab** (Cryshal-Tirith), **Mebdinga**,
     **Icasaracht**, **Lord Maluradek**, and **The Luremaster**.
-- **Trimmed Filler & Asymmetric Elite Squads (`420` & `500`):**
-  - Cuts ~40–50% of repetitive trash mobs across Chapters 2–6, *Heart of Winter*, and *Trials of
-    the Luremaster* while fixing infinite staircase respawns and maintaining chapter XP parity.
-  - Introduces *Drasus*-style named specialist squads across Chapters 2–6 (Talonite Coven, Shadowed
-    Arcane Circle, Pure Orog Shock-Guard, Frostmaiden Sisterhood, Kraken Society Operatives) plus
-    a **Kaylessa** (`AR5401`) overhaul and Solonor Tower garrison.
-  - Adds Gloomfrost's Frost Giant War-Shaman plaza, Sea of Moving Ice Sahuagin Royal Command, and
-    fixes *Polar Bear Spirit*'s Great Roar.
+- **Trimmed Filler & Asymmetric Elite Squads (`420`, `425`, & `500`):**
+  - Cuts ~45–55% of repetitive trash mobs across Chapters 2–6, *Heart of Winter*, and *Trials of
+    the Luremaster*, replaces 100% of no-save Bombardier Beetles (`BEETBOMB`), fixes infinite
+    staircase respawns and thinned-area quest kill counters, and maintains chapter XP parity.
+  - Introduces *Drasus*-style named specialist squads and apex guardians across Chapters 2–6
+    (calibrated Talonite Coven, Shadowed Arcane Circle, Solonor Tower Garrison, Pure Orog
+    Shock-Guard, Frostmaiden Sisterhood, Kraken Society Operatives, plus Broodmother/Phase Spider,
+    Barrow Wight-Lord, Ancient Glacier-Troll, and Labyrinth Minotaur-Lord) with undroppable bespoke
+    gear and a **Kaylessa** (`AR5401`) Lv 15 overhaul.
+  - Paces Kresselack's Antechamber (`AR3503`) into 3 crypt waves (`48 s` / `+54 s` with crypt
+    horns/callouts), adds Gloomfrost's Frost Giant War-Shaman plaza and Sahuagin Royal Command,
+    and fixes *Polar Bear Spirit*'s Great Roar.
 - **Baldur's Gate Spell Rules on IWD:EE (`120`):**
   - Uses BG caster-level Dispel/Remove Magic checks (`50%` base, `+5%`/`-10%` per level).
   - Limits Minor Spell Deflection to levels 1–4 so *Breach* and *Pierce Magic* bypass it cleanly.
@@ -80,9 +84,9 @@ for **[Chriz Easy IWD](https://bg.chrizfader.org/iwd)**
 | `390` | **Icasaracht's Lair:** `650` HP dragon, `250` HP soul gem, duplicate-gem guard, and second underpriestess script fix. |
 | `400` | **Lord Maluradek:** `350` HP, working animated plates, all-rooms rally below 50% HP, restored dancing beholder and immunity gloves. |
 | `410` | **The Luremaster:** Opens with *Improved Invisibility*, Dimension Door escapes, working Dispel Magic, and spectral hero replacements. |
-| `420` | **Main Campaign Overhaul (Chapters 2–6):** ~40–50% filler thinning, 6 asymmetric named squads (`CIE401`–`CIE427`), Kaylessa Lv 15 overhaul, Solonor Tower garrison, `AR3503` 3-wave crypt, Terikan, Tarnsen, quest/staircase-respawn fixes. |
-| `425` | **Quest Kill-Counter Hotfix:** Idempotent repair component for existing installations—lowers Dragon's Eye Lv 2 (`>6`/`<7`) and Severed Hand (`>11`) thresholds and preserves `Talonite` / `ELVEN_SOLDIER` quest death variables on `AR4002` & `AR5403` squad placements. |
-| `500` | **Heart of Winter & Trials of the Luremaster:** *Polar Bear Spirit* Great Roar fix, Burial Isle thinning & respawn fix, Gloomfrost Frost Giant War-Shaman plaza (`CIE5GHST`), Sea of Moving Ice & Sahuagin Royal Command, `AR9602` repair. |
+| `420` | **Main Campaign Overhaul (Chapters 2–6):** ~45–55% filler thinning & `0%` Bombardier Beetles, calibrated stats & undroppable elite gear across 6 asymmetric squads + 6 apex/crypt guardians (`CIE401`–`CIE427`), Kaylessa Lv 15 overhaul, `AR3503` `48s`/`+54s` 3-wave crypt with horns/callouts, Terikan, Tarnsen, and quest/respawn fixes. |
+| `425` | **Quest Kill-Counter Hotfix:** Idempotent repair component for existing installations—lowers Dragon's Eye Lv 2 (`>5`/`<6`), Severed Hand (`>11`), and Lower Dorn's Deep salamander (`8001 >8`, `8008 >4`) thresholds and preserves `Talonite` / `ELVEN_SOLDIER` quest death variables on `AR4002` & `AR5403` squad placements. |
+| `500` | **Heart of Winter & Trials of the Luremaster:** Recalibrated `CIE501`–`CIE533` stats & loot, *Polar Bear Spirit* Great Roar fix, Burial Isle & Watchknight Crypts (`AR9714`) thinning & respawn fix, `0%` `BEETBOMB`, Gloomfrost Frost Giant War-Shaman plaza (`CIE5GHST`), Sahuagin Royal Command, and `AR9602` repair. |
 
 Full engine-neutral specification (written so rules can move cleanly to future script-engine
 builds): [docs/components.md](docs/components.md) · Change history: [CHANGELOG.md](CHANGELOG.md).
