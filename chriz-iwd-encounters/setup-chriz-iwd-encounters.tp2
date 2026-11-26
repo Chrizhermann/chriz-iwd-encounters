@@ -1,6 +1,6 @@
 BACKUP ~weidu_external/backup/chriz-iwd-encounters~
 AUTHOR ~Christopher Hermann (github.com/Chrizhermann/chriz-iwd-encounters)~
-VERSION ~v0.3.2~
+VERSION ~v0.3.3~
 
 ALWAYS
   INCLUDE ~chriz-iwd-encounters/lib/cie_shared.tpa~
@@ -154,6 +154,12 @@ REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
 REQUIRE_PREDICATE (FILE_EXISTS_IN_GAME ~ar4002.are~) AND (FILE_EXISTS_IN_GAME ~ar8007.are~) @9016
 INCLUDE ~chriz-iwd-encounters/lib/cie_main_campaign.tpa~
 LAF cie_main_campaign END
+
+BEGIN @425 DESIGNATED 425
+LABEL ~chriz-iwd-encounters-quest-counter-hotfix~
+REQUIRE_PREDICATE GAME_IS ~iwdee~ @9000
+INCLUDE ~chriz-iwd-encounters/lib/cie_main_campaign.tpa~
+LAF cie_quest_counter_hotfix END
 
 BEGIN @500 DESIGNATED 500
 LABEL ~chriz-iwd-encounters-expansions~

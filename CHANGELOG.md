@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.3 (2026-11-27)
+
+- **420 (Dragon's Eye & Severed Hand quest kill counters):** Clears `ARE` actor flag bit `0x8` (*Override script name*) in `cie_place_actor` (and `actors_420/ar4002/*`, `actors_420/ar5403/*`) whenever the placed creature carries its own quest Death Variable (`Talonite` on `CIE401`–`CIE403` in `AR4002`, `ELVEN_SOLDIER` on `CIE413`–`CIE414` in `AR5403`) so kills increment `SPRITE_IS_DEAD*` reliably. Lowers quest kill thresholds to `> 6` / `< 7` (`Talonite` in `DEGENIA`, `DCALLIAN`, `DCAPVIL2`, `DCAPKID2`, `AR4001.BCS`, `AR4003.BCS`) and `> 11` (`ELVEN_SOLDIER` in `DKAYLESS.DLG`).
+- **425 (Quest kill-counter hotfix component):** New standalone, idempotent repair component for existing `v0.3.0`–`v0.3.2` installations (replaces thresholds to `> 6` / `< 7` and `> 11`, clears `0x8` on any `CIE401`–`CIE403` in `AR4002` and `CIE413`–`CIE414` in `AR5403`, and ensures their CRE death variables are set).
+
 ## v0.3.2 (2026-11-22)
 
 - **300 (Belhifet's final fight):** Restores Poquelin's base-game transformation shockwave dispel (`SPIN183` / `EEPOQCNG`) so parties cannot trivialize the finale by pre-buffing outside the church, while keeping Belhifet's Lv-26 Abjuration Dispel Magic (`CIEBELDI`), `0xE256` `BELHIFET` sprite, Lv 1–3 spell immunity (`CIEBELPR`), HP scaling, wave pacing, and teleport fix.
