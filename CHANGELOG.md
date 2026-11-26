@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.3.3 (2026-11-27)
+
+- **Shared core (`cie_set_core`):** Fixes triple-stacked AC/THAC0/APR inflation across all bespoke `CIE4xx` and `CIE5xx` elites by stripping inherited donor `opcode 233` weapon High/Grandmastery bonuses and parameterizing explicit `STR`/`DEX` ability scores instead of forcing `STR 19` (`+3/+7`) and `DEX 17` (`-3 AC`) on every creature.
+- **420 (Main campaign overhaul, Chapters 1–6):**
+  - **Economy & Talonite Plague Coven (`AR4002`):** Marks all bespoke `CIE4xx` armor, shields, helmets, weapons, quivers, and AI buff potions `IDENTIFIED&UNDROPPABLE` (leaving at most 1 healing potion drop). Rebalances the `AR4002` Talonite Coven for a Ch. 2 Lv 6–7 party (`1x CIE401` Mother + `1x CIE402` Champion at `effAC -1, effTHAC0 7, 2 APR` + `1x CIE403` Venom-Troll at `88 HP, AC 3, 2 APR`, 2 fewer generic priests, `SPRITE_IS_DEADTalonite` lowered to `>5/<6`).
+  - **Kresselack's Antechamber (`AR3503`):** Stretches wave timers to `48 s` and `+54 s` (with early advance after a 12 s guard if active hostiles are wiped early), prevents one spotted sentry from waking its entire wave early, adds crypt cries/dread horn and callout messages (`@4230`, `@4231`), and upgrades Wave 3 `SPKNIGHT` Spectral Knights (`68 HP, AC 2, THAC0 10, 2 APR`).
+  - **100 % Bombardier Beetle eradication, deeper horde cuts, & lone apex encounters:** Removes every remaining `BEETBOMB` (`SPIN191` no-save stun/deafness) in `AR4001` and `AR4002`, thins `AR3601`–`AR3602`, `AR4001`–`AR4003`, `AR4005` (`-40` Yuan-ti/Histachii), `AR6001.INI` (`14` myconids + `6` ettins), `AR6002`, `AR7005` (`-34` trolls/yetis), and `AR8008`–`AR8009` (`-18` minotaurs/umber hulks) plus `AR4001`–`AR4003`/`AR4005` `.INI` spawns (`6 -> 2`). Upgrades `AR4004`/`AR4005` Yuan-ti Elites (`THAC0 9`) and `AR4005`'s High Torturer + Yuan-ti Champions (`HIGHTORT` Lv 10 Cleric, `YUCHAMP`/`CDYUCHAM` `94 HP, AC -1, THAC0 7, 3 APR`), and places compact "oh-shit" apex encounters in cleared spaces: `Broodmother Sword-Spider` (`CIE404`, `AR4001`), `Ancient Phase Matriarch` (`CIE405`, `AR4002`), `Barrow Wight-Lord` + `Risen Tomb-Necromancer` (`CIE406`–`407`, `AR4003`), `Ancient Glacier-Troll` (`CIE422`, `AR7005`), and `Labyrinth Minotaur-Lord` (`CIE423`, `AR8009`).
+- **500 (Heart of Winter & Trials of the Luremaster):**
+  - Recalibrates `CIE501`–`CIE533` effective AC (`-4..-6`), THAC0 (`-1..-4`), APR (`2.5–3`), and potion drops (1 max), removes the last `BEETBOMB` in `AR9801`, and thins 30 more repetitive undead across Watchknight Crypts (`AR9714`).
+
 ## v0.3.2 (2026-11-22)
 
 - **300 (Belhifet's final fight):** Restores Poquelin's base-game transformation shockwave dispel (`SPIN183` / `EEPOQCNG`) so parties cannot trivialize the finale by pre-buffing outside the church, while keeping Belhifet's Lv-26 Abjuration Dispel Magic (`CIEBELDI`), `0xE256` `BELHIFET` sprite, Lv 1–3 spell immunity (`CIEBELPR`), HP scaling, wave pacing, and teleport fix.

@@ -995,20 +995,27 @@ in the game: his Dispel Magic (the install checks cover it), without SCS, with a
 
 ## 420: Main campaign overhaul (Chapters 2–6)
 
-Works with and without SCS across Chapters 2–6 (`AR3101`–`AR8007`):
+Works with and without SCS across Chapters 1–6 (`AR3101`–`AR8009`):
 
-- **Curated horde compression (~40–50 %):** disables repeating filler clones across the
-  Vale of Shadows, Dragon's Eye, Severed Hand, Dorn's Deep, Wyrm's Tooth, and Marketh's
-  Palace (24 of 29 `LDDTHIE2`/`LDDTHIE3` thieves removed, `AR6001.INI` myconids 63 to 33,
-  halved `AR5002` worg/goblin spawns, empty dead-end alcoves), while keeping every quest
-  NPC, dialog actor, `#PRST_DV`, `#5104_DV`, `WTVERBET`, `NEOOROGC`, and `Genek` intact.
+- **Curated horde compression & 100 % Bombardier Beetle removal (`~45–55 %`):** disables
+  repeating filler clones across the Vale of Shadows, Temple of the Forgotten God (`AR3601`–
+  `AR3602`), Dragon's Eye (`AR4001`–`AR4005`, plus `AR4001`–`AR4003`/`AR4005` `.INI` spawns
+  trimmed from 6 to 2), Severed Hand, Dorn's Deep (`AR6001.INI` trimmed to 14 myconids + 6
+  ettins, `AR6002`, `AR8008`–`AR8009`), Wyrm's Tooth (`AR7001`, `AR7004`, `AR7005`), and
+  Marketh's Palace (`24` of `29` `LDDTHIE2`/`LDDTHIE3` thieves removed), and removes every
+  Bombardier Beetle (`BEETBOMB`, whose `SPIN191` inflicts no-save stun/deafness), while keeping
+  every quest NPC, dialog actor, `#PRST_DV`, `#5104_DV`, `WTVERBET`, `NEOOROGC`, and `Genek`
+  intact.
 - **Quest & spawn fixes:** `AR3301.INI` infinite staircase respawn is gated on
   `CIE_AR3301_SPAWN`; `DKAYLESS.DLG` lowers its `ELVEN_SOLDIER` threshold (`>24 -> >14`);
   `DEGENIA.DLG`, `DCALLIAN.DLG`, `DCAPVIL2.DLG`, `DCAPKID2.DLG`, `AR4001.BCS`, and
-  `AR4003.BCS` lower `SPRITE_IS_DEADTalonite` thresholds (`>9/<10 -> >7/<8`).
-- **Kresselack's Antechamber (`AR3503`):** preserves all 52 undead in 3 timed waves (Wave 1
-  immediately, Wave 2 `GNTEAM3M`–`6M` at 27 s, Wave 3 `GNTEAM7M` at 54 s, or immediately if
-  spotted or attacked) so `Shout(89)` never pulls all 52 at once.
+  `AR4003.BCS` lower `SPRITE_IS_DEADTalonite` thresholds (`>9/<10 -> >5/<6`, matching 7 active
+  Talonite DVs in `AR4002`).
+- **Kresselack's Antechamber (`AR3503`):** preserves all 52 undead in 3 paced waves (Wave 1
+  immediately, Wave 2 `GNTEAM3M`–`6M` at 48 s or early once combat clears, Wave 3 `GNTEAM7M`
+  at +54 s or early once Wave 2 clears; spotted sentries wake individually without pulling
+  their whole wave early), announces Waves 2 and 3 with crypt cries/dread horn and combat-log
+  callouts (`@4230`, `@4231`), and upgrades `SPKNIGHT` (`68` HP, `AC 2`, `THAC0 10`, `2 APR`).
 - **Kaylessa (`AR5401`):** upgraded to level 15 (`175` HP, `AC -6`, `THAC0 2`, `4 APR`,
   bow+sword weapon switching via `DWGNMB0`/`CIE4SWP`, `CIE4KAYP` without retreat kiting,
   keeping `MINHPN9`, `PIECE1`, `EA = 128`).
@@ -1020,16 +1027,21 @@ Works with and without SCS across Chapters 2–6 (`AR3101`–`AR8007`):
 - **Tarnsen & Ginafae repairs:** `TARNSEN` swaps `GNMBG9GH` and throwing axe `AX1H04` for
   melee AI (`DWMESVGE`/`GNMMG9GH`) and `AX1H01`; `DGINA2.DLG` state 19 checks
   `SPRITE_IS_DEADMarketh` instead of `Marketh_Dead`.
-- **Upgraded regulars & 6 asymmetric lore-grounded squads (`CIE401`–`CIE427`):** stronger
-  Severed Hand fighters/officers/Lv 10–11 tower casters, 2-APR `GIANTFN`, stronger
-  `WYRM`/`BIKNIGHT`, and 6 asymmetric encounters using real multiclasses and SCS AI:
-  Talonite Plague Coven (`AR4002`, `Talonite` DV), Labelas Tower Shadowed Arcane Circle
-  (`AR5104`, preserving `#5104_DV` guards), Solonor Tower Martial Garrison (`AR5403`,
-  `ELVEN_SOLDIER` DV, `CIE4FC1` w/ *Dispel Magic*; both `AR4002` and `AR5403` placements
-  keep the *Override script name* flag clear so quest kill counters increment), Pure Orog
-  Shock-Guard (`AR6003`),
-  Kontik's Frostmaiden Sisterhood (`AR7004`, `NEUTRAL` on `GNTEAM2`), and Kraken Society
-  Operatives (`AR8007`).
+- **Upgraded regulars, calibrated stats, undroppable gear, & asymmetric/apex encounters (`CIE401`–`CIE427`):**
+  `cie_set_core` strips inherited donor `opcode 233` weapon masteries and sets explicit ability
+  scores instead of blanket `STR 19`/`DEX 17`, while `cie420_ensure_item` marks all bespoke
+  armor/shields/weapons `UNDROPPABLE` (leaving at most 1 healing potion drop). Upgrades
+  Yuan-ti Elites (`YUAEWAX`/`BL`/`SW`/`BO` to `THAC0 9`), `AR4005`'s High Torturer (`HIGHTORT`
+  Lv 10 Cleric) + Yuan-ti Champions (`YUCHAMP`/`CDYUCHAM` `94` HP, `AC -1`, `THAC0 7`, `3 APR`),
+  Severed Hand fighters/officers/Lv 10–11 tower casters, 2-APR `GIANTFN`, and `WYRM`/`BIKNIGHT`.
+  Places 6 asymmetric squads and 5 lone/duo apex guardians (`21` templates total): calibrated
+  3-member Talonite Plague Coven (`AR4002`, `Talonite` DV), `Broodmother Sword-Spider`
+  (`CIE404`, `AR4001`), `Ancient Phase Matriarch` (`CIE405`, `AR4002`), `Barrow Wight-Lord` +
+  `Risen Tomb-Necromancer` (`CIE406`–`407`, `AR4003`), Labelas Tower Shadowed Arcane Circle
+  (`AR5104`), Solonor Tower Martial Garrison (`AR5403`, `ELVEN_SOLDIER` DV), Pure Orog
+  Shock-Guard (`AR6003`), Kontik's Frostmaiden Sisterhood (`AR7004`, `NEUTRAL` on `GNTEAM2`),
+  `Ancient Glacier-Troll` (`CIE422`, `AR7005`), `Labyrinth Minotaur-Lord` (`CIE423`, `AR8009`),
+  and Kraken Society Operatives (`AR8007`).
 
 ## 500: Heart of Winter and Trials of the Luremaster expansion overhaul
 

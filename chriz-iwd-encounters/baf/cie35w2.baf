@@ -19,10 +19,6 @@ IF
 THEN
   RESPONSE #100
     SetGlobal("CIE_AWAKE","LOCALS",1)
-    SetGlobal("MAP_GROUP_HOSTILE3","MYAREA",1)
-    SetGlobal("MAP_GROUP_HOSTILE4","MYAREA",1)
-    SetGlobal("MAP_GROUP_HOSTILE5","MYAREA",1)
-    SetGlobal("MAP_GROUP_HOSTILE6","MYAREA",1)
     Enemy()
     Continue()
 END

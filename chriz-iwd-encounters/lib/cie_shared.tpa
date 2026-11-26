@@ -841,6 +841,7 @@ END
 // Authoritative owned stats & scripts on a bespoke CIE creature.
 DEFINE_PATCH_FUNCTION cie_set_core
   INT_VAR xp = 0 hp = 100 ac = 0 thac0 = 5 apr = 2 ea = 255
+          str = 16 str_ex = 0 int = 14 wis = 14 dex = 12 con = 15
           sv1 = 5 sv2 = 6 sv3 = 6 sv4 = 7 sv5 = 6
           rfir = 0 rcld = 0 rele = 0 racd = 0 mr = 0 rsl = 0 rcr = 0 rpi = 0 rmi = 0
           lvl1 = 15 lvl2 = 1 clear_items = 1
@@ -872,11 +873,12 @@ BEGIN
   WRITE_BYTE  0x63 rmi
   WRITE_BYTE  0x234 lvl1
   WRITE_BYTE  0x235 lvl2
-  WRITE_BYTE  0x238 19 // STR
-  WRITE_BYTE  0x23a 16 // INT
-  WRITE_BYTE  0x23b 16 // WIS
-  WRITE_BYTE  0x23c 17 // DEX
-  WRITE_BYTE  0x23d 16 // CON
+  WRITE_BYTE  0x238 str
+  WRITE_BYTE  0x239 str_ex
+  WRITE_BYTE  0x23a int
+  WRITE_BYTE  0x23b wis
+  WRITE_BYTE  0x23c dex
+  WRITE_BYTE  0x23d con
   WRITE_ASCIIE 0x248 ~%s_ovr%~ #8
   WRITE_ASCIIE 0x250 ~%s_cls%~ #8
   WRITE_ASCIIE 0x258 ~%s_rac%~ #8
@@ -887,6 +889,7 @@ BEGIN
   WRITE_ASCII 0x2cc ~~ #8  // no dialog
   LPF DELETE_CRE_EFFECT INT_VAR opcode_to_delete = 20 END  // no baked invisibility
   LPF DELETE_CRE_EFFECT INT_VAR opcode_to_delete = 208 END // no immortal MINHP
+  LPF DELETE_CRE_EFFECT INT_VAR opcode_to_delete = 233 END // no hidden donor Grandmastery APR/THAC0/dmg
   PATCH_IF clear_items BEGIN
     LPF cie_clear_all_items END
   END
@@ -1242,5 +1245,24 @@ BEGIN
       ADD_KNOWN_SPELL ~%spell%~ (slot_lvl) ~%stype%~
       ADD_MEMORIZED_SPELL ~%spell%~ (slot_lvl) ~%stype%~ (cnt)
     END
+  END
+END
+
+// Trim the critters= list inside an event section of an area INI (idempotent).
+DEFINE_ACTION_FUNCTION cie_trim_ini_critters
+  STR_VAR ini = ~~ section = ~8_HOURS~ critters = ~~
+BEGIN
+  ACTION_IF FILE_EXISTS_IN_GAME ~%ini%.ini~ BEGIN
+    COPY_EXISTING ~%ini%.ini~ ~override~
+      REPLACE_TEXTUALLY EXACT_MATCH ~%WNL%~ ~%LNL%~
+      LPF cie_ini_section STR_VAR section = EVAL ~%section%~ RET head next END
+      PATCH_IF (head >= 0) BEGIN
+        READ_ASCII head txt (next - head)
+        INNER_PATCH_SAVE txt ~%txt%~ BEGIN
+          REPLACE_TEXTUALLY CASE_INSENSITIVE ~^critters[ %TAB%]*=[^%LNL%]*~ ~critters=%critters%~
+        END
+        LPF cie_replace_text INT_VAR start = head length = (next - head) STR_VAR text = EVAL ~%txt%~ END
+      END
+    BUT_ONLY
   END
 END

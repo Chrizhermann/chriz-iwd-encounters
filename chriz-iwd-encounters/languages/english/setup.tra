@@ -256,6 +256,10 @@ The wiser the wizard, the better chance that <PRO_HESHE> will choose the right w
 @4201 = ~Talonite High Plague-Mother~
 @4202 = ~Talonite Blight-Champion~
 @4203 = ~Blighted Venom-Troll~
+@4204 = ~Broodmother Sword-Spider~
+@4205 = ~Ancient Phase Matriarch~
+@4206 = ~Barrow Wight-Lord~
+@4207 = ~Risen Tomb-Necromancer~
 @4210 = ~Shadowed Bladesinger~
 @4211 = ~Shadowed High Arcanist~
 @4212 = ~Shadowed Lorekeeper~
@@ -265,9 +269,13 @@ The wiser the wizard, the better chance that <PRO_HESHE> will choose the right w
 @4217 = ~Orog Berserker~
 @4220 = ~Aurilite Cryomancer~
 @4221 = ~Frostmaiden Ice-Priestess~
+@4222 = ~Ancient Glacier-Troll~
+@4223 = ~Labyrinth Minotaur-Lord~
 @4225 = ~Kraken Illusionist-Envoy~
 @4226 = ~Kraken Spellsword~
 @4227 = ~Kraken Nightblade~
+@4230 = ~Rattling armor echoes from the side crypts — Kresselack's tomb guard advances!~
+@4231 = ~A dread horn sounds from the inner sanctum — Kresselack's Spectral Knights and skeletal mages march forth!~
 
 @9000 = ~This mod is for Icewind Dale: Enhanced Edition.~
 @9001 = ~This component needs Sword Coast Stratagems' smarter mages or smarter priests.~
